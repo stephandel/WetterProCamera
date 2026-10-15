@@ -74,9 +74,9 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .mk-leer p { margin: 0; }
 .akt-punkte { position: absolute; z-index: 500; left: var(--s3); bottom: var(--s2); display: flex; gap: var(--s2); }
 .akt-r:not(.medien) .akt-punkte { position: static; margin-top: var(--s3); }
-.akt-punkte i { width: var(--s2); height: var(--s2); border-radius: 50%; background: var(--label-3); }   /* 8 px statt 6 px (A5) */
+.akt-punkte i { width: var(--s2); height: var(--s2); border-radius: 50%; background: var(--label-2); }   /* 8 px (A5); label-2 für mindestens 3:1 (Analyse 15.10.) */
 .akt-punkte i.an { background: var(--label); }
-.medien .akt-punkte i { background: rgba(255,255,255,.45); } .medien .akt-punkte i.an { background: #fff; }
+.medien .akt-punkte i { background: rgba(255,255,255,.6); } .medien .akt-punkte i.an { background: #fff; }
 #ansichtListe label { justify-content: space-between; }
 #ansichtListe label.aus > .modell-text > span { color: var(--label-2); }
 #ansichtListe input { width: 22px; height: 22px; accent-color: var(--akzent); }
