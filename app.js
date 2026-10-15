@@ -249,7 +249,7 @@
     if (graphsModus() === 'meteo') return renderMeteo();   // Paket C: Meteogramm
     // Breite in echten Pixeln (1 Einheit = 1 px), damit die Achsenzahlen wirklich 12 px groß sind (UX-Prüfung A7)
     var seite = $('#tab-graphs'), breite = Math.round((seite.clientWidth || 358) - 32);
-    var h = daten.hourly, i0 = stundenIndex(), n = 48, B = Math.max(280, breite), H = Math.round(Math.min(300, Math.max(200, B * .62))), l = 34, r = 10, o = 14, u = 30;
+    var h = daten.hourly, i0 = stundenIndex(), n = 48, B = Math.max(280, breite), H = Math.round(Math.min(grafHoeheMax(), Math.max(200, B * .62))), l = 34, r = 10, o = 14, u = 30;
     var temp = h.temperature_2m.slice(i0, i0 + n), regen = h.precipitation.slice(i0, i0 + n), zeit = h.time.slice(i0, i0 + n);
     var leer = temp.indexOf(null); if (leer > 1) { n = leer; temp = temp.slice(0, n); regen = regen.slice(0, n); zeit = zeit.slice(0, n); }   // Modelle mit kürzerer Reichweite
     regen = regen.map(function (v) { return v || 0; });
@@ -1720,6 +1720,136 @@
       if (e.target.closest('#pcZeilenAuf')) zeilenBlattAuf();
     });
   }
+
+  /* === Paket A6: Mac-Layout (15.10.2026) === */
+  // Ab 1024 px Breite mit Maus oder Trackpad (hover: hover): Seitenleiste links statt Tab-Leiste unten,
+  // Wetter und Mehr zweispaltig, dichte Schriftstufen (CSS-Block „Mac" am Ende von app.css),
+  // Tastaturkürzel ⌘1–⌘5, ⌘K, ⌘R, Esc. Auf iPhone und iPad bleibt alles, wie es war.
+  var MAC_MQ = '(min-width: 1024px) and (hover: hover)';
+  function macAn() { return !!(window.matchMedia && matchMedia(MAC_MQ).matches); }
+  // Graphs auf dem Mac höher (renderGraphs fragt hier nach der größten Höhe)
+  function grafHoeheMax() { return macAn() ? Math.max(300, Math.min(520, window.innerHeight - 300)) : 300; }
+
+  /* --- Seitenleiste: App-Name, Bereiche, Orte mit Favoriten, Teilen, Kürzel --- */
+  var KUERZEL_TASTE = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Strg+';
+  var macLeiste = document.createElement('aside');
+  macLeiste.className = 'mac-leiste'; macLeiste.id = 'macLeiste'; macLeiste.setAttribute('aria-label', 'Seitenleiste');
+  macLeiste.innerHTML = '<div class="ml-name">WetterProCamera</div>' +
+    '<nav aria-labelledby="mlBereicheTitel"><h2 class="ml-titel" id="mlBereicheTitel">Bereiche</h2><div class="ml-liste" id="mlBereiche">' +
+    TABS.map(function (t, i) {
+      var kamera = t[0] === 'kamera';
+      return '<button type="button" class="ml-knopf tippbar" data-ml-tab="' + t[0] + '"' + (kamera ? ' aria-haspopup="dialog" aria-label="Kamera: Wetter mit Foto teilen (' + KUERZEL_TASTE + (i + 1) + ')"' : ' aria-label="' + t[1] + ' (' + KUERZEL_TASTE + (i + 1) + ')"') + '>' +
+        Ikon(t[2]) + '<span class="ml-text">' + t[1] + '</span><kbd class="ml-kbd" aria-hidden="true">' + KUERZEL_TASTE + (i + 1) + '</kbd></button>';
+    }).join('') + '</div></nav>' +
+    '<section aria-labelledby="mlOrteTitel"><h2 class="ml-titel" id="mlOrteTitel">Orte · Stern = Favorit</h2><div class="ml-liste" id="mlOrte"></div>' +
+    '<button type="button" class="ml-knopf ml-leise tippbar" id="mlSuche" aria-label="Ort suchen (' + KUERZEL_TASTE + 'K)">' + Ikon('search') + '<span class="ml-text">Ort suchen</span><kbd class="ml-kbd" aria-hidden="true">' + KUERZEL_TASTE + 'K</kbd></button></section>' +
+    '<div class="ml-fuss"><button type="button" class="button ml-teilen tippbar" id="mlTeilen">' + Ikon('share') + '<span>Wetter teilen</span></button>' +
+    '<p class="ml-kuerzel" id="mlKuerzel"><b>Kürzel</b><br>' + KUERZEL_TASTE + '1–' + KUERZEL_TASTE + '5 Bereiche · ' + KUERZEL_TASTE + 'K Ort suchen · ' + KUERZEL_TASTE + 'R Aktualisieren · Esc schließt Fenster</p></div>';
+  document.body.insertBefore(macLeiste, document.body.firstChild);
+  var mlOrteSchluessel = '';
+  function macOrte() {
+    var liste = meineOrte(), schluessel = liste.map(ortKey).join(';') + '#' + ortKey(ort) + '#' + favoriten.length;
+    if (schluessel === mlOrteSchluessel) return;
+    var fokus = document.activeElement && document.activeElement.closest && document.activeElement.closest('#mlOrte [data-ml-ort]');
+    var fokusName = fokus ? fokus.dataset.name : '';
+    mlOrteSchluessel = schluessel;
+    $('#mlOrte').innerHTML = liste.map(function (o, i) {
+      var fav = istFavorit(o), hier = ortKey(o) === ortKey(ort);
+      return '<button type="button" class="ml-knopf tippbar" data-ml-ort="' + i + '" data-name="' + esc(o.name) + '"' + (hier ? ' aria-current="true"' : '') + ' aria-label="' + esc(o.name) + (fav ? ', Favorit' : '') + (hier ? ', gerade gewählt' : '') + '">' +
+        (fav ? sternSvg().replace('class="ikon"', 'class="ikon ml-stern"') : Ikon('pin')) + '<span class="ml-text">' + esc(o.name) + '</span></button>';
+    }).join('');
+    if (fokusName) { var neu = $$('#mlOrte [data-ml-ort]').filter(function (b) { return b.dataset.name === fokusName; })[0]; if (neu) neu.focus(); }
+  }
+  function macBereiche() {
+    $$('#mlBereiche [data-ml-tab]').forEach(function (b) { if (b.dataset.mlTab === 'kamera') return; if (b.dataset.mlTab === aktiv) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  }
+  function macLeisteAktualisieren() { macBereiche(); macOrte(); }
+  macLeiste.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-ml-tab]'), o = e.target.closest('[data-ml-ort]');
+    if (t) { if (t.dataset.mlTab === 'kamera') teilenOeffnen(); else zeigeTab(t.dataset.mlTab); return; }
+    if (o) { ortSetzen(meineOrte()[+o.dataset.mlOrt]); return; }
+    if (e.target.closest('#mlSuche')) return ortSucheOeffnen();
+    if (e.target.closest('#mlTeilen')) teilenOeffnen();
+  });
+  // Tab-Wechsel und Ortswechsel halten die Seitenleiste aktuell (ortSetzen ruft zeigeTab)
+  zeigeTab = (function (alt) { return function (id) { alt(id); macLeisteAktualisieren(); }; })(zeigeTab);
+
+  /* --- Zweispaltiger Inhalt: Wetter (links Aktuell und Stunden, rechts alles andere in DOM-Reihenfolge) und Mehr --- */
+  // Die Kacheln werden nur auf dem Mac in zwei Spalten-Hüllen verschoben; schmaler als 1024 px wird das wieder aufgelöst.
+  var ordnetGerade = false;
+  function spalteNeu(klasse) { var d = document.createElement('div'); d.className = 'mac-spalte ' + klasse; return d; }
+  function wetterOrdnen() {
+    var s = $('#tab-wetter'), links = $(':scope > .mac-links', s), rechts = $(':scope > .mac-rechts', s);
+    if (!macAn() || !$('.akt', s)) {   // kein Mac oder noch keine Daten (Skeleton, Fehler): Hüllen auflösen
+      [links, rechts].forEach(function (h) { if (!h) return; while (h.firstChild) s.insertBefore(h.firstChild, h); h.remove(); });
+      s.classList.remove('mac-zwei'); return;
+    }
+    if (!links) { links = spalteNeu('mac-links'); rechts = spalteNeu('mac-rechts'); s.appendChild(links); s.appendChild(rechts); }
+    var karte = false;
+    Array.prototype.slice.call(s.children).forEach(function (k) {
+      if (k === links || k === rechts || k.classList.contains('update-zeile')) return;
+      if (k.querySelector('.leaflet-container')) karte = true;
+      (k.classList.contains('akt') || k.classList.contains('std') ? links : rechts).appendChild(k);
+    });
+    // Reihenfolge links: Aktuell vor Stunden; Update-Zeile bleibt oben über beiden Spalten
+    var akt = $(':scope > .akt', links); if (akt && akt !== links.firstChild) links.insertBefore(akt, links.firstChild);
+    var upd = $(':scope > .update-zeile', s); if (upd && upd !== s.firstChild) s.insertBefore(upd, s.firstChild);
+    s.appendChild(links); s.appendChild(rechts);
+    s.classList.add('mac-zwei');
+    if (karte) setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 0);   // Mini-Radar misst sich neu
+  }
+  function mehrOrdnen() {
+    var s = $('#tab-mehr'), gruppen = $$(':scope > .mac-gruppe', s);
+    // erst auflösen (Pakete ergänzen „Mehr" nachträglich), dann neu gruppieren: je Überschrift eine Gruppe
+    gruppen.forEach(function (g) { while (g.firstChild) s.insertBefore(g.firstChild, g); g.remove(); });
+    s.classList.remove('mac-gruppiert');
+    if (!macAn() || !s.children.length) return;
+    var g = null;
+    Array.prototype.slice.call(s.children).forEach(function (k) {
+      if (!g || (k.matches('h2.abschnitt-titel'))) { g = document.createElement('div'); g.className = 'mac-gruppe'; s.insertBefore(g, k); }
+      g.appendChild(k);
+    });
+    s.classList.add('mac-gruppiert');
+  }
+  function macOrdnen() {
+    if (ordnetGerade) return;
+    ordnetGerade = true;
+    var fokus = document.activeElement;
+    try { wetterOrdnen(); mehrOrdnen(); macLeisteAktualisieren(); } finally {
+      if (fokus && fokus !== document.activeElement && document.contains(fokus) && fokus.focus) fokus.focus({ preventScroll: true });   // Verschieben nimmt den Fokus weg
+      beobachter.takeRecords(); ordnetGerade = false;
+    }
+  }
+  // Beobachtet Wetter und Mehr: neue Kacheln anderer Pakete (z. B. Paket A5) landen so automatisch in der rechten Spalte
+  var beobachter = new MutationObserver(function () { macOrdnen(); });
+  ['#tab-wetter', '#tab-mehr'].forEach(function (sel) { beobachter.observe($(sel), { childList: true }); });
+  if (window.matchMedia) { var macMq = matchMedia(MAC_MQ); var wechsel = function () { macOrdnen(); }; if (macMq.addEventListener) macMq.addEventListener('change', wechsel); else if (macMq.addListener) macMq.addListener(wechsel); }
+
+  /* --- Tastaturkürzel: ⌘1–⌘5 Bereiche, ⌘K Ortssuche, ⌘R Aktualisieren, Esc schließt --- */
+  function ortSucheOeffnen() {
+    zeigeTab('mehr');
+    setTimeout(function () { var f = $('#sucheFeld'); if (f) { f.focus(); f.select(); } }, 50);
+  }
+  function dialogOffen() { return $$('dialog').some(function (d) { return d.open; }); }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') return;   // Fenster (<dialog>) schließt der Browser selbst mit Esc, siehe „cancel" unten
+    if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+    var k = (e.key || '').toLowerCase();
+    if (/^[1-5]$/.test(k)) {
+      if (dialogOffen()) return;
+      e.preventDefault();
+      var t = TABS[+k - 1][0];
+      if (t === 'kamera') teilenOeffnen(); else { zeigeTab(t); var b = $('#macLeiste [data-ml-tab="' + t + '"]'); if (b && macAn()) b.focus({ preventScroll: true }); }
+    } else if (k === 'k') {
+      if (dialogOffen()) return;
+      e.preventDefault(); ortSucheOeffnen();
+    } else if (k === 'r') {
+      if (dialogOffen()) return;
+      e.preventDefault(); aktualisieren();   // statt die Seite neu zu laden: nur das Wetter neu holen
+    }
+  });
+  // Esc im Teilen-Fenster: ein offenes Blatt „Infos" schließt zuerst, nicht gleich das ganze Fenster
+  $('#teilen').addEventListener('cancel', function (e) { if (!$('#tBlatt').hidden) { e.preventDefault(); blattZu(); } });
 
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');

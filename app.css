@@ -518,3 +518,105 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 /* === Paket A4: Meteogramm-Hilfetext nie unter die schwebende Tab-Leiste (15.10.2026) === */
 .pc-mg, .pc-mg.mg { margin-bottom: var(--s6); }   /* zusätzlich zum Platz in .inhalt (Tab-Leiste plus Safe-Area): Hilfetext bleibt sicher darüber */
 .pc-mg-voll .pc-mg, .pc-mg-voll .pc-mg.mg { margin-bottom: 0; }   /* im Vollbild gibt es keine Tab-Leiste */
+
+/* === Paket A6: Mac-Layout (15.10.2026) === */
+/* Ab 1024 px Breite mit Maus oder Trackpad: Seitenleiste links statt Tab-Leiste unten, Inhalt zweispaltig,
+   dichte Schriftstufen wie auf dem Mac. Eigene Variablen (--mac-*), tokens.css bleibt unverändert.
+   Auf iPhone und iPad (ohne Maus) gilt nichts davon. */
+.mac-leiste { display: none; }
+.mac-spalte { display: contents; }   /* Spalten-Hüllen gibt es nur auf dem Mac; sicherheitshalber ohne eigene Box */
+
+@media (min-width: 1024px) and (hover: hover) {
+  :root {
+    /* Dichte Stufen (Mac): Text 13 px, Zweittext 12 px (11 px bleibt verboten), Überschrift 20 px */
+    --mac-text: 0.8125rem;          /* 13 px */
+    --mac-zweit: 0.75rem;           /* 12 px */
+    --mac-ueberschrift: 1.25rem;    /* 20 px */
+    --mac-zwischen: 0.9375rem;      /* 15 px, Zwischenstufe für Werte */
+    --mac-titel: 1.375rem;          /* 22 px */
+    --mac-gross: 1.625rem;          /* 26 px, große Zahl */
+    --mac-klick: 28px;              /* Klickfläche mit Maus */
+    --mac-leiste-b: 248px;          /* Breite der Seitenleiste */
+    --mac-inhalt-max: 1240px;
+    --fs-large-title: var(--mac-gross); --fs-title1: var(--mac-titel); --fs-title2: var(--mac-ueberschrift); --fs-title3: var(--mac-zwischen);
+    --fs-body: var(--mac-text); --fs-subhead: var(--mac-zweit); --fs-footnote: var(--mac-zweit); --fs-caption: var(--mac-zweit);
+    --tap: var(--mac-klick);
+  }
+  body { padding-left: var(--mac-leiste-b); }
+
+  /* Seitenleiste: App-Name, Bereiche, Orte, Teilen, Kürzel (deckend, kein Glas) */
+  .mac-leiste { display: flex; flex-direction: column; gap: var(--s5); position: fixed; z-index: 25; top: 0; bottom: 0; left: 0; width: var(--mac-leiste-b);
+    overflow-y: auto; overscroll-behavior: contain; padding: var(--s4) var(--s3); background: var(--bg-2); border-right: 1px solid var(--trenner); }
+  .ml-name { font-size: var(--fs-title3); font-weight: 700; padding: var(--s1) var(--s2) 0; }
+  .ml-titel { font-size: var(--fs-caption); font-weight: 600; color: var(--label-2); margin: 0 0 var(--s1); padding: 0 var(--s2); }
+  .ml-liste { display: grid; gap: 2px; }
+  .ml-knopf { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: var(--tap); padding: var(--s1) var(--s2); border-radius: var(--r-button); color: var(--label); text-align: left; font-size: var(--fs-body); }
+  .ml-knopf .ikon { width: 17px; height: 17px; color: var(--akzent); }
+  .ml-knopf .ml-stern { fill: currentColor; }
+  .ml-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ml-kbd { font: inherit; font-size: var(--fs-caption); color: var(--label-2); font-variant-numeric: tabular-nums; }
+  .ml-knopf[aria-current] { background: var(--fuellung); color: var(--akzent); font-weight: 600; }
+  .ml-knopf[aria-current="page"] .ikon { fill: currentColor; fill-opacity: .28; }
+  .ml-knopf:hover { background: var(--fuellung); }
+  .ml-knopf:focus-visible, .ml-teilen:focus-visible { outline-offset: -2px; }   /* Fokusring bleibt in der Leiste sichtbar */
+  .ml-leise { color: var(--label-2); margin-top: var(--s1); }
+  .ml-fuss { margin-top: auto; display: grid; gap: var(--s3); }
+  .ml-teilen { gap: var(--s2); width: 100%; min-height: var(--tap); padding: var(--s1) var(--s3); }
+  .ml-teilen .ikon { width: 17px; height: 17px; }
+  .ml-kuerzel { margin: 0; padding: 0 var(--s2); font-size: var(--fs-caption); color: var(--label-2); line-height: 1.45; }
+  .ml-kuerzel b { color: var(--label); font-weight: 600; }
+
+  /* Keine Tab-Leiste unten; Orte-Knopf oben entfällt (Orte stehen in der Leiste), Ort linksbündig wie eine Mac-Fensterleiste */
+  .tabbar, .tabbar.pille { display: none; }
+  #btnMenue { display: none; }
+  .titelzeile { padding-left: var(--s6); padding-right: var(--s4); }
+  .ort-block { text-align: left; display: flex; align-items: baseline; gap: var(--s3); }
+  .ort { flex: 0 1 auto; min-width: 0; }
+  .modell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .hinweis { margin: var(--s3) var(--s6) 0; }
+  .inhalt { max-width: var(--mac-inhalt-max); padding: var(--s5) var(--s6) var(--s8); }
+  .toast, .zug-anzeige { left: calc(50% + var(--mac-leiste-b) / 2); }
+  .toast { bottom: var(--s8); }
+
+  /* Wetter zweispaltig: links Aktuell und Stunden (bleiben stehen), rechts Tagesliste, Regenradar und alle weiteren Kacheln */
+  #tab-wetter.mac-zwei { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s5); align-items: start; }
+  #tab-wetter.mac-zwei > .update-zeile { grid-column: 1 / -1; margin: 0; }
+  .mac-spalte { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); align-content: start; min-width: 0; }
+  .akt-sym { width: 96px; height: 96px; }
+  .std-sym { width: 52px; height: 52px; }
+  .tag { min-height: 40px; padding-top: var(--s1); padding-bottom: var(--s1); }
+  .tag-sym { width: 34px; height: 34px; }
+
+  /* Graphs und Rad/Sat volle Breite mit mehr Höhe (Graph-Höhe rechnet app.js) */
+  .karte { height: max(360px, calc(100dvh - var(--kopf-hoehe) - 220px)); }
+  .pc-mg { --mg-haft-unten: var(--s4); }
+  .leaflet-control-attribution { font-size: var(--mac-zweit) !important; }
+
+  /* Mehr zweispaltig: je Überschrift eine Gruppe, Gruppen werden nie zerteilt */
+  #tab-mehr.mac-gruppiert { display: block; column-count: 2; column-gap: var(--s6); }
+  #tab-mehr.mac-gruppiert > .mac-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); margin-bottom: var(--s6); break-inside: avoid; -webkit-column-break-inside: avoid; }
+
+  /* Teilen als Fenster mittig (nicht Vollbild): Bild links, Formate, Vorlagen und Knöpfe rechts */
+  dialog.teilen { --mac-teilen-h: min(760px, calc(100dvh - 2 * var(--s8)));
+    inset: 0; margin: auto; width: min(1040px, calc(100vw - 2 * var(--s8))); height: var(--mac-teilen-h); border-radius: var(--r-kachel); padding: var(--s3) var(--s5) var(--s4); box-shadow: var(--glas-schatten); }
+  dialog.teilen::backdrop { background: rgba(0,0,0,.55); }
+  dialog.teilen[open] { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr); column-gap: var(--s6); row-gap: var(--s3); }
+  .teilen-kopf { grid-column: 1 / -1; grid-row: 1; }
+  .teilen-bild { grid-column: 1; grid-row: 2 / -1; }
+  .teilen-bild canvas { max-height: calc(var(--mac-teilen-h) - var(--tap) - var(--s3) - var(--s3) - var(--s4)); }
+  .teilen-formate { grid-column: 2; grid-row: 3; justify-content: flex-start; flex-wrap: wrap; overflow: visible; }
+  .teilen-stile { grid-column: 2; grid-row: 4; justify-content: flex-start; flex-wrap: wrap; overflow: visible; }
+  .teilen-knoepfe { grid-column: 2; grid-row: 5; }
+  .teilen-rund.gross { width: 64px; height: 64px; }
+  .teilen-blatt { left: auto; top: 0; width: min(420px, 46%); max-height: none; border-radius: 0 var(--r-kachel) var(--r-kachel) 0; }
+  .blatt-inhalt { padding-bottom: var(--s5); }
+  /* Blätter und Galerie ebenfalls als Fenster mittig */
+  dialog.pc-blatt { margin: auto; border-radius: var(--r-kachel); max-height: min(720px, calc(100dvh - 2 * var(--s8))); }
+  dialog.pc-voll { margin: auto; width: min(860px, calc(100vw - 2 * var(--s8))); height: min(820px, calc(100dvh - 2 * var(--s8))); border-radius: var(--r-kachel); overflow: hidden; }
+  dialog.pc-voll::backdrop { background: rgba(0,0,0,.45); }
+  .pc-voll-kopf { padding-top: var(--s1); }
+}
+/* Aktuell und Stunden bleiben beim Scrollen stehen, wenn das Fenster hoch genug ist */
+@media (min-width: 1024px) and (hover: hover) and (min-height: 700px) {
+  .mac-links { position: sticky; top: calc(var(--kopf-hoehe) + var(--s4)); }
+}

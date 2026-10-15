@@ -64,13 +64,14 @@ async function umleiten(p, modus) {
 }
 
 /* ---------- Messungen im Browser ---------- */
-const MESSEN = () => {
+const MESSEN = (minKlick) => {
+  const g = minKlick || 43.5;   // Mindestgröße der Tippflächen; auf dem Mac mit Maus 28 px (Paket A6)
   const sichtbar = e => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && !e.closest('[hidden]'); };
   const texte = [...document.querySelectorAll('body *')].filter(e => sichtbar(e) && [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()));
   const klein = [...document.querySelectorAll('button, a, label, input, [role="button"]')].filter(e => {
     if (!sichtbar(e) || e.closest('.leaflet-control-attribution') || (e.tagName === 'INPUT' && e.closest('label'))) return false;
     if (e.tagName === 'INPUT' && (e.type === 'radio' || e.type === 'checkbox' || e.hidden)) return false;
-    const r = e.getBoundingClientRect(); return r.height < 43.5 || r.width < 43.5;
+    const r = e.getBoundingClientRect(); return r.height < g || r.width < g;
   }).map(e => (e.textContent.trim() || e.getAttribute('aria-label') || e.className || e.tagName).slice(0, 24) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height));
   return { seitlich: document.documentElement.scrollWidth - innerWidth, kleinsteSchrift: Math.min(...texte.map(e => parseFloat(getComputedStyle(e).fontSize))), klein };
 };
@@ -123,6 +124,8 @@ async function tabsPruefen(p, name, bilder) {
     await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
     pruefe('Wetter-Tab zeigt die Tagesliste', (await s.p.$$('.tag')).length >= 7);
     pruefe('Kopfzeile zeigt das Modell von Open-Meteo', /Beste Mischung/.test(await s.p.textContent('#ortZeile')));
+    const ohneMac = await s.p.evaluate(() => ({ leiste: getComputedStyle(document.getElementById('macLeiste')).display, tabbar: getComputedStyle(document.getElementById('tabbar')).display, huellen: document.querySelectorAll('.mac-spalte, .mac-gruppe').length }));
+    pruefe('390 px unverändert: keine Seitenleiste, Tab-Leiste unten, keine Spalten-Hüllen', ohneMac.leiste === 'none' && ohneMac.tabbar !== 'none' && ohneMac.huellen === 0, ohneMac);
     await foto(s.p, 'hell-390-start');
     await tabsPruefen(s.p, 'hell 390', true);
     // Kamera-Tab öffnet den Teilen-Bildschirm und zeichnet das Bild
@@ -252,6 +255,79 @@ async function tabsPruefen(p, name, bilder) {
         pruefe('Mehr mit Kurzbefehl: kein seitliches Scrollen, Tippflächen ≥ 44 px', mm.seitlich <= 0 && mm.klein.length === 0, mm);
       }
       pruefe('Kurzbefehl ' + name + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+    }
+
+    /* 7. Mac-Layout (Paket A6): ab 1024 px mit Maus Seitenleiste, zwei Spalten, dichte Stufen, Kürzel */
+    for (const [name, opt] of [['mac 1280 hell', { viewport: { width: 1280, height: 800 }, colorScheme: 'light' }], ['mac 1280 dunkel', { viewport: { width: 1280, height: 800 }, colorScheme: 'dark' }],
+      ['mac 1440 hell', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' }], ['mac 1440 dunkel', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' }]]) {
+      console.log(name);
+      s = await neueSeite(b, Object.assign({ deviceScaleFactor: 1 }, opt));
+      await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+      const lay = await s.p.evaluate(() => {
+        const r = sel => { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { x: Math.round(b.left), r: Math.round(b.right), y: Math.round(b.top) }; };
+        return { leiste: r('#macLeiste'), leisteSichtbar: getComputedStyle(document.getElementById('macLeiste')).display !== 'none', tabbar: getComputedStyle(document.getElementById('tabbar')).display,
+          akt: r('.akt'), std: r('.std'), tage: r('.tage'), regen: r('#regenTitel'), inLinks: !!document.querySelector('.mac-links > .akt') && !!document.querySelector('.mac-links > .std'),
+          text: parseFloat(getComputedStyle(document.body).fontSize), titel: parseFloat(getComputedStyle(document.getElementById('ortName')).fontSize), zweit: parseFloat(getComputedStyle(document.querySelector('.update-text')).fontSize) };
+      });
+      pruefe(name + ': Seitenleiste links, keine Tab-Leiste unten', lay.leisteSichtbar && lay.leiste.x === 0 && lay.tabbar === 'none', lay);
+      pruefe(name + ': Wetter zweispaltig (links Aktuell und Stunden, rechts Regenradar und Tage)', lay.inLinks && lay.std.x === lay.akt.x && lay.tage.x > lay.akt.r && lay.regen.x > lay.akt.r && Math.abs(lay.tage.y - lay.akt.y) < 400, lay);
+      pruefe(name + ': dichte Stufen (Text 13, Zweittext 12, Überschrift 20 px)', lay.text === 13 && lay.zweit === 12 && lay.titel === 20, lay);
+      for (const tab of ['wetter', 'graphs', 'radsat', 'mehr']) {
+        await s.p.click('#macLeiste [data-ml-tab="' + tab + '"]'); await s.p.waitForTimeout(tab === 'radsat' ? 700 : 300);
+        const mm = await s.p.evaluate(MESSEN, 27.5);
+        pruefe(name + ': Tab ' + tab + ' ohne seitliches Scrollen', mm.seitlich <= 0, mm.seitlich + ' px');
+        pruefe(name + ': Tab ' + tab + ' kleinste Schrift ≥ 12 px', mm.kleinsteSchrift >= 12, mm.kleinsteSchrift);
+        pruefe(name + ': Tab ' + tab + ' Klickflächen ≥ 28 px', mm.klein.length === 0, mm.klein);
+        if (/1280 hell|1440 dunkel/.test(name)) await foto(s.p, name.replace(/ /g, '-') + '-' + tab);
+      }
+      const mehr = await s.p.evaluate(() => { const g = [...document.querySelectorAll('#tab-mehr > .mac-gruppe')]; return { gruppen: g.length, spalten: new Set(g.map(x => Math.round(x.getBoundingClientRect().left))).size }; });
+      pruefe(name + ': Mehr zweispaltig in Gruppen', mehr.gruppen >= 6 && mehr.spalten === 2, mehr);
+      if (name === 'mac 1280 hell') {
+        // Kürzel
+        await s.p.click('#macLeiste [data-ml-tab="wetter"]');
+        const offen = () => s.p.evaluate(() => ['wetter', 'graphs', 'radsat', 'mehr'].filter(t => !document.getElementById('tab-' + t).hidden)[0]);
+        await s.p.keyboard.press('Meta+2'); const k2 = await offen();
+        await s.p.keyboard.press('Meta+4'); const k4 = await offen();
+        await s.p.keyboard.press('Meta+5'); const k5 = await offen();
+        await s.p.keyboard.press('Meta+1'); const k1 = await offen();
+        pruefe('Kürzel ⌘1, ⌘2, ⌘4, ⌘5 wechseln den Bereich', k1 === 'wetter' && k2 === 'graphs' && k4 === 'radsat' && k5 === 'mehr', [k1, k2, k4, k5]);
+        pruefe('Seitenleiste markiert den Bereich (aria-current)', await s.p.evaluate(() => document.querySelector('#macLeiste [aria-current="page"]').dataset.mlTab === 'wetter'));
+        await s.p.keyboard.press('Meta+k'); await s.p.waitForTimeout(150);
+        pruefe('Kürzel ⌘K öffnet die Ortssuche mit Schreibmarke im Feld', (await offen()) === 'mehr' && await s.p.evaluate(() => document.activeElement && document.activeElement.id === 'sucheFeld'));
+        await s.p.keyboard.press('Escape'); await s.p.keyboard.press('Meta+1');
+        await s.p.evaluate(() => { window.__nichtNeu = 1; });
+        await s.p.keyboard.press('Meta+r'); await s.p.waitForTimeout(400);
+        pruefe('Kürzel ⌘R aktualisiert das Wetter, ohne die Seite neu zu laden', await s.p.evaluate(() => window.__nichtNeu === 1 && document.querySelectorAll('.tag').length >= 7));
+        await s.p.keyboard.press('Meta+3');
+        await s.p.waitForFunction(() => document.getElementById('teilen').open && document.getElementById('tBild').dataset.stand, null, { timeout: 8000 }).catch(() => { });
+        const fenster = await s.p.evaluate(() => { const r = document.getElementById('teilen').getBoundingClientRect(); return { offen: document.getElementById('teilen').open, l: Math.round(r.left), r: Math.round(innerWidth - r.right), o: Math.round(r.top), u: Math.round(innerHeight - r.bottom) }; });
+        pruefe('Kürzel ⌘3 öffnet Teilen als Fenster mittig (nicht Vollbild)', fenster.offen && fenster.l > 20 && Math.abs(fenster.l - fenster.r) <= 2 && fenster.o > 0 && Math.abs(fenster.o - fenster.u) <= 2, fenster);
+        const tm = await s.p.evaluate(MESSEN, 27.5);
+        pruefe('Teilen-Fenster: Klickflächen ≥ 28 px, Schrift ≥ 12 px', tm.klein.length === 0 && tm.kleinsteSchrift >= 12, tm);
+        await foto(s.p, 'mac-1280-hell-teilen');
+        await s.p.click('#tInfosAuf'); await s.p.waitForTimeout(150);
+        await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
+        const esc1 = await s.p.evaluate(() => ({ blatt: !document.getElementById('tBlatt').hidden, offen: document.getElementById('teilen').open }));
+        await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
+        const esc2 = await s.p.evaluate(() => document.getElementById('teilen').open);
+        pruefe('Esc schließt erst das Blatt „Infos", dann das Teilen-Fenster', !esc1.blatt && esc1.offen && !esc2, { esc1, esc2 });
+        // Neue Kacheln anderer Pakete landen rechts, in DOM-Reihenfolge
+        await s.p.evaluate(() => { const k = document.createElement('section'); k.className = 'kachel'; k.id = 'testKachel'; k.textContent = 'Neue Kachel'; document.getElementById('tab-wetter').appendChild(k); });
+        await s.p.waitForTimeout(50);
+        pruefe('Neue Kachel im Tab Wetter landet unten in der rechten Spalte', await s.p.evaluate(() => { const r = document.querySelector('.mac-rechts'); return r && r.lastElementChild && r.lastElementChild.id === 'testKachel'; }));
+        // Fokusring sichtbar in der Seitenleiste
+        // (⌘2 setzt den Fokus auf „Graphs" in der Seitenleiste; nach Tastatur zeigt der Browser den Fokusring)
+        await s.p.keyboard.press('Meta+2'); await s.p.waitForTimeout(100);
+        const ring = await s.p.evaluate(() => { const a = document.activeElement, st = getComputedStyle(a); return { tab: a.dataset && a.dataset.mlTab, stil: st.outlineStyle, breite: st.outlineWidth }; });
+        pruefe('Fokusring in der Seitenleiste (2 px Akzent)', ring.tab === 'graphs' && ring.stil !== 'none' && parseFloat(ring.breite) >= 2, ring);
+        await s.p.keyboard.press('Meta+1');
+        // Schmaler als 1024 px: wieder Tab-Leiste, Hüllen aufgelöst
+        await s.p.setViewportSize({ width: 390, height: 844 }); await s.p.waitForTimeout(300);
+        const zurueck = await s.p.evaluate(() => ({ huellen: document.querySelectorAll('.mac-spalte, .mac-gruppe').length, tabbar: getComputedStyle(document.getElementById('tabbar')).display, seitlich: document.documentElement.scrollWidth - innerWidth, akt: !!document.querySelector('#tab-wetter > .akt') }));
+        pruefe('Fenster schmal gezogen: Tab-Leiste zurück, Spalten aufgelöst, kein seitliches Scrollen', zurueck.huellen === 0 && zurueck.tabbar !== 'none' && zurueck.seitlich <= 0 && zurueck.akt, zurueck);
+      }
+      pruefe(name + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }
   } catch (e) {
