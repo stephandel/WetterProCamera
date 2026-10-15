@@ -1,5 +1,5 @@
 /* sw.js – Offline-Betrieb: App-Hülle aus dem Speicher, Wetterdaten immer frisch (Ersatz: letzter Stand in localStorage) */
-const VERSION = 'wpc-2';
+const VERSION = 'wpc-3';
 const HUELLE = ['./', 'index.html', 'app.css', 'app.js', 'base.css', 'tokens.css', 'symbole.js', 'ikonen.js', 'manifest.json', 'apple-touch-icon.png', 'app-symbol-1024.png', 'foto-mannheim.jpg'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(HUELLE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
