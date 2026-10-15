@@ -8,6 +8,7 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .wsym { display: block; }
 
 /* ---------- Kopfzeile (Leiste über die ganze Breite, Glas) ---------- */
+.titelzeile { background: color-mix(in srgb, var(--bg) 90%, transparent); }   /* deckender als --glas-bg, damit gescrollter Text nicht durchscheint (A6) */
 .titelzeile { min-height: calc(var(--safe-top) + var(--kopf-hoehe)); padding-top: var(--safe-top); padding-bottom: 0; gap: var(--s1); border-width: 0 0 1px; border-radius: 0; box-shadow: none; }
 .ikonknopf { width: var(--tap); height: var(--tap); display: grid; place-items: center; border-radius: var(--r-button); color: var(--akzent); flex: none; }
 .ort-block { flex: 1; min-width: 0; text-align: center; }
@@ -17,10 +18,17 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 /* Hinweisband für Offline und Fehler */
 .hinweis { margin: var(--s3) var(--rand) 0; padding: var(--s3) var(--s4); border-radius: var(--r-button); background: var(--fuellung); font-size: var(--fs-subhead); display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
 .hinweis .button { min-height: var(--tap); }
+.hinweis-text { flex: 1; min-width: 0; }
+/* Leer/Fehler: ruhiger Zustand mit Symbol, einem Satz und einer Aktion (A4) */
+.leer-zustand { display: grid; justify-items: center; text-align: center; gap: var(--s3); padding: var(--s8) var(--s4); }
+.leer-zustand .ikon { width: 48px; height: 48px; color: var(--label-2); }
+.leer-zustand p { margin: 0; max-width: 65ch; color: var(--label-2); }
+.leer-zustand p b { color: var(--label); }
 
 /* ---------- Inhalt ---------- */
 .inhalt { padding-top: var(--kachel-abstand); padding-bottom: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s8) + var(--s4)); max-width: 720px; margin: 0 auto; }
-.tab-seite { display: grid; gap: var(--kachel-abstand); }
+/* minmax(0, 1fr): kein Inhalt darf die Spalte über den rechten Rand drücken (UX-Prüfung A1) */
+.tab-seite { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); }
 .tab-seite[hidden] { display: none; }
 .kachel { padding: var(--s3) var(--s4); }
 .kachel-titel { font-size: var(--fs-footnote); font-weight: 600; color: var(--label-2); margin: 0 0 var(--s2); display: flex; align-items: center; gap: var(--s2); }
@@ -29,7 +37,8 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .tippbar:active { opacity: .6; transform: scale(.97); }
 
 /* (1) Aktuell-Kachel, zweispaltig mit Trennlinie */
-.akt { display: grid; grid-template-columns: 1fr 1fr; padding: 0; }
+/* Beide Hälften gleich breit, Inhalt bleibt innerhalb der Innenabstände (UX-Prüfung A2) */
+.akt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0; }
 .akt-l, .akt-r { padding: var(--s3) var(--s4); min-width: 0; }
 .akt-l { display: grid; grid-template-rows: auto 1fr auto; border-right: 1px solid var(--trenner); }
 .akt-kopf { font-size: var(--fs-footnote); }
@@ -40,7 +49,8 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .akt-regen { font-size: var(--fs-footnote); color: var(--label-2); white-space: nowrap; }
 .akt-lage { text-align: center; font-weight: 600; font-size: var(--fs-subhead); margin-bottom: var(--s3); }
 .werte { display: grid; gap: var(--s1); font-size: var(--fs-subhead); }
-.werte > div { display: flex; justify-content: space-between; gap: var(--s2); }
+.werte > div { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: var(--s2); }
+.werte > div > dd { margin-left: auto; }   /* bei großer Schrift rutscht der Wert unter die Bezeichnung, bleibt rechtsbündig */
 .werte dt { color: var(--label-2); }
 .werte dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .windzeile { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s3); }
@@ -62,12 +72,13 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .mk-leer { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: var(--s4); color: var(--label-2); font-size: var(--fs-footnote); }
 .mk-leer .ikon { width: 32px; height: 32px; margin: 0 auto var(--s2); }
 .mk-leer p { margin: 0; }
-.akt-punkte { position: absolute; z-index: 500; left: var(--s3); bottom: var(--s2); display: flex; gap: 5px; }
+.akt-punkte { position: absolute; z-index: 500; left: var(--s3); bottom: var(--s2); display: flex; gap: var(--s2); }
 .akt-r:not(.medien) .akt-punkte { position: static; margin-top: var(--s3); }
-.akt-punkte i { width: 6px; height: 6px; border-radius: 50%; background: var(--label-3); }
+.akt-punkte i { width: var(--s2); height: var(--s2); border-radius: 50%; background: var(--label-3); }   /* 8 px statt 6 px (A5) */
 .akt-punkte i.an { background: var(--label); }
 .medien .akt-punkte i { background: rgba(255,255,255,.45); } .medien .akt-punkte i.an { background: #fff; }
 #ansichtListe label { justify-content: space-between; }
+#ansichtListe label.aus > .modell-text > span { color: var(--label-2); }
 #ansichtListe input { width: 22px; height: 22px; accent-color: var(--akzent); }
 
 /* (2) Drei Stundenspalten */
@@ -87,6 +98,8 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .regen-balken i.trocken { background: var(--fuellung); opacity: 1; }
 .regen-achse { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--label-2); margin-top: var(--s1); }
 .mehr-link { margin-top: var(--s3); }
+/* Text auf Akzentfläche: hell weiß, dunkel schwarz (DESIGN.md Regel 9) */
+.button:not(.leise):not(.rand) { color: var(--auf-akzent); }
 
 /* (3) Tagesliste: gemeinsames Raster, Zeilen leicht getönt (zwei Töne wechselnd) */
 .tage { padding: 0; overflow: hidden; display: grid; grid-template-columns: repeat(5, auto); justify-content: space-between; column-gap: var(--s2); }
@@ -118,12 +131,16 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .sk.klein { min-height: 120px; }
 
 /* ---------- Graphs ---------- */
-.graph svg { width: 100%; height: auto; display: block; overflow: visible; }
+.graph svg { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; cursor: crosshair; }
 .graph .linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
 .graph .flaeche { fill: var(--akzent-fuellung); }
 .graph .regen { fill: var(--akzent); opacity: .45; }
 .graph .gitter { stroke: var(--trenner); stroke-width: 1; }
-.graph text { fill: var(--label-2); font-size: 11px; font-family: var(--font); font-variant-numeric: tabular-nums; }
+.graph text { fill: var(--label-2); font-size: var(--fs-caption); font-family: var(--font); font-variant-numeric: tabular-nums; }
+.graph .wahl-linie { stroke: var(--label-2); stroke-width: 1; }
+.graph .wahl-punkt { fill: var(--akzent); stroke: var(--bg-2); stroke-width: 2; }
+.graph-wert { margin: var(--s2) 0 0; font-size: var(--fs-subhead); color: var(--label-2); min-height: 1.4em; }
+.graph-wert.an { color: var(--label); font-weight: 600; }
 .graph .jetzt { stroke: var(--label-3); stroke-dasharray: 3 3; }
 .graph-legende { display: flex; gap: var(--s4); flex-wrap: wrap; font-size: var(--fs-footnote); color: var(--label-2); margin-top: var(--s2); }
 .graph-legende span::before { content: ""; display: inline-block; width: 12px; height: 4px; border-radius: 2px; background: var(--akzent); margin-right: var(--s2); vertical-align: middle; }
@@ -139,6 +156,10 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .ebenen .chip { padding: 0 var(--s4); }
 .temp-marke { background: var(--bg-2); color: var(--label); border-radius: var(--r-chip); padding: 2px var(--s2); font-weight: 600; font-size: var(--fs-footnote); box-shadow: var(--glas-schatten); white-space: nowrap; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 2px; }
 .temp-marke .wsym { width: 22px; height: 22px; }
+.grund-ruhig { filter: saturate(.35); }   /* ruhigere Grundkarte, damit Radar und Satellit hervortreten (A9) */
+.radar-satz { font-size: var(--fs-subhead); margin: 0; }
+#ebeneQuelle { display: grid; gap: var(--s2); }
+#ebeneQuelle .info { margin: 0; }
 .leaflet-container { font-family: var(--font); background: var(--bg-2); }
 .leaflet-control-attribution { font-size: 11px !important; }
 
@@ -172,7 +193,9 @@ dialog.teilen::backdrop { background: #000; }
 .teilen-kopf { display: flex; justify-content: space-between; align-items: center; }
 .teilen-text { color: #fff; font-size: var(--fs-body); min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); }
 #tInfosAuf, #tInfosZu { color: var(--t-akzent); font-weight: 600; }
-.teilen-bild { min-height: 0; display: grid; place-items: center; overflow: hidden; }
+.teilen-bild { min-height: 0; display: grid; place-items: center; overflow: hidden; position: relative; }
+#tBild:focus { outline: none; }   /* nur Vorschau, keine Tippfläche */
+.teilen-beispiel { position: absolute; top: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s1) var(--s3); border-radius: var(--r-chip); background: rgba(0,0,0,.7); color: #fff; font-size: var(--fs-footnote); font-weight: 600; white-space: nowrap; max-width: calc(100% - var(--s4)); overflow: hidden; text-overflow: ellipsis; }
 .teilen-bild canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: var(--s2); }
 /* Format-Chips über den Vorlagen; zu viele für die Breite: waagrecht wischen */
 .teilen-formate { display: flex; gap: var(--s2); overflow-x: auto; justify-content: safe center; scrollbar-width: none; padding: 2px; }

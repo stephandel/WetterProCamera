@@ -74,7 +74,10 @@
   --bg: #F2F2F7;
   --bg-2: #FFFFFF;
   --label: #000000;
-  --label-2: rgba(60,60,67,.6);
+  /* Zweittext hell dunkler (UX-Prüfung A3, 15.10.2026): Apples 60 % ergab nur 3,4:1 auf Weiß.
+     78 % ergibt 5,6:1 auf --bg-2 #FFF, 5,3:1 auf --bg #F2F2F7, 5,4:1 auf den Tagestönungen, 4,6:1 auf --fuellung.
+     Dunkel bleibt Apples Wert (6,0:1 auf --bg-2 #1C1C1E). */
+  --label-2: rgba(60,60,67,.78);
   --label-3: rgba(60,60,67,.3);
   --trenner: rgba(60,60,67,.29);
   --fuellung: rgba(120,120,128,.2);

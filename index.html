@@ -23,7 +23,7 @@
 <body>
 
 <header class="titelzeile glas" id="titelzeile">
-  <button class="ikonknopf tippbar" id="btnMenue" aria-label="Mehr: Orte und Einstellungen"></button>
+  <button class="ikonknopf tippbar" id="btnMenue" aria-label="Meine Orte"></button>
   <div class="ort-block">
     <h1 class="ort" id="ortName">Mannheim</h1>
     <div class="modell" id="ortZeile">Modell: Beste Mischung</div>
@@ -46,7 +46,7 @@
 <!-- Teilen-Bildschirm: immer schwarz, Knöpfe wie in der Kamera-App -->
 <dialog class="teilen" id="teilen" aria-label="Wetter mit Foto teilen">
   <div class="teilen-kopf"><button class="teilen-text tippbar" id="tAbbrechen">Abbrechen</button><button class="teilen-text tippbar" id="tInfosAuf" aria-haspopup="true" aria-controls="tBlatt">Infos</button></div>
-  <div class="teilen-bild"><canvas id="tBild" role="img" aria-label="Vorschau des Bildes zum Teilen"></canvas></div>
+  <div class="teilen-bild"><canvas id="tBild" role="img" aria-label="Vorschau des Bildes zum Teilen" tabindex="-1" autofocus></canvas><p class="teilen-beispiel" id="tBeispiel">Beispielfoto · tippe auf „Fotos" oder „Kamera"</p></div>
   <div class="teilen-formate" id="tFormate" role="radiogroup" aria-label="Format des Bildes"></div>
   <div class="teilen-stile" id="tStile" role="radiogroup" aria-label="Gestaltung des Bildes"></div>
   <div class="teilen-knoepfe">

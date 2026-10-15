@@ -8,6 +8,20 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - Reiter: **Wetter** (Aktuell, nächste Stunden, Regen der nächsten 2 Stunden, 8 Tage), **Graphs** (48 Stunden), **Kamera** (Wetter mit Foto teilen), **Rad/Sat** (Radar von [RainViewer](https://www.rainviewer.com), Satellit von EUMETSAT, Temperaturkarte), **Mehr** (Ortssuche, Favoriten, Wettermodell, Einheiten, Quellen, Webcam-Hinweis)
 - Wetter mit Foto teilen (6 Vorlagen, 6 Formate, wie früher bei WeatherPro)
 
+### Neu am 15.10.2026 (Paket 6: Funde der UX-Prüfung)
+
+- **Mehr-Tab:** rechter Rand wie links (16 px); Quellen stehen jetzt als eigene Zeilen mit großer Tippfläche (44 px) statt kleiner Links im Text.
+- **Aktuell-Kachel:** Werte halten rechts denselben Abstand wie links; Luftdruck ohne Nachkommastelle. Die Webcam-Ansicht bleibt aus, bis es eine freigegebene Webcam gibt. Die Punkte sind größer, beim ersten Start erklärt ein kurzer Tipp das Umschalten.
+- **Grauer Zweittext** im hellen Modus dunkler: jetzt 5,6:1 auf Weiß (vorher 3,4:1). Dunkel unverändert 6,0:1.
+- **Offline:** Der letzte Stand bleibt sichtbar, oben steht „Offline · Stand 14:32 Uhr“. Ganz ohne Daten erscheint ein ruhiger Zustand mit Symbol, einem Satz und „Erneut versuchen“.
+- **Kopfzeile** deckender, gescrollter Text scheint nicht mehr durch. Links steht ein **Orte-Symbol** (Pin) statt der drei Striche; es springt zu „Meine Orte“.
+- **Graphs:** Achsenzahlen echte 12 px; Antippen der Kurve zeigt Uhrzeit, Temperatur und Regen. Die Regen-Kachel auf „Wetter“ ist bei Trockenheit kurz (keine leeren Balken).
+- **Rad/Sat:** „Abspielen“ in Akzentfarbe, Satz „Kein Regen in Sicht“, ruhigere (blassere) Grundkarte, Quelle als eigene Zeile.
+- **Teilen:** Beispielfoto ist gekennzeichnet („Beispielfoto · tippe auf Fotos oder Kamera“), kein Fokusring mehr auf „Abbrechen“ beim Öffnen. Vorlage **Zeitstempel** zeigt das Wettersymbol. Auf heller Fläche (Farbton hell/automatisch, Rahmen, Polaroid) bekommt das Wettersymbol einen zarten dunklen Schein.
+- **Mein Standort:** Liegt ein bekannter Ort (Favorit, Standardort, zuletzt gesuchter Ort) näher als 8 km, gilt dessen Name. Sonst bleibt „Mein Standort“, und aufs Teilen-Bild kommt kein Ort. Grund: Open-Meteo hat keine Rückwärtssuche (Koordinaten → Stadt), andere Dienste (z. B. Nominatim) nur mit Erlaubnis.
+- Knöpfe in Akzentfarbe haben im Dunkelmodus schwarze Schrift (DESIGN.md Regel 9).
+- Service Worker `wpc-4`.
+
 ### Neu am 15.10.2026 (Paket 3)
 
 - **App-Symbol „Linse"** (Entwurf A): `app-symbol-1024.png` und `apple-touch-icon.png` (180 px, 30 KB). Die Entwürfe in `symbol-entwuerfe/` bleiben nur lokal (`.gitignore`).
