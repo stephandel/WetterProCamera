@@ -69,11 +69,15 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .mehr-link { margin-top: var(--s3); }
 
 /* (3) Tagesliste: gemeinsames Raster, Zeilen leicht getönt (zwei Töne wechselnd) */
-.tage { padding: 0; overflow: hidden; display: grid; grid-template-columns: auto auto 1fr auto auto; column-gap: var(--s3); }
+.tage { padding: 0; overflow: hidden; display: grid; grid-template-columns: repeat(5, auto); justify-content: space-between; column-gap: var(--s2); }
 .tag { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; padding: var(--s2) var(--s4); min-height: var(--tap); }
 .tage > .tag:nth-child(odd) { background: var(--tag-a); }
 .tage > .tag:nth-child(even) { background: var(--tag-b); }
 .tage > .tag + .tag { border-top: 1px solid var(--trenner); }
+/* Austariert wie bei WeatherPro: erste Spalte links, letzte rechts, dazwischen mittig */
+.tag > * { justify-self: center; }
+.tag > :first-child { justify-self: start; }
+.tag > :last-child { justify-self: end; }
 .tag-name { line-height: 1.15; }
 .tag-name b { font-weight: 600; display: block; }
 .tag-name small { font-size: var(--fs-caption); color: var(--label-2); }
