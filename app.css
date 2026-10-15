@@ -284,3 +284,118 @@ dialog.teilen::backdrop { background: #000; }
 .teilen-tipp { position: absolute; bottom: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s2) var(--s4); border-radius: var(--r-chip); background: var(--t-flaeche); color: #fff; font-size: var(--fs-subhead); font-weight: 600; text-align: center; width: max-content; max-width: calc(100% - var(--s4)); }
 /* Plus/Minus der Karte (Leaflet, jetzt lokal): Tippfläche 44 px statt 30 px */
 .leaflet-touch .leaflet-control-zoom.leaflet-bar a, .leaflet-control-zoom.leaflet-bar a { width: var(--tap); height: var(--tap); line-height: var(--tap); }
+/* === Paket A: App-Grundlagen (15.10.2026) === */
+
+/* „Letztes Update" oben im Tab Wetter, daneben der Knopf für Mac und iPad */
+.update-zeile { display: flex; align-items: center; justify-content: space-between; gap: var(--s2) var(--s3); flex-wrap: wrap; margin: calc(-1 * var(--s2)) 0 calc(-1 * var(--s1)); }
+.update-text { font-size: var(--fs-footnote); color: var(--label-2); font-variant-numeric: tabular-nums; min-width: 0; }
+.update-knopf { min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s4); font-size: var(--fs-subhead); }
+
+/* Zieh-Anzeige: schwebt unter der Kopfzeile (Glas erlaubt, schwebende Fläche) */
+.zug-anzeige { position: fixed; z-index: 15; top: calc(var(--safe-top) + var(--kopf-hoehe) + var(--s2)); left: 50%; transform: translate(-50%, 0); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); border-radius: var(--r-chip); font-size: var(--fs-footnote); font-weight: 600; color: var(--label); white-space: nowrap; max-width: calc(100vw - 2 * var(--rand)); }
+.zug-anzeige:not(.sichtbar) { visibility: hidden; }
+.zug-anzeige.laedt { transition: transform var(--dauer) var(--ease), opacity var(--dauer) var(--ease); }
+.zug-pfeil { display: grid; color: var(--akzent); transition: transform var(--dauer) var(--ease); }
+.zug-pfeil .ikon { width: 17px; height: 17px; }
+.zug-anzeige.bereit .zug-pfeil { transform: rotate(180deg); }
+.zug-dreh { display: none; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--fuellung); border-top-color: var(--akzent); }
+.zug-anzeige.laedt .zug-pfeil { display: none; }
+.zug-anzeige.laedt .zug-dreh { display: block; animation: zug-dreh .8s linear infinite; }
+@keyframes zug-dreh { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .zug-anzeige, .zug-anzeige.laedt, .zug-pfeil { transition: none; }
+  .zug-anzeige.laedt .zug-dreh { animation: none; border-color: var(--akzent); }   /* ohne Drehen: ruhiger Ring, Text sagt „Aktualisiere …" */
+}
+
+/* Kurzer Hinweis nach dem Teilen („Geteilt ✓"), schwebt über der Tab-Leiste */
+.toast { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s8)); padding: var(--s3) var(--s5); border-radius: var(--r-chip);
+  font-size: var(--fs-body); font-weight: 600; color: var(--label); max-width: calc(100vw - 2 * var(--rand)); text-align: center; }
+
+/* Pilot: Wochen-Rückmeldung und Datenschutz im Tab „Mehr" */
+.pilot { display: grid; gap: var(--s2); justify-items: start; }
+.pilot p { margin: 0; }
+.pilot-satz { font-size: var(--fs-body); font-weight: 600; font-variant-numeric: tabular-nums; }
+.datenschutz p { margin: 0; font-size: var(--fs-body); max-width: 65ch; }
+.datenschutz p + p { margin-top: var(--s2); }
+
+/* Blatt „Rückmeldung" (deckend, kein Glas) */
+dialog.rm-blatt { width: min(560px, calc(100% - 2 * var(--rand))); max-width: none; max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 2 * var(--s4)); padding: 0; border: 0; border-radius: var(--r-kachel); background: var(--bg); color: var(--label); overflow: hidden; }
+dialog.rm-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+dialog.rm-blatt::backdrop { background: rgba(0,0,0,.45); }
+.rm-kopf { display: grid; grid-template-columns: auto minmax(0, 1fr) var(--tap); align-items: center; padding: var(--s1) var(--s2); border-bottom: 1px solid var(--trenner); background: var(--bg-2); }
+.rm-kopf h2 { margin: 0; padding: 0 var(--s2); font-size: var(--fs-body); font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rm-text { justify-self: start; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); color: var(--akzent); font-size: var(--fs-body); }
+.rm-inhalt { overflow-y: auto; overscroll-behavior: contain; padding: var(--s3) var(--s4) var(--s5); display: grid; gap: var(--s2); }
+.rm-woche { margin: 0 0 var(--s2); font-size: var(--fs-body); font-weight: 600; }
+.rm-feld { font-size: var(--fs-subhead); font-weight: 600; margin-top: var(--s2); }
+.rm-inhalt textarea, .rm-inhalt input { width: 100%; min-height: var(--tap); border-radius: var(--r-button); border: 1px solid var(--trenner); background: var(--bg-2); color: var(--label); padding: var(--s2) var(--s3); font: inherit; font-size: max(16px, var(--fs-body)); resize: vertical; }
+.rm-inhalt .info { margin: var(--s2) 0 0; }
+.rm-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+.rm-status { margin: 0; min-height: 1.3em; font-size: var(--fs-subhead); color: var(--label-2); }
+.rm-ersatz { min-height: 160px; font-size: var(--fs-subhead); }
+
+/* Große Schrift (Dynamic Type): auf iPhone und iPad folgt die Grundgröße der Systemeinstellung.
+   Die Stufen aus tokens.css sind auf 16 px gerechnet; -apple-system-body ist 17 px. Deshalb hier dieselben Stufen
+   geteilt durch 17, damit bei Standardgröße alles gleich groß bleibt (tokens.css bleibt unverändert). */
+@supports (font: -apple-system-body) and (-webkit-touch-callout: none) {
+  html { font: -apple-system-body; }
+  :root { --fs-large-title: 2rem; --fs-title1: 1.647rem; --fs-title2: 1.294rem; --fs-title3: 1.176rem; --fs-body: 1rem; --fs-subhead: .882rem; --fs-footnote: .765rem; --fs-caption: .706rem; --fs-hero: 5.941rem; }
+}
+/* Umbruch bei großer Schrift: nichts ragt über den Rand, Werte dürfen zweizeilig werden */
+.tag-name, .tag-temp, .tag-wind, .tag-zusatz { min-width: 0; }
+.std { container-type: inline-size; }
+@container (max-width: 17em) { .std-fuss { flex-wrap: wrap; } }   /* Regen und Temperatur untereinander, erst bei großer Schrift */
+.akt-fuss { flex-wrap: wrap; }
+.boeen { min-width: 0; }
+.windzeile { flex-wrap: wrap; }
+.hinweis-text { flex: 1 1 14em; overflow-wrap: break-word; }   /* wird es eng, rutscht der Knopf unter den Text */
+.tabbar.pille button > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Tagesliste: Wird die Schrift im Verhältnis zur Breite zu groß (ab etwa 140 % auf dem iPhone), rücken
+   Sonne, Regenrisiko und Regenmenge in eine zweite Zeile unter die Werte. em in der Abfrage = Schriftgröße der Liste. */
+.tage { container-type: inline-size; }
+@container (max-width: 15em) {
+  .tag { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "name sym temp wind" "zusatz zusatz zusatz zusatz"; column-gap: var(--s3); row-gap: var(--s1); }
+  .tag > .tag-name { grid-area: name; } .tag > .tag-sym { grid-area: sym; } .tag > .tag-temp { grid-area: temp; justify-self: end; } .tag > .tag-wind { grid-area: wind; justify-self: end; }
+  .tag > .tag-zusatz { grid-area: zusatz; justify-self: start; display: flex; flex-wrap: wrap; column-gap: var(--s4); }
+}
+
+/* Querformat (iPhone liegend, z. B. 844 × 390) */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Kopfzeile niedriger: Ort und Modell in einer Zeile; Safe Areas links und rechts (Notch) */
+  .titelzeile { padding-left: max(var(--rand), var(--safe-left)); padding-right: max(var(--rand), var(--safe-right)); }
+  .ort-block { display: flex; align-items: baseline; justify-content: center; gap: var(--s2); }
+  .ort { font-size: var(--fs-title3); min-width: 0; }
+  .modell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .hinweis { margin-left: max(var(--rand), var(--safe-left)); margin-right: max(var(--rand), var(--safe-right)); }
+  /* Inhalt volle Breite (Graphs, Rad/Sat), Platz für die schmalere Tab-Leiste */
+  .inhalt { max-width: none; padding-left: max(var(--rand), var(--safe-left)); padding-right: max(var(--rand), var(--safe-right)); padding-top: var(--s3);
+    padding-bottom: calc(var(--tap) + var(--safe-bottom) + var(--s8)); }
+  /* Tab-Leiste bleibt unten, aber schmaler: Symbol und Beschriftung nebeneinander */
+  .tabbar.pille { max-width: 600px; bottom: calc(var(--safe-bottom) + var(--s1)); padding: 2px; }
+  .tabbar.pille button { flex-direction: row; gap: var(--s1); min-height: var(--tap); min-width: 0; padding: 0 var(--s2); }
+  .tabbar.pille button > span { min-width: 0; }
+  .tabbar.pille button .ikon { width: 20px; height: 20px; }
+  .tab-kamera .ausloeser { width: 28px; height: 28px; }
+  .toast { bottom: calc(var(--tap) + var(--safe-bottom) + var(--s5)); }
+  .zug-anzeige { top: calc(var(--kopf-hoehe) + var(--s2)); }
+  /* Tab Wetter zweispaltig: Aktuell-Kachel links (bleibt stehen), Stunden und Tage rechts */
+  #tab-wetter:has(> .akt) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  #tab-wetter:has(> .akt) > .update-zeile { grid-column: 1 / -1; }
+  #tab-wetter:has(> .akt) > .akt { grid-column: 1; grid-row: 2 / span 3; position: sticky; top: calc(var(--kopf-hoehe) + var(--s3)); }
+  #tab-wetter:has(> .akt) > :not(.akt):not(.update-zeile) { grid-column: 2; }
+  .karte { height: calc(100dvh - var(--kopf-hoehe) - var(--tap) - 140px); min-height: 200px; }
+  /* Teilen-Bildschirm: Bild links, Formate, Vorlagen und Knöpfe rechts */
+  dialog.teilen { padding: var(--s2) max(var(--rand), var(--safe-right)) calc(var(--safe-bottom) + var(--s2)) max(var(--rand), var(--safe-left)); }
+  dialog.teilen[open] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr); column-gap: var(--s5); row-gap: var(--s2); }
+  .teilen-kopf { grid-column: 1 / -1; grid-row: 1; }
+  .teilen-bild { grid-column: 1; grid-row: 2 / -1; }
+  .teilen-bild canvas { max-height: calc(100dvh - var(--tap) - var(--safe-bottom) - 3 * var(--s2)); }   /* ganze Höhe neben den Knöpfen, nichts abgeschnitten */
+  .teilen-formate { grid-column: 2; grid-row: 3; justify-content: flex-start; }
+  .teilen-stile { grid-column: 2; grid-row: 4; justify-content: flex-start; }
+  .teilen-knoepfe { grid-column: 2; grid-row: 5; }
+  .teilen-rund.gross { width: 64px; height: 64px; }
+  .teilen-blatt { left: auto; top: 0; width: min(440px, 56%); max-height: none; border-radius: var(--r-kachel) 0 0 var(--r-kachel); }
+  .blatt-inhalt { padding-right: max(var(--rand), var(--safe-right)); padding-bottom: calc(var(--safe-bottom) + var(--s5)); }
+  dialog.rm-blatt { max-height: calc(100dvh - 2 * var(--s2)); }
+}

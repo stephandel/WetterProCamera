@@ -93,10 +93,12 @@
       '&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto&forecast_days=8&wind_speed_unit=kmh&models=' + modell;
   }
   function kopfModell() { $('#ortZeile').textContent = 'Modell: ' + modellInfo()[1]; }
+  // Fehler bekommen eine Art (Paket A): 'ueberlastet' (429), 'http' (andere Nummer), 'zeit' (keine Antwort), 'offline' (kein Netz)
   function holeJson(url) {
-    var steuer = 'AbortController' in window ? new AbortController() : null;
-    var t = setTimeout(function () { if (steuer) steuer.abort(); }, 12000);
-    return fetch(url, steuer ? { signal: steuer.signal } : {}).then(function (r) { clearTimeout(t); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    var steuer = 'AbortController' in window ? new AbortController() : null, zeitUm = false;
+    var t = setTimeout(function () { zeitUm = true; if (steuer) steuer.abort(); }, 12000);
+    return fetch(url, steuer ? { signal: steuer.signal } : {}).then(function (r) { clearTimeout(t); if (!r.ok) throw fehlerArt('http', r.status); return r.json(); },
+      function (e) { clearTimeout(t); throw fehlerArt(zeitUm ? 'zeit' : 'offline', 0, e); });
   }
   function laden() {
     if (laeuft) return; laeuft = true;
@@ -104,28 +106,29 @@
     if (alt && !daten) { daten = alt.d; stand = alt.zeit; render(); }
     else if (!daten) renderSkeleton();
     holeJson(urlVorhersage(ort)).then(function (d) {
-      daten = d; ladeFehler = false; stand = Date.now(); speicher.schreiben(cacheKey(ort), { d: d, zeit: stand }); hinweis(null);
+      daten = d; ladeFehler = false; stand = Date.now(); speicher.schreiben(cacheKey(ort), { d: d, zeit: stand }); ladeErgebnis(null); hinweis(null);
       try { render(); } catch (e) { console.error('Darstellung', e); }   // Zeichenfehler nicht als Netzfehler melden
     }, function (e) {
       console.warn('Wetterdaten', e);
-      laeuft = false; ladeFehler = !daten; hinweis(daten ? 'offline' : 'fehler');
-    }).then(function () { laeuft = false; });
+      laeuft = false; ladeFehler = !daten; ladeErgebnis(e); hinweis(daten ? 'offline' : 'fehler');
+    }).then(function () { laeuft = false; ladeEnde(); });
   }
   function hinweis(art) {
     var h = $('#hinweis');
     if (!art) { h.hidden = true; h.innerHTML = ''; return; }
-    var uhr = stand ? new Date(stand).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
     if (art === 'fehler') { h.hidden = true; h.innerHTML = ''; render(); return; }   // ohne Daten: ruhiger Zustand im Inhalt (UX-Prüfung A4)
-    // Mit Daten: letzter Stand bleibt sichtbar, oben ein Band mit Uhrzeit (DESIGN.md Regel 26)
-    h.innerHTML = Ikon('cloud') + '<span class="hinweis-text"><b>Offline · Stand ' + uhr + ' Uhr</b><br>Du siehst den letzten Stand.</span><button class="button leise" id="btnNeu">Erneut versuchen</button>';
-    h.hidden = false; $('#btnNeu').addEventListener('click', laden);
+    // Mit Daten: letzter Stand bleibt sichtbar, oben ein Band mit Grund und Uhrzeit (DESIGN.md Regel 26, Fehlerarten: Paket A)
+    var f = fehlerText();
+    h.innerHTML = Ikon('cloud') + '<span class="hinweis-text"><b>' + f.titel + ' · ' + standText() + '</b><br>' + f.satz + ' Du siehst den letzten Stand.</span><button class="button leise" id="btnNeu">Erneut versuchen</button>';
+    h.hidden = false; $('#btnNeu').addEventListener('click', neuVersuchen);
   }
   // Leer- und Fehlerzustand: Symbol, ein Satz, eine Aktion (DESIGN.md Regel 35)
   function keineDaten(ziel) {
+    var f = fehlerText();
     ziel.innerHTML = '<section class="kachel leer-zustand" aria-live="polite">' + Ikon('cloud') +
-      '<p><b>Keine Verbindung.</b><br>Die Wetterdaten ließen sich nicht laden. Sobald du wieder online bist, geht es weiter.</p>' +
+      '<p><b>' + f.titel + '.</b><br>' + f.satz + '</p>' +
       '<button class="button" data-neu="1">Erneut versuchen</button></section>';
-    $('[data-neu]', ziel).addEventListener('click', function () { if (aktiv === 'wetter') renderSkeleton(); laden(); });
+    $('[data-neu]', ziel).addEventListener('click', function () { if (aktiv === 'wetter') renderSkeleton(); neuVersuchen(); });
   }
 
   function hinweisKurz(t) { var h = $('#hinweis'); if (!h.hidden && h.querySelector('button')) return; h.textContent = t; h.hidden = false; clearTimeout(hinweisKurz.t); hinweisKurz.t = setTimeout(function () { if (h.textContent === t) h.hidden = true; }, 3000); }
@@ -235,7 +238,7 @@
         '<div class="tag-wind">' + windrose(d.wind_direction_10m_dominant[i]) + '<span><b>' + windWert(d.wind_speed_10m_max[i]) + '</b><small>' + EINHEITEN[windEinheit] + '</small></span></div></div>';
     }).join('');
     var tage = '<section class="kachel tage" aria-label="Vorhersage für die nächsten Tage">' + zeilen + '</section>';
-    $('#tab-wetter').innerHTML = akt + std + regen + tage;
+    $('#tab-wetter').innerHTML = updateZeile() + akt + std + regen + tage;
     bindUmschalter(ansicht);
     // Einmaliger Hinweis, dass die linke Hälfte umschaltet (UX-Prüfung A5)
     if (ansichten().length > 1 && !speicher.lesen('wpc-tipp-akt', false)) { speicher.schreiben('wpc-tipp-akt', true); hinweisKurz('Tipp: Tippe links auf „Aktuell", dann zeigt die rechte Hälfte ' + ansichten().map(function (x) { return ANSICHT_NAMEN[x]; }).join(' oder ') + '.'); }
@@ -822,8 +825,10 @@
       $('#tBild').toBlob(function (blob) {
         if (!blob) return;
         var datei = new File([blob], 'wetter-' + (ortFuerBild() || 'foto').toLowerCase().replace(/[^a-z0-9]+/g, '-') + (T.datei === 'png' ? '.png' : '.jpg'), { type: typ });
-        if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetter' + (ortFuerBild() ? ' in ' + ortFuerBild() : '') }).catch(function () { }); return; }
-        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = datei.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+        var sichern = function () { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = datei.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800); teilenErfolg('gesichert'); };
+        // Erfolg: Bildschirm schließen und kurz bestätigen; Abbruch durch dich (AbortError) ohne Hinweis (Paket A)
+        if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetter' + (ortFuerBild() ? ' in ' + ortFuerBild() : '') }).then(function () { teilenErfolg('geteilt'); }, function (e) { if (!e || e.name !== 'AbortError') sichern(); }); return; }
+        sichern();
       }, typ, T.qualitaet / 100);
     });
   }
@@ -1035,6 +1040,241 @@
     })();
   }
   kameraDirekt();
+  /* === Paket A: App-Grundlagen (15.10.2026) === */
+  // Inhalt: Fehlerarten mit automatischem neuem Versuch, „Letztes Update" und Ziehen zum Aktualisieren,
+  // Erfolgshinweis nach dem Teilen, Nutzungszähler mit Wochen-Rückmeldung (Pilot), Datenschutz im Tab „Mehr".
+  // Kurzname „WP Camera" steht in manifest.json und index.html, Querformat und große Schrift in app.css.
+
+  /* --- A2: Fehlerarten trennen, letzter Stand bleibt sichtbar --- */
+  var letzterFehler = null;
+  var NEU_WARTEN = [30, 60, 120];   // Sekunden bis zum nächsten Versuch, wenn der Dienst überlastet ist (HTTP 429)
+  var neuVersuch = { stufe: 0, timer: null, takt: null, bis: 0 };
+  function fehlerArt(art, nr, ursache) {
+    var e = new Error(art === 'http' ? 'HTTP ' + nr : art);
+    e.art = art === 'http' && nr === 429 ? 'ueberlastet' : art; e.nr = nr || 0;
+    if (ursache) e.ursache = ursache;
+    return e;
+  }
+  function neuVersuchStopp() { clearTimeout(neuVersuch.timer); clearInterval(neuVersuch.takt); neuVersuch.timer = neuVersuch.takt = null; neuVersuch.bis = 0; }
+  function countdownText() { var s = Math.max(0, Math.ceil((neuVersuch.bis - Date.now()) / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  // Wird von laden() nach jedem Versuch aufgerufen: null = geklappt, sonst der Fehler
+  function ladeErgebnis(e) {
+    letzterFehler = e || null;
+    neuVersuchStopp();
+    if (!e) { neuVersuch.stufe = 0; return; }
+    if (e.art === 'ueberlastet' && neuVersuch.stufe < NEU_WARTEN.length) {
+      var s = NEU_WARTEN[neuVersuch.stufe++];
+      neuVersuch.bis = Date.now() + s * 1000;
+      neuVersuch.timer = setTimeout(function () { neuVersuchStopp(); laden(); }, s * 1000);
+      neuVersuch.takt = setInterval(function () { $$('[data-countdown]').forEach(function (el) { el.textContent = countdownText(); }); }, 1000);
+    }
+  }
+  function neuVersuchen() { neuVersuchStopp(); laden(); }
+  // Titel und ein Satz je Fehlerart (ruhig, ohne Fachwörter)
+  function fehlerText() {
+    var e = letzterFehler, art = navigator.onLine === false ? 'offline' : (e && e.art) || 'offline';
+    if (art === 'ueberlastet') return { titel: 'Der Wetterdienst ist gerade überlastet', satz: neuVersuch.timer ? 'Neuer Versuch in <span class="zahl" data-countdown>' + countdownText() + '</span> Minuten.' : 'Versuch es in ein paar Minuten noch einmal.' };
+    if (art === 'zeit') return { titel: 'Der Wetterdienst antwortet nicht', satz: 'Vielleicht ist die Verbindung gerade langsam.' };
+    if (art === 'http') return { titel: 'Der Wetterdienst meldet einen Fehler (Nr. ' + e.nr + ')', satz: 'Meist ist das nach kurzer Zeit vorbei.' };
+    return { titel: 'Offline', satz: 'Sobald du wieder online bist, lädt die App von selbst neu.' };
+  }
+  // „Stand 14:32 Uhr", bei älterem Stand mit Datum: „Stand 14.10. 14:32 Uhr"
+  function standText(praefix) {
+    if (!stand) return (praefix || 'Stand') + ' unbekannt';
+    var d = new Date(stand), h = new Date(), uhr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    var heute = d.toDateString() === h.toDateString();
+    return (praefix || 'Stand') + ' ' + (heute ? '' : d.getDate() + '.' + (d.getMonth() + 1) + '. ') + uhr + ' Uhr';
+  }
+
+  /* --- A3: „Letztes Update" oben im Tab Wetter, Knopf „Aktualisieren", Ziehen zum Aktualisieren --- */
+  function updateText() { return laeuft ? 'Aktualisiere …' : standText('Letztes Update'); }
+  function updateZeile() {
+    return '<div class="update-zeile"><span class="update-text" id="updateText" aria-live="polite">' + updateText() + '</span>' +
+      '<button type="button" class="button leise tippbar update-knopf" data-aktualisieren="1" aria-label="Wetter aktualisieren">Aktualisieren</button></div>';
+  }
+  function updateZeileSetzen() { var t = $('#updateText'); if (t) t.textContent = updateText(); }
+  function aktualisieren() { zugLaden(true); neuVersuchen(); updateZeileSetzen(); if (!laeuft) zugLaden(false); }
+  // Nach jedem Ladeversuch (Erfolg oder Fehler): Dreh-Anzeige weg, Zeile neu
+  function ladeEnde() { zugLaden(false); updateZeileSetzen(); }
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-aktualisieren]')) aktualisieren(); });
+
+  // Zieh-Anzeige: schwebt unter der Kopfzeile. Nur transform und opacity bewegen sich (DESIGN.md Regel 20).
+  var ZUG_SCHWELLE = 72, zug = { y0: null, dy: 0, aktiv: false };
+  var zugEl = document.createElement('div');
+  zugEl.className = 'zug-anzeige glas'; zugEl.setAttribute('aria-hidden', 'true');
+  zugEl.innerHTML = '<span class="zug-pfeil">' + Ikon('chevdown') + '</span><span class="zug-dreh"></span><span class="zug-text">Zum Aktualisieren ziehen</span>';
+  document.body.appendChild(zugEl);
+  function zugZeigen(dy) {
+    var weg = Math.min(dy * .5, 90), bereit = dy >= ZUG_SCHWELLE;
+    zugEl.classList.add('sichtbar'); zugEl.classList.toggle('bereit', bereit);
+    zugEl.style.transform = 'translate(-50%, ' + weg + 'px)'; zugEl.style.opacity = String(Math.min(1, dy / ZUG_SCHWELLE));
+    $('.zug-text', zugEl).textContent = bereit ? 'Loslassen zum Aktualisieren' : 'Zum Aktualisieren ziehen';
+  }
+  function zugLaden(an) {
+    if (an) { zugEl.classList.add('sichtbar', 'laedt'); zugEl.classList.remove('bereit'); zugEl.style.transform = 'translate(-50%, 36px)'; zugEl.style.opacity = '1'; $('.zug-text', zugEl).textContent = 'Aktualisiere …'; return; }
+    if (!zugEl.classList.contains('laedt') && zug.aktiv) return;
+    zugEl.classList.remove('laedt', 'sichtbar', 'bereit'); zugEl.style.transform = ''; zugEl.style.opacity = '';
+  }
+  function zugStart(y, ziel) {
+    zug.y0 = null; zug.aktiv = false;
+    if (aktiv !== 'wetter' && aktiv !== 'graphs') return;
+    if (window.scrollY > 0 || $('#teilen').open || (rmDialog && rmDialog.open)) return;
+    if (!ziel || !ziel.closest || !ziel.closest('.inhalt') || ziel.closest('svg, input, textarea, .leaflet-container')) return;   // Graph-Kurve behält ihr Ziehen
+    zug.y0 = y; zug.dy = 0;
+  }
+  function zugBewegen(y) {
+    if (zug.y0 == null) return false;
+    zug.dy = y - zug.y0;
+    if (!zug.aktiv && zug.dy > 10 && window.scrollY <= 0) zug.aktiv = true;
+    if (!zug.aktiv) { if (zug.dy < -4) zug.y0 = null; return false; }   // nach oben: normal scrollen
+    if (zug.dy <= 0) { zugLaden(false); zugEl.classList.remove('sichtbar'); return true; }
+    zugZeigen(zug.dy); return true;
+  }
+  function zugEnde() {
+    if (zug.y0 == null) return;
+    var los = zug.aktiv && zug.dy >= ZUG_SCHWELLE;
+    zug.y0 = null; zug.aktiv = false;
+    if (los) aktualisieren(); else zugLaden(false);
+  }
+  // Pointer-Events für Finger und Stift; Touch-Ereignisse nur, um das Scrollen der Seite während des Ziehens anzuhalten
+  // (sonst bricht Safari die Geste mit pointercancel ab, auch in der installierten App).
+  document.addEventListener('pointerdown', function (e) { if (e.pointerType !== 'mouse' && e.isPrimary) zugStart(e.clientY, e.target); });
+  document.addEventListener('pointermove', function (e) { if (e.pointerType !== 'mouse' && e.isPrimary) zugBewegen(e.clientY); });
+  document.addEventListener('pointerup', function (e) { if (e.pointerType !== 'mouse') zugEnde(); });
+  document.addEventListener('touchstart', function (e) { if (zug.y0 == null && e.touches.length === 1) zugStart(e.touches[0].clientY, e.target); }, { passive: true });
+  document.addEventListener('touchmove', function (e) { if (e.touches.length !== 1) return; if (zugBewegen(e.touches[0].clientY) && e.cancelable) e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchend', zugEnde);
+  document.addEventListener('touchcancel', function () { zug.y0 = null; zug.aktiv = false; zugLaden(false); });
+
+  /* --- A4: Erfolgshinweis nach dem Teilen --- */
+  var toastEl = document.createElement('div');
+  toastEl.className = 'toast glas'; toastEl.setAttribute('role', 'status'); toastEl.setAttribute('aria-live', 'polite'); toastEl.hidden = true;
+  document.body.appendChild(toastEl);
+  function toast(t) {
+    toastEl.textContent = t; toastEl.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(function () { toastEl.hidden = true; toastEl.textContent = ''; }, 3000);
+  }
+  function teilenErfolg(art) {
+    $('#tBlatt').hidden = true; if ($('#teilen').open) $('#teilen').close();
+    toast(art === 'geteilt' ? 'Geteilt ✓' : 'Bild gesichert ✓');
+  }
+
+  /* --- A7: Nutzungszähler für den Pilot (nur auf dem Gerät, je ISO-Kalenderwoche die Tage, kein Zeitpunkt) --- */
+  var zwei = function (n) { return String(n).padStart(2, '0'); };
+  function isoWoche(d) {
+    var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), wt = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - wt);
+    var j0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return { jahr: t.getUTCFullYear(), kw: Math.ceil(((t - j0) / 864e5 + 1) / 7) };
+  }
+  var wocheSchluessel = function (w) { return w.jahr + '-W' + zwei(w.kw); };
+  var tagIso = function (d) { return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-' + zwei(d.getDate()); };
+  function nutzungLesen() { var n = speicher.lesen('wpc-nutzung', {}); return n && typeof n === 'object' && !Array.isArray(n) ? n : {}; }
+  function nutzungZaehlen() {
+    var n = nutzungLesen(), jetzt = new Date(), k = wocheSchluessel(isoWoche(jetzt)), heute = tagIso(jetzt);
+    var tage = Array.isArray(n[k]) ? n[k] : [];
+    if (tage.indexOf(heute) < 0) tage.push(heute);
+    n[k] = tage.sort();
+    Object.keys(n).sort().slice(0, -12).forEach(function (alt) { delete n[alt]; });   // höchstens 12 Wochen aufheben
+    speicher.schreiben('wpc-nutzung', n);
+  }
+  function dieseWoche() {
+    var w = isoWoche(new Date()), tage = nutzungLesen()[wocheSchluessel(w)] || [];
+    return { kw: w.kw, jahr: w.jahr, tage: tage, n: tage.length, satz: 'Diese Woche an ' + tage.length + (tage.length === 1 ? ' Tag' : ' Tagen') + ' genutzt (KW ' + w.kw + ')' };
+  }
+  nutzungZaehlen();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) nutzungZaehlen(); });   // App aus dem Hintergrund an einem neuen Tag
+
+  // Gerät kurz und ohne Kennung: z. B. „iPhone · iOS 18.1 · Safari · installiert"
+  function geraetKurz() {
+    var ua = navigator.userAgent || '';
+    var g = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'iPad' : /iPhone/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : 'Gerät';
+    var ios = /(?:iPhone|iPad|CPU) OS (\d+)[_.](\d+)/.exec(ua), andr = /Android (\d+(?:\.\d+)?)/.exec(ua);
+    var sys = ios ? 'iOS ' + ios[1] + '.' + ios[2] : andr ? 'Android ' + andr[1] : '';
+    var br = /CriOS|Chrome\//.test(ua) && !/Edg/.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Edg/.test(ua) ? 'Edge' : /Safari\//.test(ua) ? 'Safari' : '';
+    var inst = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone ? 'installiert' : 'im Browser';
+    return [g, sys, br, inst].filter(Boolean).join(' · ');
+  }
+  // App-Version aus sw.js (dort pflegt sie der Service Worker), ohne eigenen Zähler
+  var appVersion = '';
+  function versionHolen() {
+    if (appVersion) return Promise.resolve(appVersion);
+    return fetch('sw.js').then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) { var m = /VERSION\s*=\s*['"]([^'"]+)['"]/.exec(t); appVersion = m ? m[1] : 'unbekannt'; return appVersion; }, function () { return 'unbekannt'; });
+  }
+
+  // Blatt „Rückmeldung": drei Fragen, Name freiwillig; Text wird geteilt oder kopiert, nie automatisch gesendet
+  var rmDialog = null;
+  var RM_FRAGEN = [['rmGut', 'Was war gut?'], ['rmFehlt', 'Was hat gefehlt?'], ['rmKaputt', 'Hat etwas nicht funktioniert?']];
+  function rmBauen() {
+    if (rmDialog) return rmDialog;
+    rmDialog = document.createElement('dialog');
+    rmDialog.className = 'rm-blatt'; rmDialog.id = 'rmBlatt'; rmDialog.setAttribute('aria-labelledby', 'rmTitel');
+    rmDialog.innerHTML = '<div class="rm-kopf"><button type="button" class="rm-text tippbar" id="rmAbbrechen">Abbrechen</button><h2 id="rmTitel">Rückmeldung</h2><span class="rm-platz" aria-hidden="true"></span></div>' +
+      '<div class="rm-inhalt"><p class="rm-woche" id="rmWoche"></p>' +
+      RM_FRAGEN.map(function (f) { return '<label class="rm-feld" for="' + f[0] + '">' + f[1] + '</label><textarea id="' + f[0] + '" rows="3"></textarea>'; }).join('') +
+      '<label class="rm-feld" for="rmName">Dein Name (freiwillig)</label><input id="rmName" type="text" autocomplete="given-name" enterkeyhint="done">' +
+      '<p class="info">Nichts wird automatisch gesendet. Mit „Teilen" wählst du selbst, wohin der Text geht, zum Beispiel WhatsApp oder Mail. Mitgeschickt werden die Woche, die Zahl der Nutzungstage, das Gerät (z. B. iPhone, iOS-Version) und die App-Version.</p>' +
+      '<div class="rm-knoepfe"><button type="button" class="button tippbar" id="rmTeilen">Teilen</button><button type="button" class="button leise tippbar" id="rmKopieren">Text kopieren</button></div>' +
+      '<p class="rm-status" id="rmStatus" role="status" aria-live="polite"></p>' +
+      '<textarea class="rm-ersatz" id="rmErsatz" readonly hidden aria-label="Text der Rückmeldung zum Kopieren"></textarea></div>';
+    document.body.appendChild(rmDialog);
+    $('#rmAbbrechen').addEventListener('click', function () { rmDialog.close(); });
+    $('#rmTeilen').addEventListener('click', function () { rmText().then(rmTeilen); });
+    $('#rmKopieren').addEventListener('click', function () { rmText().then(rmKopieren); });
+    return rmDialog;
+  }
+  function rmText() {
+    var w = dieseWoche();
+    return versionHolen().then(function (v) {
+      var antwort = function (id) { var t = $('#' + id).value.trim(); return t || '–'; }, name = $('#rmName').value.trim();
+      return ['WetterProCamera – Rückmeldung KW ' + w.kw + '/' + w.jahr,
+        'Genutzt: an ' + w.n + (w.n === 1 ? ' Tag' : ' Tagen') + (w.n ? ' (' + w.tage.map(function (t) { var p = t.split('-'); return +p[2] + '.' + +p[1] + '.'; }).join(', ') + ')' : ''),
+        name ? 'Name: ' + name : '', '',
+        RM_FRAGEN.map(function (f) { return f[1] + '\n' + antwort(f[0]); }).join('\n\n'), '',
+        'Gerät: ' + geraetKurz(), 'App-Version: ' + v].filter(function (z, i) { return z !== '' || i > 2; }).join('\n');
+    });
+  }
+  function rmStatus(t) { $('#rmStatus').textContent = t; }
+  function rmTeilen(text) {
+    if (navigator.share) {
+      navigator.share({ title: 'Rückmeldung WetterProCamera', text: text }).then(function () { rmDialog.close(); toast('Geteilt ✓'); }, function (e) { if (!e || e.name !== 'AbortError') rmKopieren(text); });
+      return;
+    }
+    rmKopieren(text);
+  }
+  function rmKopieren(text) {
+    var ersatz = function () { var f = $('#rmErsatz'); f.value = text; f.hidden = false; f.focus(); f.select(); rmStatus('Markiere den Text und kopiere ihn, dann füge ihn in WhatsApp oder eine Mail ein.'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { rmStatus('Text kopiert ✓ Füge ihn in WhatsApp oder eine Mail ein.'); }, ersatz);
+    else ersatz();
+  }
+  function rmOeffnen() {
+    var d = rmBauen(), w = dieseWoche();
+    $('#rmTitel').textContent = 'Rückmeldung KW ' + w.kw;
+    $('#rmWoche').textContent = w.satz + '. Drei kurze Fragen, alles freiwillig.';
+    rmStatus(''); $('#rmErsatz').hidden = true;
+    if (!d.open) d.showModal();
+  }
+
+  /* --- A7 und A8: Abschnitte im Tab „Mehr" (Pilot oben, Datenschutz unter den Quellen) --- */
+  // renderMehr() bleibt unverändert; die Abschnitte werden danach eingesetzt (konfliktarm, siehe AUFTRAG-AGENTEN-2.md)
+  function pilotHtml() {
+    return '<h2 class="abschnitt-titel" id="pilotTitel">Pilot: Wochen-Rückmeldung</h2><section class="kachel pilot" aria-labelledby="pilotTitel">' +
+      '<p class="pilot-satz" id="pilotSatz">' + esc(dieseWoche().satz) + '</p>' +
+      '<p class="info">Die App zählt nur, an welchen Tagen du sie öffnest, und nur auf deinem Gerät. Nichts wird automatisch gesendet.</p>' +
+      '<button type="button" class="button tippbar" id="btnRueckmeldung">Rückmeldung schreiben</button></section>';
+  }
+  function datenschutzHtml() {
+    return '<h2 class="abschnitt-titel" id="datenschutzTitel">Datenschutz</h2><section class="kachel datenschutz" id="datenschutz" aria-labelledby="datenschutzTitel">' +
+      '<p>Diese App speichert Orte, Einstellungen, Zähler und Fotos nur auf deinem Gerät. Wetterdaten holt sie bei Open-Meteo, Radar bei RainViewer, Satellitenbilder bei EUMETSAT, Karten bei OpenTopoMap. Diese Dienste sehen dabei deine IP-Adresse und die Koordinaten des gewählten Orts. Keine Schriften von Google, keine Zähler im Netz, keine Werbung.</p></section>';
+  }
+  function mehrErgaenzen() {
+    var s = $('#tab-mehr'), q = $('#quellen');
+    if (!$('#pilotTitel', s)) s.insertAdjacentHTML('afterbegin', pilotHtml());
+    if (q && !$('#datenschutz', s)) q.insertAdjacentHTML('afterend', datenschutzHtml());
+    var b = $('#btnRueckmeldung'); if (b) b.addEventListener('click', rmOeffnen);
+  }
+  var renderMehrOhneA = renderMehr;
+  renderMehr = function () { renderMehrOhneA(); mehrErgaenzen(); };
 
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');

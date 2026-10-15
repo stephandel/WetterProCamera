@@ -16,6 +16,16 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - **Version automatisch**: Die Version des Service Workers ist ein Fingerabdruck aller App-Dateien und ändert sich von selbst, sobald sich eine Datei ändert (siehe „Tests und Version").
 - **Automatische Tests**: `npm test` prüft die App in WebKit (dem Browser-Kern von Safari), auf GitHub bei jedem Hochladen.
 - Plus- und Minus-Knopf der Karten haben jetzt 44 px Tippfläche.
+### Neu am 15.10.2026 (Paket A)
+
+- **Kurzname „WP Camera"** unter dem App-Symbol auf dem Home-Bildschirm (`manifest.json`, `index.html`).
+- **Fehler verständlich:** „Der Wetterdienst ist gerade überlastet" (neuer Versuch von selbst nach 30 s, 60 s, 120 s, mit Countdown), „Offline" (lädt neu, sobald wieder Netz da ist), „Der Wetterdienst antwortet nicht", „Der Wetterdienst meldet einen Fehler (Nr. 503)". Der letzte Stand bleibt sichtbar („Stand 14:32 Uhr", ältere Stände mit Datum), dazu „Erneut versuchen".
+- **Ziehen zum Aktualisieren** auf „Wetter" und „Graphs" (oben nach unten ziehen, „Loslassen zum Aktualisieren"). Oben im Tab Wetter steht „Letztes Update 14:32 Uhr" mit dem Knopf „Aktualisieren" für Mac und iPad.
+- **Nach dem Teilen** schließt sich der Teilen-Bildschirm, kurz erscheint „Geteilt ✓" oder „Bild gesichert ✓". Brichst du selbst ab, erscheint nichts.
+- **Querformat** (iPhone liegend): Aktuell-Kachel links, Stunden und Tage rechts; Teilen-Bildschirm mit Bild links und Knöpfen rechts; Ränder für die Notch.
+- **Große Schrift** (iPhone-Einstellung „Textgröße"): Die App folgt ihr; bei sehr großer Schrift rücken Sonne und Regen in der Tagesliste in eine zweite Zeile.
+- **Pilot: Wochen-Rückmeldung** im Tab „Mehr": „Diese Woche an 3 Tagen genutzt (KW 42)". Gezählt werden nur die Tage, nur auf dem Gerät (`wpc-nutzung`). „Rückmeldung schreiben" öffnet drei Fragen; der Text wird über Teilen (WhatsApp, Mail) verschickt oder kopiert, nie automatisch.
+- **Datenschutz** im Tab „Mehr" unter den Quellen.
 
 ### Neu am 15.10.2026 (Paket 6: Funde der UX-Prüfung)
 
