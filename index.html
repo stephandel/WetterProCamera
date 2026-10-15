@@ -17,6 +17,7 @@
 <link rel="icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="meteogramm.css">
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
@@ -45,7 +46,7 @@
 
 <!-- Teilen-Bildschirm: immer schwarz, Knöpfe wie in der Kamera-App -->
 <dialog class="teilen" id="teilen" aria-label="Wetter mit Foto teilen">
-  <div class="teilen-kopf"><button class="teilen-text tippbar" id="tAbbrechen">Abbrechen</button><button class="teilen-text tippbar" id="tInfosAuf" aria-haspopup="true" aria-controls="tBlatt">Infos</button></div>
+  <div class="teilen-kopf"><button class="teilen-text tippbar" id="tAbbrechen">Abbrechen</button><button class="teilen-text tippbar" id="tGalerie" aria-haspopup="dialog" aria-label="Meine Wetterfotos öffnen">Galerie</button><button class="teilen-text tippbar" id="tInfosAuf" aria-haspopup="true" aria-controls="tBlatt">Infos</button></div>
   <div class="teilen-bild"><canvas id="tBild" role="img" aria-label="Vorschau des Bildes zum Teilen" tabindex="-1" autofocus></canvas><p class="teilen-beispiel" id="tBeispiel">Beispielfoto · tippe auf „Fotos" oder „Kamera"</p></div>
   <div class="teilen-formate" id="tFormate" role="radiogroup" aria-label="Format des Bildes"></div>
   <div class="teilen-stile" id="tStile" role="radiogroup" aria-label="Gestaltung des Bildes"></div>
@@ -64,6 +65,7 @@
 <script src="symbole.js"></script>
 <script src="ikonen.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" defer></script>
+<script src="meteogramm.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
