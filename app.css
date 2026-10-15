@@ -518,3 +518,30 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 /* === Paket A4: Meteogramm-Hilfetext nie unter die schwebende Tab-Leiste (15.10.2026) === */
 .pc-mg, .pc-mg.mg { margin-bottom: var(--s6); }   /* zusätzlich zum Platz in .inhalt (Tab-Leiste plus Safe-Area): Hilfetext bleibt sicher darüber */
 .pc-mg-voll .pc-mg, .pc-mg-voll .pc-mg.mg { margin-bottom: 0; }   /* im Vollbild gibt es keine Tab-Leiste */
+
+/* === Paket A5: Corralejo mit DWD, Meteogramm auf der Startseite, „Was heute geht" (15.10.2026) === */
+/* Aktuell aus der Vorhersage (keine Messstation in der Nähe) */
+.a5-vorhersage { color: var(--label-2); font-size: var(--fs-caption); white-space: nowrap; }
+/* Kachel „Was heute geht": Symbol links, ein Satz rechts */
+.a5-tipp-liste { list-style: none; margin: 0; padding: 0; display: grid; }
+.a5-tipp-liste li { display: grid; grid-template-columns: var(--sym-groesse) minmax(0, 1fr); align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s1) 0; }
+.a5-tipp-liste li + li { border-top: 1px solid var(--trenner); }
+.a5-tipp-sym { display: grid; place-items: center; width: var(--sym-groesse); height: var(--sym-groesse); color: var(--label); }
+.a5-tipp-sym .wsym { width: var(--sym-groesse); height: var(--sym-groesse); }
+.a5-tipp-sym .ikon { width: var(--ikon-groesse); height: var(--ikon-groesse); }
+.a5-tipp-satz { font-size: var(--fs-body); line-height: var(--lh); max-width: 65ch; }
+.a5-leer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); }
+.a5-leer p { margin: 0; font-size: var(--fs-body); color: var(--label-2); }
+/* Meteogramm-Kachel auf der Startseite: Baustein ohne eigene Fläche, ohne Knopfleiste und Hilfetext (dafür „Ganz ansehen") */
+.a5-mg-kachel { padding-bottom: var(--s2); }
+.a5-mg-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.a5-mg-kopf .kachel-titel { margin: 0; }
+.a5-mg-kachel .pc-mg.mg, .a5-mg-kachel .pc-mg { margin: var(--s2) 0 0; background: transparent; border-radius: 0; }
+.a5-mg-kachel .pc-mg .mg-knoepfe, .a5-mg-kachel .pc-mg .mg-foot, .a5-mg-kachel .pc-mg .mg-haft-fuss { display: none; }
+/* Tab „Mehr", Abschnitt „Startseite" */
+.a5-liste label { justify-content: space-between; }
+.a5-liste input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.a5-groesse { display: grid; gap: var(--s2); }
+.a5-groesse-titel { margin: 0; font-size: var(--fs-subhead); font-weight: 600; }
+.a5-groesse .info { margin: 0; }
+.a5-mg-kachel .pc-mg .mg-ecke { display: none; }   /* Zoomen geht mit zwei Fingern; Knöpfe nur im Tab „Graphs" */
