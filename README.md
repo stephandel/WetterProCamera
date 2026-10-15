@@ -8,6 +8,17 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - Reiter: **Wetter** (Aktuell, nächste Stunden, Regen der nächsten 2 Stunden, 8 Tage), **Graphs** (48 Stunden), **Kamera** (Wetter mit Foto teilen), **Rad/Sat** (Radar von [RainViewer](https://www.rainviewer.com), Satellit von EUMETSAT, Temperaturkarte), **Mehr** (Ortssuche, Favoriten, Wettermodell, Einheiten, Quellen, Webcam-Hinweis)
 - Wetter mit Foto teilen (6 Vorlagen, 6 Formate, wie früher bei WeatherPro)
 
+### Neu am 15.10.2026 (Paket A)
+
+- **Kurzname „WP Camera"** unter dem App-Symbol auf dem Home-Bildschirm (`manifest.json`, `index.html`).
+- **Fehler verständlich:** „Der Wetterdienst ist gerade überlastet" (neuer Versuch von selbst nach 30 s, 60 s, 120 s, mit Countdown), „Offline" (lädt neu, sobald wieder Netz da ist), „Der Wetterdienst antwortet nicht", „Der Wetterdienst meldet einen Fehler (Nr. 503)". Der letzte Stand bleibt sichtbar („Stand 14:32 Uhr", ältere Stände mit Datum), dazu „Erneut versuchen".
+- **Ziehen zum Aktualisieren** auf „Wetter" und „Graphs" (oben nach unten ziehen, „Loslassen zum Aktualisieren"). Oben im Tab Wetter steht „Letztes Update 14:32 Uhr" mit dem Knopf „Aktualisieren" für Mac und iPad.
+- **Nach dem Teilen** schließt sich der Teilen-Bildschirm, kurz erscheint „Geteilt ✓" oder „Bild gesichert ✓". Brichst du selbst ab, erscheint nichts.
+- **Querformat** (iPhone liegend): Aktuell-Kachel links, Stunden und Tage rechts; Teilen-Bildschirm mit Bild links und Knöpfen rechts; Ränder für die Notch.
+- **Große Schrift** (iPhone-Einstellung „Textgröße"): Die App folgt ihr; bei sehr großer Schrift rücken Sonne und Regen in der Tagesliste in eine zweite Zeile.
+- **Pilot: Wochen-Rückmeldung** im Tab „Mehr": „Diese Woche an 3 Tagen genutzt (KW 42)". Gezählt werden nur die Tage, nur auf dem Gerät (`wpc-nutzung`). „Rückmeldung schreiben" öffnet drei Fragen; der Text wird über Teilen (WhatsApp, Mail) verschickt oder kopiert, nie automatisch.
+- **Datenschutz** im Tab „Mehr" unter den Quellen.
+
 ### Neu am 15.10.2026 (Paket 6: Funde der UX-Prüfung)
 
 - **Mehr-Tab:** rechter Rand wie links (16 px); Quellen stehen jetzt als eigene Zeilen mit großer Tippfläche (44 px) statt kleiner Links im Text.
