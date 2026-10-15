@@ -1,6 +1,6 @@
 {
-  "name": "WetterPro Glas Test",
-  "short_name": "Glas Test",
+  "name": "WetterProCamera",
+  "short_name": "WetterProCamera",
   "lang": "de",
   "start_url": "./",
   "scope": "./",

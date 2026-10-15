@@ -1,4 +1,6 @@
-# WetterPro Glas Test
+# WetterProCamera
+
+**Online:** https://stephandel.github.io/WetterProCamera/
 
 Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Design-Konfigurator** nach den Empfehlungen der KI und gebaut von Claude Code aus dem exportierten Projektpaket (15.10.2026).
 

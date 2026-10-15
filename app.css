@@ -1,4 +1,4 @@
-/* app.css – WetterPro Glas Test. Nur Variablen aus tokens.css und base.css, keine festen Farben oder Größen (DESIGN.md Regel 36). */
+/* app.css – WetterProCamera. Nur Variablen aus tokens.css und base.css, keine festen Farben oder Größen (DESIGN.md Regel 36). */
 
 [hidden] { display: none !important; }
 body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }

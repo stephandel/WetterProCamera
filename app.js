@@ -1,4 +1,4 @@
-/* app.js – WetterPro Glas Test. Gestaltung nach DESIGN.md (Design-Konfigurator, 15.10.2026).
+/* app.js – WetterProCamera. Gestaltung nach DESIGN.md (Design-Konfigurator, 15.10.2026).
    Daten: Open-Meteo (CC BY 4.0), Radar: RainViewer, Karte: OpenTopoMap/OpenStreetMap. Ohne Server, läuft auf GitHub Pages. */
 (function () {
   'use strict';
@@ -244,7 +244,7 @@
       '<h2 class="abschnitt-titel">Meine Orte</h2><div class="liste" id="orteListe">' + orteHtml +
       '<button class="tippbar" id="btnStandort"><span>' + Ikon('pin') + ' Mein Standort</span><span class="leise">fragt einmal nach</span></button></div>' +
       '<h2 class="abschnitt-titel">Über die App</h2><section class="kachel info">' +
-      '<p><b>WetterPro Glas Test</b> ist eine Test-App, gestaltet mit dem Design-Konfigurator nach den Empfehlungen der KI.</p>' +
+      '<p><b>WetterProCamera</b> ist eine Test-App, gestaltet mit dem Design-Konfigurator nach den Empfehlungen der KI.</p>' +
       '<p>Wetterdaten: <a href="https://open-meteo.com" rel="noopener">Open-Meteo</a> (CC BY 4.0). Regenradar: <a href="https://www.rainviewer.com" rel="noopener">RainViewer</a>. Karte: <a href="https://opentopomap.org" rel="noopener">OpenTopoMap</a>, © OpenStreetMap-Mitwirkende. Wettersymbole: eigene Zeichnung „Klassisch". Foto: Mannheim, eigene Aufnahme.</p></section>';
     $('#sucheForm').addEventListener('submit', function (e) { e.preventDefault(); suchen($('#sucheFeld').value); });
     $('#orteListe').addEventListener('click', function (e) { var b = e.target.closest('[data-ort]'); if (b) ortSetzen(STANDARDORTE[+b.dataset.ort]); });
@@ -333,8 +333,8 @@
         ctx.drawImage(s, rand, H - 220 * k, 150 * k, 150 * k); text(ctx, temp, rand + 170 * k, H - 110 * k, 100 * k, 300, '#111');
         text(ctx, ortT + ' · ' + dat, W - rand, H - 150 * k, 34 * k, 600, '#111', 'right'); text(ctx, wind + ' · ' + regen, W - rand, H - 100 * k, 30 * k, 500, '#555', 'right');
       }
-      if (welcher !== 'rahmen') text(ctx, 'WetterPro Glas Test', W - 40 * k, H - 36 * k, 26 * k, 600, 'rgba(255,255,255,.85)', 'right');
-      else text(ctx, 'WetterPro Glas Test', rand, H - 36 * k, 24 * k, 600, '#777');
+      if (welcher !== 'rahmen') text(ctx, 'WetterProCamera', W - 40 * k, H - 36 * k, 26 * k, 600, 'rgba(255,255,255,.85)', 'right');
+      else text(ctx, 'WetterProCamera', rand, H - 36 * k, 24 * k, 600, '#777');
     });
   }
   function teilenOeffnen() {

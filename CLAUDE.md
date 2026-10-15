@@ -1,4 +1,4 @@
-# WetterPro Glas Test
+# WetterProCamera
 
 ## Gestaltung (vom Design-Konfigurator, 15.10.2026)
 
@@ -12,9 +12,9 @@
 
 ## Projekt
 
-- Name: **WetterPro Glas Test**, unter dem Symbol: „Glas Test".
+- Name: **WetterProCamera**.
 - Art: Web-App zum Installieren (PWA).
-- Ordner: `KI Projekte/WetterPro Glas Test`. Dort anlegen, nirgendwo sonst.
+- Ordner: `KI Projekte/WetterProCamera`. Dort anlegen, nirgendwo sonst.
 - Optimiert für: iPhone (390 px, Daumen unten).
 - Veröffentlichen: GitHub Pages.
 - App-Symbol: `app-symbol-1024.png` (Motiv Heiter), dazu `apple-touch-icon.png` (180 px). Einbinden mit `<link rel="apple-touch-icon" href="apple-touch-icon.png">` und `<link rel="manifest" href="manifest.json">`; dazu ein Service Worker für den Offline-Betrieb.
