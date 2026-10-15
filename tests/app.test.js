@@ -47,14 +47,17 @@ async function umleiten(p, modus) {
     if (u.host === 'api.open-meteo.com') {
       const lat = u.searchParams.get('latitude') || '';
       if (lat.includes(',')) return json(route, JSON.stringify(lat.split(',').map((_, i) => ({ current: { temperature_2m: 15 + i, weather_code: 2, is_day: 1 } }))));
-      return json(route, fixture('open-meteo.json'));
+      if (u.searchParams.has('past_days')) return json(route, fixture('open-meteo-meteogramm.json'));   // Meteogramm-Baustein (Paket A5)
+      return json(route, modus.omAendern ? JSON.stringify(modus.omAendern(JSON.parse(fixture('open-meteo.json')))) : fixture('open-meteo.json'));
     }
+    // Open-Meteo Marine (Paket A5): echte Antworten vom 15.10.2026; Mannheim liefert nur leere Werte (kein Meer)
+    if (u.host === 'marine-api.open-meteo.com') return json(route, fixture(+u.searchParams.get('latitude') < 40 ? 'marine-corralejo.json' : 'marine-mannheim.json'));
     if (u.host === 'air-quality-api.open-meteo.com') return json(route, fixture('air-quality.json'));
     if (u.host === 'geocoding-api.open-meteo.com') return json(route, '{"results":[]}');
     if (u.host === 'api.brightsky.dev') {
       const lat = +u.searchParams.get('lat'), nichts = fixture('brightsky-corralejo-current-404.json');
       if (modus.dwdAus) return json(route, nichts, 404);
-      if (u.pathname === '/weather') return lat > 45 ? json(route, fixture('brightsky-mannheim.json')) : lat > 28 && lat < 29 ? json(route, fixture('brightsky-corralejo.json')) : json(route, nichts, 404);
+      if (u.pathname === '/weather') return lat > 45 ? json(route, fixture('brightsky-mannheim.json')) : lat > 28 && lat < 29 ? json(route, modus.bsAendern ? JSON.stringify(modus.bsAendern(JSON.parse(fixture('brightsky-corralejo.json')))) : fixture('brightsky-corralejo.json')) : json(route, nichts, 404);
       if (u.pathname === '/current_weather') return lat > 45 ? json(route, fixture('brightsky-mannheim-current.json')) : json(route, nichts, 404);
     }
     if (u.host === 'api.rainviewer.com') return json(route, '{"host":"https://tilecache.rainviewer.com","radar":{"past":[]}}');
@@ -330,6 +333,99 @@ async function tabsPruefen(p, name, bilder) {
       pruefe(name + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }
+    /* 7. Paket A5: „Was heute geht", Corralejo mit DWD (Zeitzone, „Vorhersage"), Meteogramm auf der Startseite */
+    console.log('Paket A5');
+    const tipps = p => p.evaluate(() => { const k = document.getElementById('a5Tipps'); return k ? { arten: [...k.querySelectorAll('[data-tipp]')].map(x => x.dataset.tipp), saetze: [...k.querySelectorAll('.a5-tipp-satz')].map(x => x.textContent), leer: (k.querySelector('.a5-leer p') || {}).textContent || '' } : null; });
+    const warteTipps = (p, art) => p.waitForFunction(a => !!document.querySelector('#a5Tipps [data-tipp="' + a + '"]'), art, { timeout: 8000 }).catch(() => { });
+    // a) Mannheim, Open-Meteo, echte Antwort: nur die goldene Stunde (Sonnenuntergang 18:35), kein Meer
+    s = await neueSeite(b, { colorScheme: 'light' });
+    await s.p.goto(BASIS); await s.p.waitForSelector('#a5Tipps');
+    await s.p.waitForFunction(() => /"49\.49,8\.47":false/.test(localStorage.getItem('wpc-kueste') || ''), null, { timeout: 8000 }).catch(() => { });
+    let t = await tipps(s.p);
+    pruefe('Mannheim: Kachel „Was heute geht" steht unter den Stunden', await s.p.evaluate(() => document.getElementById('a5Tipps').previousElementSibling.classList.contains('std')));
+    pruefe('Mannheim: nur „Goldene Stunde ab 17:50 Uhr"', t && t.arten.join() === 'gold' && /Goldene Stunde ab 17:50 Uhr/.test(t.saetze[0]), t);
+    pruefe('Mannheim: Marine-API ohne Werte → kein Küstenort (gemerkt in wpc-kueste)', await s.p.evaluate(() => JSON.parse(localStorage.getItem('wpc-kueste'))['49.49,8.47'] === false));
+    pruefe('Mannheim: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+    // Mehr → Startseite: Schalter, Haken und Quelle Marine-API
+    await s.p.click('#tb-mehr');
+    const mehr = await s.p.evaluate(() => ({ schalter: document.querySelectorAll('#a5Start input[role="switch"]').length, arten: document.querySelectorAll('#a5Arten input').length, groesseVersteckt: document.getElementById('a5Groesse').hidden, quelle: /Ebbe und Flut: Open-Meteo Marine/.test(document.getElementById('quellen').textContent) }));
+    pruefe('Mehr: Abschnitt „Startseite" mit 2 Schaltern, 9 Tipp-Haken, Größe erst bei Meteogramm an', mehr.schalter === 2 && mehr.arten === 9 && mehr.groesseVersteckt, mehr);
+    pruefe('Quellen nennen Open-Meteo Marine', mehr.quelle);
+    // Leerzustand: goldene Stunde und Sterne abwählen
+    await s.p.uncheck('#a5Arten input[value="gold"]'); await s.p.uncheck('#a5Arten input[value="sterne"]');
+    await s.p.click('#tb-wetter'); t = await tipps(s.p);
+    pruefe('Leerzustand „Heute nichts Besonderes." mit Knopf', t && t.arten.length === 0 && t.leer === 'Heute nichts Besonderes.' && !!(await s.p.$('[data-a5-zu-start]')), t);
+    await s.p.click('[data-a5-zu-start]'); await s.p.waitForTimeout(200);
+    pruefe('Knopf „Tipps auswählen" führt zu „Mehr" → „Startseite"', await s.p.evaluate(() => !document.getElementById('tab-mehr').hidden && document.activeElement && document.activeElement.closest('#a5Arten') !== null));
+    // Schalter „Was heute geht" aus
+    await s.p.uncheck('#a5Start input[data-a5="tipps"]'); await s.p.click('#tb-wetter');
+    pruefe('Schalter aus: keine Kachel „Was heute geht"', !(await s.p.$('#a5Tipps')));
+    // Meteogramm auf der Startseite: an, Größe „Klein" (1 Zeile), dann „Groß" (alle 4 Standardzeilen)
+    await s.p.click('#tb-mehr'); await s.p.check('#a5Start input[data-a5="meteo"]');
+    pruefe('Meteogramm an: Wahl der Größe erscheint', await s.p.evaluate(() => !document.getElementById('a5Groesse').hidden));
+    await s.p.click('[data-seg="a5groesse"] [data-v="klein"]');
+    await s.p.click('#tb-wetter'); await s.p.waitForSelector('#a5Mg .mg-ax-titel', { timeout: 8000 }).catch(() => { });
+    let mgs = await s.p.evaluate(() => { const k = document.querySelector('.a5-mg-kachel'); return k && { zeilen: k.querySelectorAll('.mg-ax-titel').length, unterRegen: !!(k.previousElementSibling && k.previousElementSibling.querySelector('#regenTitel')) }; });
+    pruefe('Meteogramm „Klein": 1 Zeile, direkt unter dem Regenradar', mgs && mgs.zeilen === 1 && mgs.unterRegen, mgs);
+    let m5 = await s.p.evaluate(MESSEN);
+    pruefe('Wetter mit Meteogramm 390 px: kein seitliches Scrollen, Tippflächen ≥ 44 px, Schrift ≥ 11 px', m5.seitlich <= 0 && m5.klein.length === 0 && m5.kleinsteSchrift >= 11, m5);
+    await s.p.$eval('.a5-mg-kachel', e => e.scrollIntoView({ block: 'center' })); await foto(s.p, 'hell-390-a5-meteogramm');
+    await s.p.evaluate(() => window.scrollTo(0, 0));
+    await s.p.click('#tb-mehr'); await s.p.click('[data-seg="a5groesse"] [data-v="gross"]'); await s.p.click('#tb-wetter');
+    await s.p.waitForFunction(() => document.querySelectorAll('#a5Mg .mg-ax-titel').length === 4, null, { timeout: 8000 }).catch(() => { });
+    pruefe('Meteogramm „Groß": alle 4 gewählten Zeilen', await s.p.evaluate(() => document.querySelectorAll('#a5Mg .mg-ax-titel').length) === 4);
+    // Zweites Meteogramm im Tab „Graphs" gleichzeitig: eigene IDs, beide bleiben heil
+    await s.p.click('[data-a5-mg-ganz]'); await s.p.waitForSelector('#pcMg .mg-ax-titel', { timeout: 8000 }).catch(() => { });
+    const zwei = await s.p.evaluate(() => { const ids = [...document.querySelectorAll('[id]')].map(e => e.id); return { graphs: document.querySelectorAll('#pcMg .mg-ax-titel').length, start: document.querySelectorAll('#a5Mg .mg-ax-titel').length, doppelt: ids.filter((x, i) => ids.indexOf(x) !== i) }; });
+    pruefe('„Ganz ansehen" öffnet Graphs als Meteogramm; beide Bausteine laufen nebeneinander (keine doppelten IDs)', zwei.graphs >= 1 && zwei.start === 4 && zwei.doppelt.length === 0, zwei);
+    await s.p.click('#tb-wetter');
+    pruefe('Zurück auf Wetter: Startseiten-Meteogramm wieder da, ohne neu zu laden', await s.p.evaluate(() => document.querySelectorAll('#tab-wetter #a5Mg .mg-ax-titel').length) === 4);
+    pruefe('Meteogramm Startseite: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+    await s.ctx.close();
+    // b) Mannheim mit Regen und Frost (geänderte Antwort): Schirm mit Uhrzeit, Frost
+    s = await neueSeite(b, { colorScheme: 'dark' }, { omAendern: d => { d.daily.precipitation_probability_max[0] = 70; d.daily.temperature_2m_min[0] = -2; d.hourly.time.forEach((z, i) => { if (z >= '2026-10-15T16:00') d.hourly.precipitation_probability[i] = 60; }); return d; } });
+    await s.p.goto(BASIS); await warteTipps(s.p, 'schirm'); t = await tipps(s.p);
+    pruefe('Mannheim Regen/Frost: Tipps Schirm, Frost (in dieser Reihenfolge)', t && t.arten[0] === 'schirm' && t.arten[1] === 'frost', t);
+    pruefe('Schirm-Satz mit Risiko und Uhrzeit', t && /Regenrisiko 70 %, ab etwa 16:00 Uhr/.test(t.saetze[0]), t && t.saetze[0]);
+    pruefe('Frost-Satz mit Tiefstwert', t && /Frost bis −2 °C/.test(t.saetze[1]), t && t.saetze[1]);
+    await s.p.$eval('#a5Tipps', e => e.scrollIntoView({ block: 'center' })); await foto(s.p, 'dunkel-390-a5-schirm-frost');
+    m5 = await s.p.evaluate(MESSEN);
+    pruefe('dunkel 390 mit Tipps: kein seitliches Scrollen, Tippflächen ≥ 44 px', m5.seitlich <= 0 && m5.klein.length === 0, m5);
+    pruefe('Mannheim Regen/Frost: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+    await s.ctx.close();
+    // c) Corralejo mit DWD: Uhrzeit auf Kanaren-Zeit, „(Vorhersage)", Strand, Ebbe/Flut aus der gespeicherten Marine-Antwort
+    for (const [name, modus] of [['Corralejo DWD', {}], ['Corralejo DWD mit mehr Wind', { bsAendern: d => { d.weather.forEach(x => { if (x.wind_speed != null) x.wind_speed = Math.round(x.wind_speed * 1.5 * 10) / 10; }); return d; } }]]) {
+      s = await neueSeite(b, { colorScheme: 'light' }, modus);
+      await s.p.addInitScript(() => { if (!localStorage.getItem('wpc-quelle')) { localStorage.setItem('wpc-quelle', '"dwd"'); localStorage.setItem('wpgt-ort', JSON.stringify({ name: 'Corralejo', land: 'Spanien', lat: 28.73, lon: -13.867 })); } });
+      await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await warteTipps(s.p, 'gezeiten');
+      const c = await s.p.evaluate(() => {
+        const k = Object.keys(localStorage).filter(x => /-dwd$/.test(x))[0], d = JSON.parse(localStorage.getItem(k)).d;
+        return { kopf: document.querySelector('.akt-kopf').textContent.replace(/\s+/g, ' ').trim(), tz: d.timezone, zeit: d.current.time, unter: d.daily.sunset[0], auf: d.daily.sunrise[0], erste: d.hourly.time[0], temp: document.querySelector('.akt-temp').textContent };
+      });
+      t = await tipps(s.p);
+      if (!modus.bsAendern) {
+        pruefe(name + ': Zeitzone Atlantic/Canary, „Aktuell (Vorhersage) 13:00" (14:40 in Berlin = 13:40 auf den Kanaren)', c.tz === 'Atlantic/Canary' && c.kopf === 'Aktuell (Vorhersage) 13:00' && c.temp === '26°C', c);
+        pruefe(name + ': Stunden in Ortszeit (erste Stunde 01:00 statt 02:00)', c.erste === '2026-10-15T01:00', c.erste);
+        pruefe(name + ': Sonnenaufgang 08:0x, Sonnenuntergang 19:1x–19:3x Ortszeit', /^2026-10-15T0(7:5|8:0|8:1)\d$/.test(c.auf) && /^2026-10-15T19:[1-3]\d$/.test(c.unter), c);
+        pruefe(name + ': Tipps Strand, Ebbe/Flut, goldene Stunde', t && t.arten.join() === 'strand,gezeiten,gold', t);
+        pruefe(name + ': „Strandwetter" (Küstenort), Wind bis 18 km/h', t && /^Strandwetter: bis 26 °C, kaum Regen, Wind bis 18 km\/h\.$/.test(t.saetze[0]), t && t.saetze[0]);
+        pruefe(name + ': nächste Flut gegen 16:25, danach Ebbe gegen 22:20 Uhr', t && t.saetze[1] === 'Nächste Flut gegen 16:25 Uhr, danach Ebbe gegen 22:20 Uhr.', t && t.saetze[1]);
+        pruefe(name + ': Küstenort gemerkt', await s.p.evaluate(() => JSON.parse(localStorage.getItem('wpc-kueste'))['28.73,-13.87'] === true));
+        await s.p.$eval('#a5Tipps', e => e.scrollIntoView({ block: 'center' })); await foto(s.p, 'hell-390-a5-corralejo');
+      } else {
+        pruefe(name + ': Tipps Strand, Kiten, Ebbe/Flut (höchstens 3)', t && t.arten.join() === 'strand,kiten,gezeiten', t);
+        pruefe(name + ': Kiten-Satz mit Wind und Richtung', t && /^Gut zum Kiten: Wind bis 27 km\/h aus (N|NO)\.$/.test(t.saetze[1]), t && t.saetze[1]);
+      }
+      const ck = s.konsole.filter(x => !/status of 404/.test(x));   // Bright Sky: keine Station für Corralejo, gewollt
+      pruefe(name + ': Konsole ohne weitere Fehler', ck.length === 0, ck);
+      await s.ctx.close();
+    }
+    // d) Mannheim mit DWD: Messung der Station, kein Zusatz „(Vorhersage)"
+    s = await neueSeite(b, { colorScheme: 'light' });
+    await s.p.addInitScript(() => localStorage.setItem('wpc-quelle', '"dwd"'));
+    await s.p.goto(BASIS); await s.p.waitForFunction(() => /DWD MOSMIX/.test(document.getElementById('ortZeile').textContent)); await s.p.waitForSelector('.tag');
+    pruefe('Mannheim DWD: Aktuell aus der Station, ohne „(Vorhersage)"', await s.p.evaluate(() => !document.querySelector('.a5-vorhersage') && /^Aktuell 14:\d\d$/.test(document.querySelector('.akt-kopf').textContent.replace(/\s+/g, ' ').trim())), await s.p.textContent('.akt-kopf'));
+    await s.ctx.close();
   } catch (e) {
     fehler++; console.log('  ✗ Test abgebrochen: ' + (e && e.stack || e));
   } finally {

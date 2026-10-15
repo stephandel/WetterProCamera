@@ -88,7 +88,7 @@
   function urlVorhersage(o) {
     return 'https://api.open-meteo.com/v1/forecast?latitude=' + o.lat + '&longitude=' + o.lon +
       '&current=temperature_2m,apparent_temperature,relative_humidity_2m,pressure_msl,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,is_day' +
-      '&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,is_day' +
+      '&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,is_day,cloud_cover' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunshine_duration,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max' +
       '&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto&forecast_days=8&wind_speed_unit=kmh&models=' + modell;
   }
@@ -1850,6 +1850,249 @@
   });
   // Esc im Teilen-Fenster: ein offenes Blatt „Infos" schließt zuerst, nicht gleich das ganze Fenster
   $('#teilen').addEventListener('cancel', function (e) { if (!$('#tBlatt').hidden) { e.preventDefault(); blattZu(); } });
+  /* === Paket A5: Corralejo mit DWD, Meteogramm auf der Startseite, „Was heute geht" (15.10.2026) === */
+  // Bestehende Funktionen bleiben unverändert; umhüllt werden dwdZeitzone, dwdHolen, brightSkyUmwandeln (Paket B),
+  // renderWetter, renderMehr und quellenHtml. Einstellungen in wpc-startseite, Küsten-Prüfung je Ort in wpc-kueste.
+  var a5Zwei = function (n) { return (n < 10 ? '0' : '') + n; };
+  var a5PosKey = function (o) { return Number(o.lat).toFixed(2) + ',' + Number(o.lon).toFixed(2); };
+
+  /* --- 1. Zeitzone des Orts für Bright Sky (sonst liegen die Kanaren eine Stunde daneben) --- */
+  // Reihenfolge: gemerkt (wpc-zeitzonen) → frühere Open-Meteo-Antwort → bekannte Gebiete → einmal Open-Meteo fragen
+  var A5_GEBIETE = [{ tz: 'Atlantic/Canary', lat: [27.4, 29.6], lon: [-18.4, -13.1] }, { tz: 'Atlantic/Madeira', lat: [32.3, 33.2], lon: [-17.4, -16.2] }, { tz: 'Atlantic/Azores', lat: [36.8, 39.8], lon: [-31.4, -24.9] }];
+  var a5Zeitzonen = speicher.lesen('wpc-zeitzonen', {}) || {};
+  function a5Zeitzone(o) {
+    var k = a5PosKey(o); if (a5Zeitzonen[k]) return a5Zeitzonen[k];
+    var alt = speicher.lesen(cacheKeyOpenMeteo(o), null); if (alt && alt.d && alt.d.timezone && alt.d._quelle !== 'dwd') return alt.d.timezone;
+    var g = A5_GEBIETE.filter(function (x) { return o.lat >= x.lat[0] && o.lat <= x.lat[1] && o.lon >= x.lon[0] && o.lon <= x.lon[1]; })[0];
+    return g ? g.tz : null;
+  }
+  dwdZeitzone = function (o) { return a5Zeitzone(o) || 'Europe/Berlin'; };
+  dwdHolen = (function (alt) {
+    return function (o) {
+      if (a5Zeitzone(o)) return alt(o);
+      return holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + o.lat + '&longitude=' + o.lon + '&current=is_day&forecast_days=1&timezone=auto')
+        .then(function (r) { if (r && r.timezone) { a5Zeitzonen[a5PosKey(o)] = r.timezone; speicher.schreiben('wpc-zeitzonen', a5Zeitzonen); } }, function () { })
+        .then(function () { return alt(o); });
+    };
+  })(dwdHolen);
+  // Zeitstempel in die Ortszeit umrechnen, z. B. '2026-10-15T14:00:00+02:00' → '2026-10-15T13:00:00+01:00' (Kanaren)
+  var a5Formate = {};
+  function a5Ortszeit(ts, tz) {
+    var ms = Date.parse(ts); if (isNaN(ms)) return ts;
+    try {
+      var f = a5Formate[tz] || (a5Formate[tz] = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      var p = {}; f.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
+      var st = p.hour === '24' ? '00' : p.hour, versatz = Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +st, +p.minute, +p.second) - ms) / 60000), b = Math.abs(versatz);
+      return p.year + '-' + p.month + '-' + p.day + 'T' + st + ':' + p.minute + ':' + p.second + (versatz < 0 ? '-' : '+') + a5Zwei(Math.floor(b / 60)) + ':' + a5Zwei(b % 60);
+    } catch (e) { return ts; }
+  }
+  brightSkyUmwandeln = (function (alt) {
+    return function (antw, akt, o) {
+      var tz = dwdZeitzone(o), umw = function (x) { return x && x.timestamp ? Object.assign({}, x, { timestamp: a5Ortszeit(x.timestamp, tz) }) : x; };
+      var a2 = antw && antw.weather ? Object.assign({}, antw, { weather: antw.weather.map(umw) }) : antw;
+      var k2 = akt && akt.weather ? Object.assign({}, akt, { weather: umw(akt.weather) }) : akt;
+      var d = alt(a2, k2, o);
+      // Bewölkung je Stunde (für „Sterne") und Kennzeichen, ob „Aktuell" gemessen oder aus der Vorhersage ist
+      d.hourly.cloud_cover = a2.weather.filter(function (x) { return x.temperature != null; }).map(function (x) { return x.cloud_cover == null ? null : x.cloud_cover; });
+      d.current._vorhersage = !(k2 && k2.weather && k2.weather.temperature != null);
+      return d;
+    };
+  })(brightSkyUmwandeln);
+
+  /* --- Einstellungen „Startseite" (wpc-startseite) --- */
+  var A5_ARTEN = [
+    ['schirm', 'Schirm', 'Regenrisiko ab 40 %'], ['frost', 'Frost', 'Tiefstwert 0 °C oder darunter'], ['hitze', 'Hitze', 'Höchstwert ab 30 °C'],
+    ['uv', 'UV-Schutz', 'UV-Index ab 6'], ['strand', 'Strand und Baden', 'ab 22 °C, Regenrisiko unter 20 %, Wind unter 30 km/h'], ['kiten', 'Kiten', 'Wind 20 bis 40 km/h'],
+    ['gezeiten', 'Ebbe und Flut', 'nur an der Küste, nächster Tief- und Höchststand'], ['gold', 'Goldene Stunde', '45 Minuten vor Sonnenuntergang'], ['sterne', 'Sterne', 'nachts höchstens 20 % Wolken']
+  ];
+  var A5_GROESSEN = ['klein', 'mittel', 'gross'];
+  function startLesen() {
+    var s = speicher.lesen('wpc-startseite', {}) || {}, ids = A5_ARTEN.map(function (a) { return a[0]; });
+    return { tipps: s.tipps !== false, meteo: s.meteo === true, groesse: A5_GROESSEN.indexOf(s.groesse) >= 0 ? s.groesse : 'mittel',
+      arten: Array.isArray(s.arten) ? s.arten.filter(function (a) { return ids.indexOf(a) >= 0; }) : ids };
+  }
+  function startSchreiben(s) { speicher.schreiben('wpc-startseite', s); }
+
+  /* --- Zeit als Ortszeit-Text 'JJJJ-MM-TTTHH:MM' rechnen (unabhängig von der Zeitzone des Geräts) --- */
+  var a5Ms = function (iso) { var t = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || ''); return t ? Date.UTC(+t[1], +t[2] - 1, +t[3], +t[4], +t[5]) : NaN; };
+  var a5Plus = function (iso, min) { return new Date(a5Ms(iso) + min * 60000).toISOString().slice(0, 16); };
+  var a5Grad = function (v) { return rund(v).replace('-', '−') + ' °C'; };
+
+  /* --- 3. Ebbe und Flut: Open-Meteo Marine (sea_level_height_msl). Küstenort = die Abfrage liefert Werte --- */
+  var a5Kueste = speicher.lesen('wpc-kueste', {}) || {}, a5Meer = {};
+  function a5MeerHolen(o, fertig) {
+    var k = a5PosKey(o), m = a5Meer[k];
+    if (a5Kueste[k] === false || (m && (m.laedt || Date.now() - m.zeit < 3 * 3600e3))) return;
+    a5Meer[k] = { laedt: true, zeit: 0, d: m && m.d };
+    holeJson('https://marine-api.open-meteo.com/v1/marine?latitude=' + o.lat + '&longitude=' + o.lon + '&hourly=sea_level_height_msl&timezone=auto&forecast_days=3').then(function (r) {
+      var h = r && r.hourly && r.hourly.sea_level_height_msl, hat = !!(h && h.some(function (v) { return v != null; }));
+      a5Kueste[k] = hat; speicher.schreiben('wpc-kueste', a5Kueste);   // einmal je Ort prüfen, Ergebnis merken
+      a5Meer[k] = { zeit: Date.now(), d: hat ? r.hourly : null };
+      fertig();
+    }, function () { a5Meer[k] = { zeit: Date.now() - 2.5 * 3600e3, d: m && m.d }; });   // ohne Netz: in 30 Minuten wieder versuchen
+  }
+  // Nächster Höchst- (Flut) und Tiefststand (Ebbe) nach „jetzt"; Zeitpunkt zwischen den Stundenwerten per Parabel, auf 5 Minuten gerundet
+  function a5Gezeiten(meer, jetzt) {
+    var z = meer.time, h = meer.sea_level_height_msl, hoch = null, tief = null;
+    for (var k = 1; k < h.length - 1 && !(hoch && tief); k++) {
+      if (h[k - 1] == null || h[k] == null || h[k + 1] == null) continue;
+      var istHoch = h[k] > h[k - 1] && h[k] >= h[k + 1], istTief = h[k] < h[k - 1] && h[k] <= h[k + 1];
+      if (!istHoch && !istTief) continue;
+      var nenner = h[k - 1] - 2 * h[k] + h[k + 1], dx = nenner ? .5 * (h[k - 1] - h[k + 1]) / nenner : 0;
+      var zeit = a5Plus(z[k], Math.round(dx * 12) * 5);
+      if (zeit <= jetzt) continue;
+      if (istHoch && !hoch) hoch = { flut: true, zeit: zeit };
+      if (istTief && !tief) tief = { flut: false, zeit: zeit };
+    }
+    return [hoch, tief].filter(Boolean).sort(function (a, b) { return a.zeit < b.zeit ? -1 : 1; });
+  }
+
+  /* --- „Was heute geht": feste Regeln, höchstens 3 Tipps in der Reihenfolge von A5_ARTEN --- */
+  function a5Tipps(d, meer, kueste, arten) {
+    var c = d.current || {}, t = d.daily, h = d.hourly || {}, jetzt = (c.time || '').slice(0, 16), heute = jetzt.slice(0, 10), liste = [];
+    if (!t || !t.time) return liste;
+    var i = t.time.indexOf(heute); if (i < 0) i = 0;
+    var wert = function (k) { return t[k] && t[k][i] != null ? t[k][i] : null; };
+    var max = wert('temperature_2m_max'), min = wert('temperature_2m_min'), risiko = wert('precipitation_probability_max'), summe = wert('precipitation_sum');
+    var wind = wert('wind_speed_10m_max'), dir = wert('wind_direction_10m_dominant'), uv = wert('uv_index_max'), unter = wert('sunset');
+    var trocken = risiko != null ? risiko < 20 : summe != null && summe < 0.5;
+    var dazu = function (art, symbol, satz) { if (arten.indexOf(art) >= 0) liste.push({ art: art, sym: symbol, satz: satz }); };
+    if (risiko != null && risiko >= 40) {
+      var ab = '';
+      (h.time || []).some(function (z, k) { if (z.slice(0, 10) === heute && z.slice(0, 13) > jetzt.slice(0, 13) && h.precipitation_probability && h.precipitation_probability[k] >= 40) { ab = z; return true; } return false; });
+      dazu('schirm', sym('regen', 'a5-sym'), 'Nimm einen Schirm mit: Regenrisiko ' + rund(risiko) + ' %' + (ab ? ', ab etwa ' + hm(ab) + ' Uhr' : '') + '.');
+    }
+    if (min != null && min <= 0) dazu('frost', sym('schnee', 'a5-sym'), 'Frost bis ' + a5Grad(min) + ': Scheiben kratzen, empfindliche Pflanzen schützen.');
+    if (max != null && max >= 30) dazu('hitze', sym('sonne', 'a5-sym'), 'Heiß, bis ' + a5Grad(max) + ': viel trinken, die Mittagssonne meiden.');
+    if (uv != null && uv >= 6) dazu('uv', Ikon('sun'), 'UV-Index ' + rund(uv) + ' (' + uvWort(uv) + '): Sonnencreme, Hut und Sonnenbrille.');
+    if (max != null && max >= 22 && trocken && wind != null && wind < 30) dazu('strand', sym('sonne', 'a5-sym'), (kueste ? 'Strandwetter' : 'Badewetter') + ': bis ' + a5Grad(max) + ', kaum Regen, Wind bis ' + windTxt(wind) + '.');
+    if (wind != null && wind >= 20 && wind <= 40) dazu('kiten', sym('wind', 'a5-sym'), 'Gut zum Kiten: Wind bis ' + windTxt(wind) + (dir != null ? ' aus ' + richtung(dir) : '') + '.');
+    if (meer && meer.time) {
+      var g = a5Gezeiten(meer, jetzt);
+      if (g.length) dazu('gezeiten', Ikon('tropfen'), 'Nächste ' + g.map(function (x) { return (x.flut ? 'Flut' : 'Ebbe') + ' gegen ' + hm(x.zeit) + ' Uhr'; }).join(', danach ') + '.');
+    }
+    if (unter && jetzt < unter) {
+      var gold = a5Plus(unter, -45);
+      dazu('gold', Ikon('sunset'), jetzt < gold ? 'Goldene Stunde ab ' + hm(gold) + ' Uhr: warmes, weiches Licht für Fotos.' : 'Goldene Stunde jetzt, bis ' + hm(unter) + ' Uhr: warmes Licht für Fotos.');
+    }
+    if (unter && h.time) {
+      // Nacht = Sonnenuntergang bis 3 Uhr; ohne Bewölkungswerte zählt das Wettersymbol (klar = 0 %, heiter = 15 %)
+      var bis = a5Plus(heute + 'T03:00', 24 * 60), wolken = [];
+      h.time.forEach(function (z, k) {
+        if (z < unter || z > bis) return;
+        var w = h.cloud_cover && h.cloud_cover[k] != null ? h.cloud_cover[k] : h.weather_code ? ({ 0: 0, 1: 15, 2: 50 })[h.weather_code[k]] : null;
+        wolken.push(w == null ? 100 : w);
+      });
+      if (wolken.length >= 3 && wolken.reduce(function (s, v) { return s + v; }, 0) / wolken.length <= 20) dazu('sterne', sym('mond', 'a5-sym'), 'Klare Nacht: Sterne gut zu sehen ab etwa ' + hm(a5Plus(unter, 60)) + ' Uhr.');
+    }
+    return liste;
+  }
+  function a5TippsHtml() {
+    var st = startLesen(), k = a5PosKey(ort), m = a5Meer[k];
+    var tipps = a5Tipps(daten, m && m.d, a5Kueste[k] === true, st.arten).slice(0, 3);
+    return '<section class="kachel a5-tipps" id="a5Tipps" aria-labelledby="a5TippsTitel"><h2 class="kachel-titel" id="a5TippsTitel">' + Ikon('sun') + 'Was heute geht</h2>' +
+      (tipps.length ? '<ul class="a5-tipp-liste">' + tipps.map(function (x) { return '<li data-tipp="' + x.art + '"><span class="a5-tipp-sym" aria-hidden="true">' + x.sym + '</span><span class="a5-tipp-satz">' + esc(x.satz) + '</span></li>'; }).join('') + '</ul>'
+        : '<div class="a5-leer"><p>Heute nichts Besonderes.</p><button type="button" class="button leise tippbar" data-a5-zu-start="1">Tipps auswählen</button></div>') + '</section>';
+  }
+  function a5TippsNeu() { var alt = $('#a5Tipps'); if (alt && daten) alt.outerHTML = a5TippsHtml(); }
+
+  /* --- 2. Meteogramm auf der Startseite (eigene Instanz des Bausteins; die Ziel-IDs zählt der Baustein selbst hoch) --- */
+  var a5Mg = { el: null, instanz: null, schl: '', breite: 0 };
+  function a5MgZeilen(gr) { var z = meteoZeilen(); return gr === 'klein' ? z.slice(0, 1) : gr === 'mittel' ? z.slice(0, 2) : z; }
+  function a5MgAbbauen() {
+    if (a5Mg.instanz) { try { a5Mg.instanz.abbauen(); } catch (e) { console.warn('Meteogramm', e); } }
+    if (a5Mg.el && a5Mg.el.parentNode) a5Mg.el.parentNode.removeChild(a5Mg.el);
+    a5Mg.instanz = null; a5Mg.el = null; a5Mg.schl = '';
+  }
+  function a5MgEinsetzen(anker) {
+    if (!window.Meteogramm || !anker) return;
+    var z = a5MgZeilen(startLesen().groesse), m = modellInfo(), schl = [ort.lat, ort.lon, modell, z.join(','), (daten && daten.timezone) || ''].join('|');
+    if (a5Mg.el && a5Mg.schl === schl) {   // gleiche Einstellung: dieselbe Instanz wieder einhängen, nichts neu laden
+      anker.insertAdjacentElement('afterend', a5Mg.el);
+      var b = a5Mg.el.clientWidth; if (b && b !== a5Mg.breite) { a5Mg.breite = b; window.dispatchEvent(new Event('resize')); }
+      return;
+    }
+    a5MgAbbauen();
+    var el = document.createElement('section');
+    el.className = 'kachel a5-mg-kachel'; el.setAttribute('aria-labelledby', 'a5MgTitel');
+    el.innerHTML = '<div class="a5-mg-kopf"><h2 class="kachel-titel" id="a5MgTitel">' + Ikon('chart') + 'Meteogramm</h2><button type="button" class="button leise tippbar" data-a5-mg-ganz="1" aria-label="Meteogramm im Tab Graphs ganz ansehen">Ganz ansehen</button></div><div class="pc-mg a5-mg" id="a5Mg"></div>';
+    anker.insertAdjacentElement('afterend', el);
+    a5Mg.el = el; a5Mg.breite = el.clientWidth;
+    var ziel = $('#a5Mg', el);
+    ziel.style.setProperty('--mg-haft-oben', $('#titelzeile').offsetHeight + 'px');
+    try { localStorage.removeItem('wpc-mg-start-zeilen'); localStorage.removeItem('wpc-mg-start-reihenfolge'); } catch (e) { }   // Zeilen bestimmt die App
+    a5Mg.instanz = Meteogramm.einbauen({
+      ziel: ziel, orte: [{ id: 'start', name: ort.name, lat: ort.lat, lon: ort.lon }],
+      modelle: [{ id: modell, name: m[1], lang: m[1], hinweis: m[2] }],
+      karte: false, zeilen: z, zeilenStandard: z, werteKlug: false, merkschluessel: 'wpc-mg-start', zeitzone: (daten && daten.timezone) || 'auto',
+      vollbild: function (an) { document.documentElement.classList.toggle('pc-mg-voll', !!an); }
+    });
+    a5Mg.schl = schl;
+  }
+
+  /* --- Wetter-Tab: Zusatz „(Vorhersage)", Kachel „Was heute geht" unter den Stunden, Meteogramm unter dem Regenradar --- */
+  renderWetter = (function (alt) {
+    return function () {
+      if (a5Mg.el && a5Mg.el.parentNode) a5Mg.el.parentNode.removeChild(a5Mg.el);   // Meteogramm bleibt erhalten, wird nur umgehängt
+      alt();
+      var s = $('#tab-wetter'), st = startLesen();
+      if (daten.current && daten.current._vorhersage) {
+        var kopf = $('.akt-kopf', s), u = $('#aktUmschalter', s);
+        if (kopf) $('b', kopf).insertAdjacentHTML('afterend', ' <span class="a5-vorhersage">(Vorhersage)</span>');
+        if (u) u.setAttribute('aria-label', u.getAttribute('aria-label') + '. Aktuelle Werte aus der Vorhersage, keine Messung');
+      }
+      var std = $('.std', s) || $('.akt', s);
+      if (st.tipps && std) {
+        std.insertAdjacentHTML('afterend', a5TippsHtml());
+        if (st.arten.indexOf('gezeiten') >= 0 || st.arten.indexOf('strand') >= 0) a5MeerHolen(ort, a5TippsNeu);
+      }
+      if (st.meteo) { var r = $('#regenTitel', s); a5MgEinsetzen(r ? r.closest('section') : $('#a5Tipps', s) || std); }
+      else if (a5Mg.el) a5MgAbbauen();
+    };
+  })(renderWetter);
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-a5-mg-ganz]')) { speicher.schreiben('wpc-graphs', 'meteo'); zeigeTab('graphs'); return; }
+    if (e.target.closest('[data-a5-zu-start]')) {
+      zeigeTab('mehr'); var t = $('#a5StartTitel');
+      if (t) { window.scrollTo(0, Math.max(0, t.getBoundingClientRect().top + window.scrollY - $('#titelzeile').offsetHeight - 16)); var f = $('#a5Arten input'); if (f) f.focus({ preventScroll: true }); }
+    }
+  });
+
+  /* --- Tab „Mehr": Abschnitt „Startseite" vor „Aktuell-Kachel", Quelle Marine-API --- */
+  quellenHtml = (function (alt) {
+    return function () {
+      return alt() + '<a class="tippbar" href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noopener"><span class="modell-text"><span>Ebbe und Flut: Open-Meteo Marine</span><small class="leise">Wasserstand des Meeres, CC BY 4.0, nur an der Küste</small></span><span aria-hidden="true">↗</span></a>';
+    };
+  })(quellenHtml);
+  renderMehr = (function (alt) { return function () { alt(); a5Mehr(); }; })(renderMehr);
+  function a5Mehr() {
+    var s = $('#tab-mehr'), st = startLesen();
+    var schalter = function (k, titel, text, an) { return '<label class="tippbar"><span class="modell-text"><span>' + titel + '</span><small class="leise">' + text + '</small></span><input type="checkbox" role="switch" data-a5="' + k + '"' + (an ? ' checked' : '') + '></label>'; };
+    var html = '<h2 class="abschnitt-titel" id="a5StartTitel">Startseite</h2><div class="liste a5-liste" id="a5Start">' +
+      schalter('tipps', 'Was heute geht', 'Bis zu 3 Tipps für heute, nach festen Regeln', st.tipps) +
+      schalter('meteo', 'Meteogramm auf der Startseite', 'Unter dem Regenradar, Zeilen wie im Tab „Graphs“', st.meteo) + '</div>' +
+      '<div class="kachel a5-groesse" id="a5Groesse"' + (st.meteo ? '' : ' hidden') + '><p class="a5-groesse-titel" id="a5GroesseTitel">Größe des Meteogramms</p>' +
+      seg('a5groesse', st.groesse, [['klein', 'Klein'], ['mittel', 'Mittel'], ['gross', 'Groß']], 'Größe des Meteogramms') +
+      '<p class="info">Klein zeigt 1 Zeile, Mittel 2 Zeilen, Groß alle Zeilen, die du im Tab „Graphs“ unter „Zeilen“ gewählt hast.</p></div>' +
+      '<h2 class="abschnitt-titel" id="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>Welche Tipps dürfen erscheinen?</h2>' +
+      '<div class="liste a5-liste" id="a5Arten" role="group" aria-labelledby="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>' +
+      A5_ARTEN.map(function (a) { return '<label class="tippbar"><span class="modell-text"><span>' + a[1] + '</span><small class="leise">' + a[2] + '</small></span><input type="checkbox" value="' + a[0] + '"' + (st.arten.indexOf(a[0]) >= 0 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
+      '<p class="info hilfe" id="a5ArtenHilfe"' + (st.tipps ? '' : ' hidden') + '>Die App zeigt höchstens 3 Tipps, in dieser Reihenfolge. Ebbe und Flut kommen von Open-Meteo Marine und erscheinen nur an Orten am Meer.</p>';
+    var vor = $$('h2.abschnitt-titel', s).filter(function (h) { return /^Aktuell-Kachel/.test(h.textContent.trim()); })[0];
+    if (vor) vor.insertAdjacentHTML('beforebegin', html); else s.insertAdjacentHTML('beforeend', html);
+    var sichtbar = function () { var x = startLesen(); $('#a5Groesse').hidden = !x.meteo; ['#a5ArtenTitel', '#a5Arten', '#a5ArtenHilfe'].forEach(function (id) { $(id).hidden = !x.tipps; }); };
+    $('#a5Start').addEventListener('change', function (e) {
+      var k = e.target.dataset.a5; if (!k) return;
+      var x = startLesen(); x[k] = e.target.checked; startSchreiben(x); sichtbar();
+      if (k === 'meteo' && !x.meteo) a5MgAbbauen();
+    });
+    $('[data-seg="a5groesse"]').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-v]'); if (!b) return;
+      var x = startLesen(); x.groesse = b.dataset.v; startSchreiben(x);
+      $$('[data-seg="a5groesse"] [data-v]').forEach(function (y) { y.setAttribute('aria-checked', String(y === b)); });
+    });
+    $('#a5Arten').addEventListener('change', function () { var x = startLesen(); x.arten = $$('#a5Arten input:checked').map(function (c) { return c.value; }); startSchreiben(x); });
+  }
 
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');
