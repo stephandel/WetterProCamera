@@ -1,3 +1,5 @@
 symbol-entwuerfe/
 .DS_Store
 .claude/
+node_modules/
+tests/bilder/

@@ -1,0 +1,20 @@
+# Kern-Tests bei jedem Hochladen (push) und jedem Änderungsvorschlag (pull_request).
+# Läuft kostenlos auf GitHub (öffentliches Repository).
+name: Tests
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - run: npm test
+      # Prüft, ob die Version in sw.js zu den Dateien passt (sonst wurde vor dem Hochladen „npm run version" vergessen)
+      - run: git diff --exit-code sw.js

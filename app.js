@@ -828,6 +828,214 @@
     });
   }
 
+  /* === Paket B: App-Technik (15.10.2026) === */
+  // Datenquelle wählbar: Open-Meteo (Standard) oder DWD über Bright Sky (brightsky.dev, DWD-Daten CC BY 4.0, ohne Schlüssel).
+  // laden() bleibt unverändert. Dafür werden hier urlVorhersage, holeJson, cacheKey, kopfModell, quellenHtml und renderMehr
+  // umhüllt: Bei „DWD" liefert urlVorhersage eine Marke „dwd:lat,lon", holeJson erkennt sie und holt die Daten bei Bright Sky.
+  var QUELLEN = [['open-meteo', 'Open-Meteo', 'Standard: viele Wettermodelle, ganze Welt'], ['dwd', 'DWD über Bright Sky', 'Deutscher Wetterdienst, Vorhersage MOSMIX bis 10 Tage, Stationen in Deutschland und Umgebung']];
+  var quelle = speicher.lesen('wpc-quelle', 'open-meteo'); if (quelle !== 'dwd') quelle = 'open-meteo';
+  var dwdLaeuft = null;   // null: noch nicht geladen, true: DWD-Daten sichtbar, false: Rückfall auf Open-Meteo
+  var DWD_MARKE = 'dwd:', BRIGHTSKY = 'https://api.brightsky.dev/';
+  var KURZBEFEHL_URL = 'https://stephandel.github.io/WetterProCamera/?kamera=1';
+  var urlOpenMeteo = urlVorhersage, cacheKeyOpenMeteo = cacheKey;
+
+  urlVorhersage = (function (alt) { return function (o) { return quelle === 'dwd' ? DWD_MARKE + o.lat + ',' + o.lon : alt(o); }; })(urlVorhersage);
+  cacheKey = (function (alt) { return function (o) { return alt(o) + (quelle === 'dwd' ? '-dwd' : ''); }; })(cacheKey);
+  holeJson = (function (alt) {
+    return function (url) {
+      if (typeof url !== 'string' || url.indexOf(DWD_MARKE) !== 0) return alt.apply(this, arguments);
+      var p = url.slice(DWD_MARKE.length).split(','), o = { lat: +p[0], lon: +p[1] }, rest = [].slice.call(arguments, 1), selbst = this;
+      return dwdHolen(o).then(function (d) { dwdLaeuft = true; kopfModell(); return d; }, function (e) {
+        // Kein DWD für diesen Ort (oder Bright Sky gestört): Open-Meteo zeigen und das sagen
+        console.warn('DWD über Bright Sky', e && e.message);
+        dwdLaeuft = false;
+        return alt.apply(selbst, [urlOpenMeteo(o)].concat(rest)).then(function (d) {
+          kopfModell(); var q = $('#quellen'); if (q) q.innerHTML = quellenHtml();
+          dwdMeldung(e && e.keineDaten ? 'DWD hat für diesen Ort keine Daten, Open-Meteo wird gezeigt.' : 'DWD ist gerade nicht erreichbar, Open-Meteo wird gezeigt.');
+          return d;
+        });
+      });
+    };
+  })(holeJson);
+  kopfModell = (function (alt) { return function () { alt(); if (quelle === 'dwd' && dwdLaeuft !== false) $('#ortZeile').textContent = 'Modell: DWD MOSMIX'; }; })(kopfModell);
+  quellenHtml = (function (alt) {
+    return function () {
+      if (quelle !== 'dwd') return alt();
+      return '<a class="tippbar" href="https://brightsky.dev" target="_blank" rel="noopener"><span class="modell-text"><span>Daten: DWD über Bright Sky (brightsky.dev)</span><small class="leise">DWD-Daten CC BY 4.0, Modell MOSMIX' +
+        (dwdLaeuft === false ? '. Für diesen Ort ohne Daten, deshalb Open-Meteo' : '') + '</small></span><span aria-hidden="true">↗</span></a>' + alt();
+    };
+  })(quellenHtml);
+
+  function dwdMeldung(t) {
+    // nach laden(): dort blendet hinweis(null) den Hinweis aus, deshalb erst im nächsten Takt zeigen
+    setTimeout(function () {
+      var h = $('#hinweis'); if (!h.hidden && h.querySelector('button')) return;   // Offline-Hinweis hat Vorrang
+      h.innerHTML = Ikon('cloud') + '<span class="hinweis-text">' + esc(t) + '</span>'; h.dataset.dwd = '1'; h.hidden = false;
+      clearTimeout(dwdMeldung.t); dwdMeldung.t = setTimeout(function () { if (h.dataset.dwd) { h.hidden = true; delete h.dataset.dwd; } }, 8000);
+    }, 0);
+  }
+  var zwei = function (n) { return (n < 10 ? '0' : '') + n; };
+  var isoDatum = function (d) { return d.getFullYear() + '-' + zwei(d.getMonth() + 1) + '-' + zwei(d.getDate()); };
+  // Zeitzone des Orts: aus einer früheren Open-Meteo-Antwort für diesen Ort, sonst deutsche Zeit
+  function dwdZeitzone(o) { var alt = speicher.lesen(cacheKeyOpenMeteo(o), null); return (alt && alt.d && alt.d.timezone) || 'Europe/Berlin'; }
+  function brightSkyJson(url) {
+    var steuer = 'AbortController' in window ? new AbortController() : null;
+    var t = setTimeout(function () { if (steuer) steuer.abort(); }, 12000);
+    return fetch(url, steuer ? { signal: steuer.signal } : {}).then(function (r) {
+      clearTimeout(t);
+      if (r.status === 404) { var f = new Error('Bright Sky: keine Daten (404)'); f.keineDaten = true; throw f; }
+      if (!r.ok) throw new Error('Bright Sky: HTTP ' + r.status);
+      return r.json();
+    });
+  }
+  function dwdHolen(o) {
+    var tz = dwdZeitzone(o), q = 'lat=' + o.lat + '&lon=' + o.lon + '&tz=' + encodeURIComponent(tz);
+    var vorhersage = brightSkyJson(BRIGHTSKY + 'weather?' + q + '&date=' + isoDatum(new Date()) + '&last_date=' + isoDatum(new Date(Date.now() + 9 * 864e5)));
+    var aktuell = brightSkyJson(BRIGHTSKY + 'current_weather?' + q).catch(function () { return null; });   // fehlt außerhalb Deutschlands oft
+    return Promise.all([vorhersage, aktuell]).then(function (r) { var d = brightSkyUmwandeln(r[0], r[1], o); d.timezone = tz; return d; });
+  }
+  // Bright Sky (condition, icon) → WMO-Code wie in CODES
+  function wmoAusBrightSky(bed, ikon, wolken, nied) {
+    var c = bed || '', i = ikon || '', n = nied || 0;
+    if (c === 'thunderstorm' || i === 'thunderstorm') return 95;
+    if (c === 'hail' || i === 'hail') return 96;
+    if (c === 'snow' || i === 'snow') return n >= 1.5 ? 75 : n >= 0.5 ? 73 : 71;
+    if (c === 'sleet' || i === 'sleet') return 66;
+    if (c === 'rain' || i === 'rain') return n >= 4 ? 65 : n >= 1 ? 63 : 61;
+    if (c === 'fog' || i === 'fog') return 45;
+    if (i.indexOf('clear') === 0) return wolken != null && wolken > 12 ? 1 : 0;
+    if (i.indexOf('partly-cloudy') === 0) return 2;
+    if (i === 'cloudy') return 3;
+    return wolken == null ? 3 : wolken < 15 ? 0 : wolken < 40 ? 1 : wolken < 75 ? 2 : 3;
+  }
+  // Gefühlte Temperatur (Formel des australischen Wetterdienstes: Temperatur, Feuchte, Wind)
+  function gefuehlt(t, feuchte, kmh) {
+    if (t == null || feuchte == null || kmh == null) return null;
+    var e = feuchte / 100 * 6.105 * Math.exp(17.27 * t / (237.7 + t));
+    return t + .33 * e - .7 * (kmh / 3.6) - 4;
+  }
+  // Sonnenauf- und -untergang ohne Dienst (Sonnenstand-Formel nach NOAA, vereinfacht, genau auf etwa 1–2 Minuten).
+  // datum 'JJJJ-MM-TT', versatz = Minuten zur Weltzeit (aus dem Zeitstempel). Ergebnis als Ortszeit 'JJJJ-MM-TTTHH:MM'.
+  function sonnenzeiten(datum, lat, lon, versatz) {
+    var g = Math.PI / 180, p = datum.split('-');
+    var jdMittag = Date.UTC(+p[0], +p[1] - 1, +p[2], 12) / 864e5 + 2440587.5;
+    var n = Math.round(jdMittag - 2451545 + .0008), js = n - lon / 360;
+    var M = (357.5291 + .98560028 * js) % 360, C = 1.9148 * Math.sin(M * g) + .02 * Math.sin(2 * M * g) + .0003 * Math.sin(3 * M * g);
+    var lambda = (M + C + 180 + 102.9372) % 360, transit = 2451545 + js + .0053 * Math.sin(M * g) - .0069 * Math.sin(2 * lambda * g);
+    var sinD = Math.sin(lambda * g) * Math.sin(23.4397 * g), cosD = Math.cos(Math.asin(sinD));
+    var cosW = (Math.sin(-.833 * g) - Math.sin(lat * g) * sinD) / (Math.cos(lat * g) * cosD);
+    if (cosW > 1) return { auf: null, unter: null, polartag: false };   // Polarnacht
+    if (cosW < -1) return { auf: null, unter: null, polartag: true };   // Mitternachtssonne
+    var w = Math.acos(cosW) / g / 360;
+    var ortszeit = function (jd) { return new Date((jd - 2440587.5) * 864e5 + versatz * 60000).toISOString().slice(0, 16); };
+    return { auf: ortszeit(transit - w), unter: ortszeit(transit + w) };
+  }
+  // Antwort von Bright Sky in das Datenformat der App (wie Open-Meteo: current, hourly, daily) übersetzen
+  function brightSkyUmwandeln(antw, akt, o) {
+    var w = ((antw && antw.weather) || []).filter(function (x) { return x.temperature != null; }), jetzt = Date.now();
+    if (w.length < 24 || !w.some(function (x) { return Date.parse(x.timestamp) > jetzt + 6 * 3600e3; })) { var f = new Error('Bright Sky: keine Vorhersage für diesen Ort'); f.keineDaten = true; throw f; }
+    var zeit = function (ts) { return ts.slice(0, 16); };
+    var versatz = function (ts) { var m = /([+-])(\d{2}):(\d{2})$/.exec(ts); return m ? (m[1] === '-' ? -1 : 1) * (+m[2] * 60 + +m[3]) : 0; };
+    var tage = [], proTag = {}, sonne = {};
+    w.forEach(function (x) { var t = x.timestamp.slice(0, 10); if (!proTag[t]) { proTag[t] = []; tage.push(t); } proTag[t].push(x); });
+    tage.forEach(function (t) { sonne[t] = sonnenzeiten(t, o.lat, o.lon, versatz(proTag[t][0].timestamp)); });
+    var istTag = function (x) { var s = sonne[x.timestamp.slice(0, 10)], z = zeit(x.timestamp); return s.auf ? (z >= s.auf && z < s.unter ? 1 : 0) : (s.polartag ? 1 : 0); };
+    var hourly = { time: [], temperature_2m: [], precipitation: [], precipitation_probability: [], weather_code: [], is_day: [] };
+    w.forEach(function (x) {
+      hourly.time.push(zeit(x.timestamp)); hourly.temperature_2m.push(x.temperature); hourly.precipitation.push(x.precipitation == null ? 0 : x.precipitation);
+      hourly.precipitation_probability.push(x.precipitation_probability); hourly.weather_code.push(wmoAusBrightSky(x.condition, x.icon, x.cloud_cover, x.precipitation)); hourly.is_day.push(istTag(x));
+    });
+    // Aktuell: Messung der nächsten DWD-Station; fehlt sie (außerhalb Deutschlands), die laufende Stunde der Vorhersage
+    var iJ = 0; w.forEach(function (x, i) { if (Date.parse(x.timestamp) <= jetzt) iJ = i; });
+    var h = w[iJ], a = (akt && akt.weather) || {}, wert = function (v, ersatz) { return v == null ? ersatz : v; };
+    var temp = wert(a.temperature, h.temperature), feuchte = wert(a.relative_humidity, h.relative_humidity), wind = wert(a.wind_speed_10, h.wind_speed);
+    var current = {
+      time: zeit(a.timestamp || h.timestamp), temperature_2m: temp, apparent_temperature: gefuehlt(temp, feuchte, wind), relative_humidity_2m: feuchte,
+      pressure_msl: wert(a.pressure_msl, h.pressure_msl), weather_code: a.icon || a.condition ? wmoAusBrightSky(a.condition, a.icon, a.cloud_cover, a.precipitation_60) : hourly.weather_code[iJ],
+      wind_speed_10m: wind, wind_direction_10m: wert(a.wind_direction_10, h.wind_direction), wind_gusts_10m: wert(a.wind_gust_speed_10, h.wind_gust_speed),
+      precipitation: wert(a.precipitation_60, h.precipitation), cloud_cover: wert(a.cloud_cover, h.cloud_cover), visibility: wert(a.visibility, h.visibility),
+      is_day: a.icon ? (/night/.test(a.icon) ? 0 : 1) : hourly.is_day[iJ]
+    };
+    var daily = { time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: [], sunshine_duration: [], precipitation_probability_max: [], precipitation_sum: [], wind_speed_10m_max: [], wind_direction_10m_dominant: [], sunrise: [], sunset: [], uv_index_max: [] };
+    tage.forEach(function (t, i) {
+      var xs = proTag[t]; if (i > 0 && xs.length < 12) return;   // angebrochener letzter Tag
+      var zahlen = function (k, liste) { return (liste || xs).map(function (x) { return x[k]; }).filter(function (v) { return v != null; }); };
+      var summe = function (k) { var z = zahlen(k); return z.length ? z.reduce(function (s, v) { return s + v; }, 0) : null; };
+      var max = function (k) { var z = zahlen(k); return z.length ? Math.max.apply(null, z) : null; };
+      // Tagessymbol: kräftigstes Niederschlagswetter am Tag, sonst Nebel (ab 3 Stunden), sonst mittlere Bewölkung
+      var hell = xs.filter(function (x) { return istTag(x); }); if (!hell.length) hell = xs;
+      var codes = hell.map(function (x) { return wmoAusBrightSky(x.condition, x.icon, x.cloud_cover, x.precipitation); });
+      var nass = codes.filter(function (c) { return c >= 51; }), wolken = zahlen('cloud_cover', hell), mittel = wolken.length ? wolken.reduce(function (s, v) { return s + v; }, 0) / wolken.length : null;
+      var code = nass.length ? Math.max.apply(null, nass) : codes.filter(function (c) { return c === 45; }).length >= 3 ? 45 : wmoAusBrightSky(null, null, mittel, 0);
+      // Hauptwindrichtung als Mittel der Richtungen, gewichtet mit der Windstärke
+      var vx = 0, vy = 0; xs.forEach(function (x) { if (x.wind_direction == null || x.wind_speed == null) return; vx += Math.sin(x.wind_direction * Math.PI / 180) * x.wind_speed; vy += Math.cos(x.wind_direction * Math.PI / 180) * x.wind_speed; });
+      var sonnenMin = summe('sunshine');
+      daily.time.push(t); daily.weather_code.push(code); daily.temperature_2m_max.push(max('temperature'));
+      daily.temperature_2m_min.push(Math.min.apply(null, zahlen('temperature'))); daily.sunshine_duration.push(sonnenMin == null ? null : sonnenMin * 60);
+      daily.precipitation_probability_max.push(max('precipitation_probability')); daily.precipitation_sum.push(summe('precipitation') || 0);
+      daily.wind_speed_10m_max.push(max('wind_speed')); daily.wind_direction_10m_dominant.push(vx || vy ? (Math.atan2(vx, vy) * 180 / Math.PI + 360) % 360 : null);
+      daily.sunrise.push(sonne[t].auf || ''); daily.sunset.push(sonne[t].unter || ''); daily.uv_index_max.push(null);   // UV hat Bright Sky nicht
+    });
+    return { _quelle: 'dwd', latitude: o.lat, longitude: o.lon, current: current, hourly: hourly, daily: daily };
+  }
+
+  // Tab „Mehr": Abschnitte Datenquelle und Kurzbefehl, Datenschutz-Satz (ohne bestehende Zeilen zu ändern: renderMehr wird umhüllt)
+  renderMehr = (function (alt) { return function () { alt(); mehrPaketB(); }; })(renderMehr);
+  function mehrPaketB() {
+    var s = $('#tab-mehr'), titel = function (t) { return $$('h2.abschnitt-titel', s).filter(function (h) { return h.textContent.trim() === t; })[0]; };
+    var vor = function (el, html) { var tmp = document.createElement('div'); tmp.innerHTML = html; while (tmp.firstChild) el.parentNode.insertBefore(tmp.firstChild, el); };
+    var nach = function (el, html) { el.insertAdjacentHTML('afterend', html); };
+    // Datenquelle vor dem Abschnitt „Wettermodell"
+    var quelleHtml = '<h2 class="abschnitt-titel" id="quelleTitel">Datenquelle</h2><div class="liste" id="quelleListe" role="radiogroup" aria-labelledby="quelleTitel">' +
+      QUELLEN.map(function (q) { return '<label class="tippbar"><span class="modell-text"><span>' + q[1] + '</span><small class="leise">' + q[2] + '</small></span><input type="radio" name="quelle" value="' + q[0] + '"' + (q[0] === quelle ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
+      '<p class="info hilfe">Beim DWD fehlen UV-Index und Luftqualität (dort steht „–"). Sonnenauf- und -untergang rechnet die App selbst aus. Die Wahl „Wettermodell" darunter gilt nur für Open-Meteo.</p>';
+    var wm = titel('Wettermodell'); if (wm) vor(wm, quelleHtml); else s.insertAdjacentHTML('beforeend', quelleHtml);
+    // Datenschutz-Satz: unter „Datenschutz" (falls vorhanden), sonst unter den Quellen
+    var satz = '<p class="info hilfe" id="datenschutzDwd">Bei Datenquelle DWD sieht brightsky.dev deine IP-Adresse und den Ort.</p>';
+    var ds = titel('Datenschutz'), ql = $('#quellen', s);
+    if (ds && ds.nextElementSibling) nach(ds.nextElementSibling, satz); else if (ql) nach(ql, '<p class="info hilfe" id="datenschutzDwd"><b>Datenschutz:</b> Bei Datenquelle DWD sieht brightsky.dev deine IP-Adresse und den Ort.</p>');
+    // Kurzbefehl „Wetterfoto" vor „Über die App"
+    var kb = '<h2 class="abschnitt-titel" id="kbTitel">Kurzbefehl „Wetterfoto“</h2><section class="kachel kurzbefehl" aria-labelledby="kbTitel">' +
+      '<p>Mit Apples App „Kurzbefehle“ fotografierst du mit einem Tipp und landest danach direkt im Teilen-Bildschirm dieser App.</p><ol class="kb-schritte">' +
+      '<li>Öffne die App <b>Kurzbefehle</b> und tippe oben rechts auf <b>+</b>.</li>' +
+      '<li>Füge die Aktion <b>App öffnen</b> hinzu und wähle <b>ProCamera</b> (oder <b>Kamera</b>).</li>' +
+      '<li>Füge die Aktion <b>Warten bis Rückkehr</b> hinzu. Der Kurzbefehl wartet dann, bis du fotografiert hast und zurückwechselst.</li>' +
+      '<li>Füge die Aktion <b>URL öffnen</b> hinzu und setze diesen Link ein:<code class="kb-link">' + esc(KURZBEFEHL_URL) + '</code></li>' +
+      '<li>Nenne den Kurzbefehl <b>Wetterfoto</b>. Über <b>Zum Home-Bildschirm</b> bekommt er ein eigenes Symbol, oder du sagst „Hey Siri, Wetterfoto“.</li>' +
+      '<li>Weitergeben: Kurzbefehle lassen sich seit iOS 15 nur über einen iCloud-Link teilen. Den Link erzeugst du selbst, wenn der Kurzbefehl fertig ist (Kurzbefehl lange drücken, „Teilen“, „iCloud-Link kopieren“).</li></ol>' +
+      '<p class="info">Der Link öffnet die App in Safari und zeigt gleich den Teilen-Bildschirm. Tippe dort auf „Fotos“ und wähle das neueste Bild.</p>' +
+      '<div class="kb-fuss"><button class="button" id="kbKopieren" aria-label="Link für den Kurzbefehl kopieren">Link kopieren</button><span class="leise" id="kbStatus" role="status" aria-live="polite"></span></div></section>';
+    var ueber = titel('Über die App'); if (ueber) vor(ueber, kb); else s.insertAdjacentHTML('beforeend', kb);
+
+    $('#quelleListe').addEventListener('change', function (e) {
+      quelle = e.target.value === 'dwd' ? 'dwd' : 'open-meteo'; speicher.schreiben('wpc-quelle', quelle); dwdLaeuft = null;
+      kopfModell(); var q = $('#quellen'); if (q) q.innerHTML = quellenHtml();
+      daten = null; laden(); hinweisKurz('Lade Vorhersage von ' + (quelle === 'dwd' ? 'DWD über Bright Sky' : 'Open-Meteo') + ' …');
+    });
+    $('#kbKopieren').addEventListener('click', function () {
+      var st = $('#kbStatus'), fertig = function (ok) { st.textContent = ok ? 'Link kopiert ✓' : 'Kopieren ging nicht. Halte den Link oben gedrückt und wähle „Kopieren“.'; clearTimeout(fertig.t); fertig.t = setTimeout(function () { st.textContent = ''; }, 4000); };
+      var ersatz = function () { try { var f = document.createElement('textarea'); f.value = KURZBEFEHL_URL; f.setAttribute('readonly', ''); f.style.position = 'fixed'; f.style.opacity = '0'; document.body.appendChild(f); f.select(); var ok = document.execCommand('copy'); f.remove(); fertig(ok); } catch (x) { fertig(false); } };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(KURZBEFEHL_URL).then(function () { fertig(true); }, ersatz); else ersatz();
+    });
+  }
+
+  // Direktlink für den Kurzbefehl: index.html?kamera=1 (oder #kamera) öffnet nach dem Laden sofort den Teilen-Bildschirm
+  function kameraDirekt() {
+    if (!/[?&]kamera=1(&|$)/.test(location.search) && location.hash !== '#kamera') return;
+    try { history.replaceState(null, '', location.pathname); } catch (e) { }   // beim Neuladen nicht noch einmal öffnen
+    var versuche = 0;
+    (function warten() {
+      if (!daten) { if (++versuche < 100) setTimeout(warten, 200); return; }   // höchstens 20 s auf die Wetterdaten warten
+      teilenOeffnen();
+      var tipp = $('#tTipp');
+      if (!tipp) { $('.teilen-bild').insertAdjacentHTML('beforeend', '<p class="teilen-tipp" id="tTipp" role="status">Tippe auf „Fotos“ und wähle das neueste Bild.</p>'); tipp = $('#tTipp'); }
+      tipp.hidden = !!foto;
+      var weg = function () { tipp.hidden = true; };
+      $('#tFotos').addEventListener('change', weg, { once: true }); $('#tKamera').addEventListener('change', weg, { once: true }); $('#teilen').addEventListener('close', weg, { once: true });
+    })();
+  }
+  kameraDirekt();
+
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');
   $('#tTeilen').innerHTML = Ikon('share'); $('#tFotosIkon').innerHTML = Ikon('image'); $('#tKameraIkon').innerHTML = Ikon('camera');

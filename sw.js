@@ -1,10 +1,38 @@
-/* sw.js – Offline-Betrieb: App-Hülle aus dem Speicher, Wetterdaten immer frisch (Ersatz: letzter Stand in localStorage) */
-const VERSION = 'wpc-5';
-const HUELLE = ['./', 'index.html', 'app.css', 'app.js', 'base.css', 'tokens.css', 'symbole.js', 'ikonen.js', 'manifest.json', 'apple-touch-icon.png', 'app-symbol-1024.png', 'foto-mannheim.jpg'];
+/* sw.js – Offline-Betrieb (Paket B, 15.10.2026)
+   - VERSION schreibt tools/version.js automatisch (Hash über alle Dateien in HUELLE). Nicht von Hand ändern.
+   - index.html und Daten-Dateien (JSON): erst aus dem Netz, ohne Netz aus dem Zwischenspeicher.
+   - Übrige Hülle (CSS, JS, Bilder, Leaflet): sofort aus dem Zwischenspeicher, im Hintergrund auffrischen.
+   - Gespeichert werden nur einwandfreie Antworten der eigenen Seite (r.ok und Typ „basic").
+   - Wetterdaten, Karten und Radar kommen von fremden Diensten und gehen direkt ins Netz; den letzten Stand merkt sich app.js. */
+const VERSION = 'wpc-8446a17c24';
+const HUELLE = ['./', 'index.html', 'app.css', 'app.js', 'base.css', 'tokens.css', 'symbole.js', 'ikonen.js', 'manifest.json', 'apple-touch-icon.png', 'app-symbol-1024.png', 'foto-mannheim.jpg',
+  'lib/leaflet/leaflet.min.js', 'lib/leaflet/leaflet.css', 'lib/leaflet/images/layers.png', 'lib/leaflet/images/layers-2x.png', 'lib/leaflet/images/marker-icon.png', 'lib/leaflet/images/marker-icon-2x.png', 'lib/leaflet/images/marker-shadow.png'];
+
+const speicherbar = r => r && r.ok && r.type === 'basic';
+const merken = (req, r) => { if (speicherbar(r)) { const kopie = r.clone(); caches.open(VERSION).then(c => c.put(req, kopie)); } return r; };
+
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(HUELLE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+
+// Netz zuerst, sonst Zwischenspeicher (Startseite: auch mit ?kamera=1 die gespeicherte index.html)
+function netzZuerst(req, seite) {
+  return fetch(req).then(r => merken(seite ? 'index.html' : req, r)).catch(() =>
+    caches.match(seite ? 'index.html' : req, { ignoreSearch: seite }).then(r => r || caches.match('index.html')));
+}
+// Zwischenspeicher zuerst, im Hintergrund auffrischen (stale-while-revalidate)
+function speicherZuerst(e) {
+  const netz = fetch(e.request).then(r => merken(e.request, r));
+  return caches.match(e.request).then(r => {
+    if (r) { e.waitUntil(netz.catch(() => { })); return r; }
+    return netz;
+  });
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;   // Wetterdaten, Karten, Radar: direkt aus dem Netz
-  e.respondWith(fetch(e.request).then(r => { const kopie = r.clone(); caches.open(VERSION).then(c => c.put(e.request, kopie)); return r; }).catch(() => caches.match(e.request).then(r => r || caches.match('index.html'))));
+  if (e.request.method !== 'GET' || url.origin !== location.origin) return;   // fremde Dienste: direkt aus dem Netz
+  const pfad = url.pathname, scope = new URL(self.registration.scope).pathname;
+  const seite = e.request.mode === 'navigate' || pfad === scope || pfad.endsWith('/index.html');
+  const daten = /\.json$/.test(pfad);
+  e.respondWith(seite || daten ? netzZuerst(e.request, seite) : speicherZuerst(e));
 });

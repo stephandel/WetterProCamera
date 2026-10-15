@@ -8,6 +8,15 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - Reiter: **Wetter** (Aktuell, nächste Stunden, Regen der nächsten 2 Stunden, 8 Tage), **Graphs** (48 Stunden), **Kamera** (Wetter mit Foto teilen), **Rad/Sat** (Radar von [RainViewer](https://www.rainviewer.com), Satellit von EUMETSAT, Temperaturkarte), **Mehr** (Ortssuche, Favoriten, Wettermodell, Einheiten, Quellen, Webcam-Hinweis)
 - Wetter mit Foto teilen (6 Vorlagen, 6 Formate, wie früher bei WeatherPro)
 
+### Neu am 15.10.2026 (Paket B)
+
+- **Datenquelle wählbar** (Tab „Mehr" → „Datenquelle"): Open-Meteo (Standard) oder **DWD über Bright Sky** (brightsky.dev, DWD-Daten CC BY 4.0, ohne Schlüssel). Beim DWD steht oben „Modell: DWD MOSMIX"; die Vorhersage reicht 9 Tage. Aktuelle Werte kommen von der nächsten DWD-Wetterstation. UV-Index und Luftqualität gibt es beim DWD nicht (dort steht „–"), Sonnenauf- und -untergang rechnet die App selbst aus. Hat der DWD für einen Ort keine Daten, zeigt die App Open-Meteo und sagt das in einem Hinweis. Gemerkt in `wpc-quelle`.
+- **Kurzbefehl „Wetterfoto"**: Der Link `https://stephandel.github.io/WetterProCamera/?kamera=1` (oder `#kamera`) öffnet sofort den Teilen-Bildschirm mit dem Hinweis „Tippe auf „Fotos" und wähle das neueste Bild". Im Tab „Mehr" steht eine Schritt-für-Schritt-Anleitung für Apples App „Kurzbefehle" und ein Knopf „Link kopieren".
+- **Offline robuster**: Die Kartenbibliothek Leaflet liegt jetzt in der App (`lib/leaflet/`, Version 1.9.4) statt auf einem fremden Server. Der Service Worker (das Programm, das die App ohne Netz startet) speichert nur noch einwandfreie Dateien, holt die Startseite immer frisch und frischt alles andere im Hintergrund auf.
+- **Version automatisch**: Die Version des Service Workers ist ein Fingerabdruck aller App-Dateien und ändert sich von selbst, sobald sich eine Datei ändert (siehe „Tests und Version").
+- **Automatische Tests**: `npm test` prüft die App in WebKit (dem Browser-Kern von Safari), auf GitHub bei jedem Hochladen.
+- Plus- und Minus-Knopf der Karten haben jetzt 44 px Tippfläche.
+
 ### Neu am 15.10.2026 (Paket 6: Funde der UX-Prüfung)
 
 - **Mehr-Tab:** rechter Rand wie links (16 px); Quellen stehen jetzt als eigene Zeilen mit großer Tippfläche (44 px) statt kleiner Links im Text.
@@ -41,6 +50,8 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 | `base.css` | Skill `apple-ui` (Grundwerte, von `tokens.css` überschrieben) |
 | `index.html`, `app.css`, `app.js`, `ikonen.js`, `sw.js` | von Claude Code nach `DESIGN.md` gebaut |
 | `foto-mannheim.jpg` | eigene Aufnahme, Beispielbild zum Teilen |
+| `lib/leaflet/` | Kartenbibliothek Leaflet 1.9.4 (BSD-2-Lizenz, `LICENSE` liegt bei) |
+| `package.json`, `tests/`, `tools/`, `.github/workflows/test.yml` | Tests, Versionswerkzeug und Git-Hook (Paket B) |
 
 ## Lokal starten
 
@@ -49,6 +60,12 @@ python3 -m http.server 8822 --bind 127.0.0.1
 ```
 
 Dann im Browser `http://localhost:8822` öffnen.
+
+## Tests und Version
+
+**Tests:** Einmal `npm install` (lädt das Testwerkzeug Playwright, rund 10 MB, und nutzt WebKit, den Browser-Kern von Safari), danach `npm test`. Der Befehl startet einen kleinen Server auf Port 8862 und prüft rund 75 Punkte: alle Tabs in 390 px hell und dunkel, iPad (820 px) und iPhone quer (844 × 390), kein seitliches Scrollen, keine Fehler in der Konsole, Tippflächen mindestens 44 px, keine Schrift unter 11 px, Teilen-Bildschirm und Blatt „Infos", Offline-Zustand, Datenquelle DWD samt Rückfall auf Open-Meteo, Direktlink `?kamera=1` und den Service Worker. Die Wetterdienste werden dabei nicht gefragt: Die Tests nutzen gespeicherte echte Antworten vom 15.10.2026 aus `tests/fixtures/`. Bildschirmfotos landen in `tests/bilder/` (wird nicht hochgeladen). Auf GitHub laufen dieselben Tests bei jedem Hochladen automatisch (`.github/workflows/test.yml`, für öffentliche Repositories kostenlos); das Ergebnis steht im Reiter „Actions".
+
+**Version des Service Workers:** Die Zeile `const VERSION = 'wpc-…'` in `sw.js` nie von Hand ändern. `npm run version` berechnet sie neu (Fingerabdruck über alle Dateien der Liste `HUELLE`). Damit das vor jedem Commit von selbst passiert, einmal pro Rechner `npm run hooks` ausführen (richtet den Git-Hook `tools/hooks/pre-commit` ein). Neue Dateien, die offline gebraucht werden, in `HUELLE` in `sw.js` eintragen; der Test meldet, wenn eine eingetragene Datei fehlt.
 
 ## Veröffentlichen (GitHub Pages)
 

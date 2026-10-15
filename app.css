@@ -266,3 +266,21 @@ dialog.teilen::backdrop { background: #000; }
 @media (prefers-reduced-transparency: reduce) { .glas { background: var(--bg-2); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 @media (prefers-contrast: more) { :root { --label-2: var(--label); --trenner: var(--label-3); } .glas { background: var(--bg-2); } }
 @media (prefers-reduced-motion: reduce) { .tippbar:active { transform: none; } }
+
+/* === Paket B: App-Technik (15.10.2026) === */
+/* Datenquelle (wie die Liste der Wettermodelle) */
+#quelleListe label { justify-content: space-between; }
+#quelleListe input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+/* Kurzbefehl „Wetterfoto": Anleitung als Fließtext (17 px), Link umbrechbar, damit nichts seitlich herausragt */
+.kurzbefehl { font-size: var(--fs-body); line-height: var(--lh); }
+.kurzbefehl > p { margin: 0 0 var(--s3); max-width: 65ch; }
+.kb-schritte { margin: 0 0 var(--s3); padding-left: var(--s6); display: grid; gap: var(--s2); max-width: 65ch; }
+.kb-schritte li::marker { font-weight: 600; color: var(--label-2); }
+.kb-link { display: block; margin-top: var(--s1); padding: var(--s2) var(--s3); border-radius: var(--r-button); background: var(--fuellung); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--fs-footnote); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+.kb-fuss { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.kb-fuss .button { min-height: var(--tap); }
+.kb-fuss .leise { font-size: var(--fs-subhead); }
+/* Hinweis im Teilen-Bildschirm nach dem Direktlink ?kamera=1 */
+.teilen-tipp { position: absolute; bottom: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s2) var(--s4); border-radius: var(--r-chip); background: var(--t-flaeche); color: #fff; font-size: var(--fs-subhead); font-weight: 600; text-align: center; width: max-content; max-width: calc(100% - var(--s4)); }
+/* Plus/Minus der Karte (Leaflet, jetzt lokal): Tippfläche 44 px statt 30 px */
+.leaflet-touch .leaflet-control-zoom.leaflet-bar a, .leaflet-control-zoom.leaflet-bar a { width: var(--tap); height: var(--tap); line-height: var(--tap); }
