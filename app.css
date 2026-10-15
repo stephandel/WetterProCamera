@@ -514,3 +514,7 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 /* Vollbild des Meteogramms: Kopfzeile und Tab-Leiste der App ausblenden */
 .pc-mg-voll .titelzeile, .pc-mg-voll .tabbar, .pc-mg-voll .pc-graphs-kopf { display: none; }
 @media (prefers-reduced-motion: reduce) { .pc-mg .mg-btn:active { transform: none; } }
+
+/* === Paket A4: Meteogramm-Hilfetext nie unter die schwebende Tab-Leiste (15.10.2026) === */
+.pc-mg, .pc-mg.mg { margin-bottom: var(--s6); }   /* zusätzlich zum Platz in .inhalt (Tab-Leiste plus Safe-Area): Hilfetext bleibt sicher darüber */
+.pc-mg-voll .pc-mg, .pc-mg-voll .pc-mg.mg { margin-bottom: 0; }   /* im Vollbild gibt es keine Tab-Leiste */

@@ -1395,12 +1395,12 @@
   function satFrameZeigen() {
     var n = satFilm.frames.length, f = satFilm.frames[satFilm.i]; if (!f) return;
     satFilm.frames.forEach(function (x, j) { x.lage.setOpacity(j === satFilm.i ? .9 : 0); });
-    var z = $('#radarZeit'); if (z) z.textContent = (satFilm.ebene === 'sat' ? 'Satellit' : 'Infrarot') + ' · ' + new Date(f.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr (' + (satFilm.i + 1) + ' von ' + n + ')';
+    var z = $('#radarZeit'); if (z) z.textContent = (satFilm.ebene === 'sat' ? 'Satellit' : 'Infrarot') + ' · ' + new Date(f.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr (' + (satFilm.i + 1) + ' von ' + n + ')' + (satFilm.frames.some(function (x) { return !x.geladen && !x.fehler; }) ? ' · Bilder laden …' : '');
   }
   // Nächstes fertig geladenes Bild; Bilder mit Fehlern werden übersprungen
   function satWeiter() {
     var n = satFilm.frames.length; if (!n) return;
-    for (var s = 1; s <= n; s++) { var j = (satFilm.i + s) % n, f = satFilm.frames[j]; if (f.geladen && !f.fehler) { satFilm.i = j; break; } }
+    for (var s = 1; s <= n; s++) { var j = (satFilm.i + s) % n, f = satFilm.frames[j]; if ((f.geladen || Date.now() - f.t0 > 4000) && !f.fehler) { satFilm.i = j; break; } }
     satFrameZeigen();
   }
   function satLos() { clearInterval(satFilm.timer); satFilm.timer = setInterval(satWeiter, matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700); }
@@ -1414,7 +1414,7 @@
       if (ebene !== k || !radarKarte) return;
       satAufraeumen(); satFilm.ebene = k;
       satFilm.frames = liste.map(function (iso) {
-        var f = { zeit: iso, geladen: false, fehler: false };
+        var f = { zeit: iso, geladen: false, fehler: false, t0: Date.now() };   // t0: nach 4 s gilt das Bild auch unvollständig als zeigbar
         f.lage = L.tileLayer.wms(EUMETSAT_WMS, { layers: SAT_LAYER[k][0], styles: SAT_LAYER[k][1], format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, opacity: 0, time: iso, attribution: '© EUMETSAT' });
         f.lage.on('load', function () { f.geladen = true; });
         f.lage.on('tileerror', function () { f.fehler = true; });

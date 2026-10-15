@@ -28,6 +28,7 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - **Datenschutz** im Tab „Mehr" unter den Quellen.
 ### Neu am 15.10.2026 (Paket C)
 
+- **Nachbesserung (A4):** Der Hilfetext unter dem Meteogramm liegt jetzt sicher über der Tab-Leiste, und der Satellitenfilm geht nach 4 Sekunden auch mit noch unvollständigen Bildern weiter (Hinweis „Bilder laden …“).
 - **Eigenes Logo fürs Teilen-Bild:** Blatt „Infos" → „Logo" → „Eigenes Logo". Bild wählen (PNG, JPEG oder SVG), die App verkleinert es auf höchstens 512 Pixel und merkt es sich im Browser (`wpc-logo`, höchstens etwa 300 KB). Es steht so hoch wie der App-Name in der Ecke, das Seitenverhältnis bleibt. Knopf „Logo entfernen". Bleibt nur auf deinem Gerät.
 - **Satellit und Infrarot abspielen:** Unter Rad/Sat hat jetzt auch die Ebene Satellit bzw. Infrarot den Knopf „Abspielen". Er zeigt 12 Bilder der letzten 2 Stunden (alle 10 Minuten eins), mit Uhrzeit. Fehlende Bilder werden übersprungen. Nachts erklärt ein Satz, dass das Farbbild dunkel bleibt und Infrarot die Wolken trotzdem zeigt.
   Technik: EUMETSAT-Kartendienst (WMS) mit Zeitangabe `time=`. Die Zeitliste kommt aus der Selbstauskunft des Dienstes (`GetCapabilities` je Ebene). Geprüft am 15.10.2026: `<Dimension name="time">2024-09-23T00:00:00.000Z/2026-10-15T12:30:00.000Z/PT10M</Dimension>`, also Anfang/Ende/Schritt 10 Minuten, das neueste Bild ist etwa 20–25 Minuten alt (gleich für `mtg_fd:rgb_geocolour` und `mtg_fd:ir105_hrfi`).
