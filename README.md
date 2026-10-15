@@ -5,8 +5,18 @@
 Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Design-Konfigurator** nach den Empfehlungen der KI und gebaut von Claude Code aus dem exportierten Projektpaket (15.10.2026).
 
 - Live-Wetter von [Open-Meteo](https://open-meteo.com) (CC BY 4.0), ohne Schlüssel und ohne eigenen Server
-- Reiter: **Wetter** (Aktuell, nächste Stunden, Regen der nächsten 2 Stunden, 8 Tage), **Graphs** (48 Stunden), **Karten** (Temperaturen an den Orten), **Rad/Sat** (Regenradar von [RainViewer](https://www.rainviewer.com)), **Mehr** (Ortssuche, Standort, Quellen)
-- Wetter mit Foto teilen (4 Gestaltungen, wie früher bei WeatherPro)
+- Reiter: **Wetter** (Aktuell, nächste Stunden, Regen der nächsten 2 Stunden, 8 Tage), **Graphs** (48 Stunden), **Kamera** (Wetter mit Foto teilen), **Rad/Sat** (Radar von [RainViewer](https://www.rainviewer.com), Satellit von EUMETSAT, Temperaturkarte), **Mehr** (Ortssuche, Favoriten, Wettermodell, Einheiten, Quellen, Webcam-Hinweis)
+- Wetter mit Foto teilen (6 Vorlagen, 6 Formate, wie früher bei WeatherPro)
+
+### Neu am 15.10.2026 (Paket 3)
+
+- **App-Symbol „Linse"** (Entwurf A): `app-symbol-1024.png` und `apple-touch-icon.png` (180 px, 30 KB). Die Entwürfe in `symbol-entwuerfe/` bleiben nur lokal (`.gitignore`).
+- **Tab-Leiste mit Kamera in der Mitte:** Wetter, Graphs, **Kamera** (Auslöser, öffnet den Teilen-Bildschirm), Rad/Sat, Mehr. Der Teilen-Knopf oben bleibt. Die Temperaturkarte ist jetzt die Ebene „Karte" unter Rad/Sat.
+- **Teilen-Bildschirm:** Formate 3:4, 4:5, 1:1, 9:16, 16:9 und Original; sechs Vorlagen (Klassisch, Glas, Minimal, Rahmen, **Polaroid**, **Zeitstempel** mit orangen Ziffern). Blatt **„Infos"**: 19 Angaben zum Anhaken, Reihenfolge mit ↑ ↓, Ort als Stadt/Stadtteil/aus, eigener Text oder Hashtag, Farbton dunkel/hell/**automatisch** (misst die Helligkeit des Fotos), Logo App-Name oder keins, Größe 1080/2160 px, JPEG oder PNG. „Shot on ProCamera" ist vorbereitet, aber gesperrt (nur mit Freigabe von Cocologics). Alles wird im Browser unter `wpc-teilen` gemerkt.
+- **Mehr:** Orte mit Favoriten-Stern (Favoriten stehen oben), **Wettermodell** wählbar (Beste Mischung, ECMWF, DWD ICON, NOAA GFS, Météo-France, UK Met Office; Open-Meteo-Parameter `models=`), Modell steht in der Kopfzeile, Wind in km/h, m/s, Knoten oder Beaufort, Quellen-Block automatisch, Abschnitt „Webcam" mit den 6 angefragten Kameras (Bilder folgen erst nach Erlaubnis).
+- **Rad/Sat:** Ebenen Radar (RainViewer), **Satellit** und **Infrarot** (EUMETSAT/Meteosat, frei ohne Schlüssel), Karte (Temperaturen an deinen Orten).
+- Tagestönung im Dunkelmodus abgeschwächt (`tokens.css`).
+- Service Worker `wpc-3`: Nach dem Veröffentlichen holt sich die installierte App die neue Fassung.
 - Hell und dunkel nach Gerät, offline mit dem letzten Stand, auf dem iPhone installierbar („Zum Home-Bildschirm")
 
 ## Dateien
@@ -21,7 +31,7 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 ## Lokal starten
 
 ```
-python3 -m http.server 8822
+python3 -m http.server 8822 --bind 127.0.0.1
 ```
 
 Dann im Browser `http://localhost:8822` öffnen.

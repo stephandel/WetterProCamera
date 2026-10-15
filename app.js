@@ -22,6 +22,33 @@
     { name: 'Morro Jable', land: 'Spanien', lat: 28.051, lon: -14.354 }
   ];
   var ort = speicher.lesen('wpgt-ort', STANDARDORTE[0]);
+  var ortKey = function (o) { return o.name + '|' + Number(o.lat).toFixed(2) + ',' + Number(o.lon).toFixed(2); };
+  var favoriten = speicher.lesen('wpc-favoriten', []);
+
+  /* ---------- Wettermodell (Open-Meteo, Parameter models=) und Einheiten ---------- */
+  var MODELLE = [
+    ['best_match', 'Beste Mischung', 'Open-Meteo wählt je Ort das passende Modell'],
+    ['ecmwf_ifs025', 'ECMWF IFS', 'Europäisches Zentrum für mittelfristige Wettervorhersage'],
+    ['icon_seamless', 'DWD ICON', 'Deutscher Wetterdienst'],
+    ['gfs_seamless', 'NOAA GFS', 'US-Wetterdienst NOAA'],
+    ['meteofrance_seamless', 'Météo-France', 'Französischer Wetterdienst (ARPEGE, AROME)'],
+    ['ukmo_seamless', 'UK Met Office', 'Britischer Wetterdienst']
+  ];
+  var modell = speicher.lesen('wpc-modell', 'best_match');
+  if (!MODELLE.some(function (m) { return m[0] === modell; })) modell = 'best_match';
+  var modellInfo = function () { return MODELLE.filter(function (m) { return m[0] === modell; })[0] || MODELLE[0]; };
+  var EINHEITEN = { kmh: 'km/h', ms: 'm/s', kn: 'kn', bft: 'Bft' };
+  var windEinheit = speicher.lesen('wpc-wind', 'kmh'); if (!EINHEITEN[windEinheit]) windEinheit = 'kmh';
+  // Daten kommen immer in km/h; umgerechnet wird hier
+  var BFT = [1, 6, 12, 20, 29, 39, 50, 62, 75, 89, 103, 118];
+  var windWert = function (kmh) {
+    if (kmh == null || isNaN(kmh)) return '–';
+    if (windEinheit === 'ms') return rund(kmh / 3.6);
+    if (windEinheit === 'kn') return rund(kmh / 1.852);
+    if (windEinheit === 'bft') { var b = 0; while (b < BFT.length && kmh >= BFT[b]) b++; return String(b); }
+    return rund(kmh);
+  };
+  var windTxt = function (kmh) { return windWert(kmh) + ' ' + EINHEITEN[windEinheit]; };
 
   /* ---------- Wettercodes (WMO) → Text und Symbol, Tag und Nacht ---------- */
   var CODES = {
@@ -57,14 +84,15 @@
 
   /* ---------- Daten holen ---------- */
   var daten = null, stand = null, laeuft = false;
-  var cacheKey = function (o) { return 'wpgt-daten-' + o.lat.toFixed(3) + ',' + o.lon.toFixed(3); };
+  var cacheKey = function (o) { return 'wpgt-daten-' + Number(o.lat).toFixed(3) + ',' + Number(o.lon).toFixed(3) + (modell === 'best_match' ? '' : '-' + modell); };
   function urlVorhersage(o) {
     return 'https://api.open-meteo.com/v1/forecast?latitude=' + o.lat + '&longitude=' + o.lon +
       '&current=temperature_2m,apparent_temperature,relative_humidity_2m,pressure_msl,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,is_day' +
       '&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,is_day' +
-      '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunshine_duration,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset' +
-      '&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto&forecast_days=8&wind_speed_unit=kmh';
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunshine_duration,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max' +
+      '&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto&forecast_days=8&wind_speed_unit=kmh&models=' + modell;
   }
+  function kopfModell() { $('#ortZeile').textContent = 'Modell: ' + modellInfo()[1]; }
   function holeJson(url) {
     var steuer = 'AbortController' in window ? new AbortController() : null;
     var t = setTimeout(function () { if (steuer) steuer.abort(); }, 12000);
@@ -167,7 +195,7 @@
       '<div><dt>Gefühlt</dt><dd>' + rund(c.apparent_temperature) + '°C</dd></div>' +
       '<div><dt>Rel. Feuchte</dt><dd>' + rund(c.relative_humidity_2m) + ' %</dd></div>' +
       '<div><dt>Luftdruck</dt><dd>' + dez(c.pressure_msl) + ' hPa</dd></div></dl>' +
-      '<div class="windzeile">' + windrose(c.wind_direction_10m) + '<div class="wind-wert"><b>' + rund(c.wind_speed_10m) + '</b><small>km/h ' + richtung(c.wind_direction_10m) + '</small></div><div class="boeen">Böen<br><span class="zahl">' + rund(c.wind_gusts_10m) + ' km/h</span></div></div>' + punkte(ansicht) +
+      '<div class="windzeile">' + windrose(c.wind_direction_10m) + '<div class="wind-wert"><b>' + windWert(c.wind_speed_10m) + '</b><small>' + EINHEITEN[windEinheit] + ' ' + richtung(c.wind_direction_10m) + '</small></div><div class="boeen">Böen<br><span class="zahl">' + windTxt(c.wind_gusts_10m) + '</span></div></div>' + punkte(ansicht) +
       '</div>' : rechtsMedien(ansicht)) + '</section>';
     // Drei Stundenspalten im Abstand von 6 Stunden
     var spalten = [i0 + 5, i0 + 11, i0 + 17].map(function (i) {
@@ -187,13 +215,15 @@
         '<button class="button leise mehr-link" data-gehe="radsat">Radar ansehen</button></section>';
     }
     // Tagesliste
+    var std3600 = function (s) { return s == null ? null : s / 3600; };
     var zeilen = d.time.map(function (t, i) {
+      if (d.temperature_2m_max[i] == null) return '';   // manche Modelle rechnen nicht so weit voraus
       var name = i === 0 ? 'Heute' : teile(t).wt;
       return '<div class="tag"><div class="tag-name"><b>' + name + '</b><small class="zahl">' + datumKurz(t) + '</small></div>' +
         sym(wArt(d.weather_code[i], 1), 'tag-sym', wText(d.weather_code[i], 1)) +
         '<div class="tag-temp"><span class="min">' + rund(d.temperature_2m_min[i]) + '°C</span><span class="max">' + rund(d.temperature_2m_max[i]) + '°C</span></div>' +
-        '<div class="tag-zusatz" aria-label="Sonne ' + dez(d.sunshine_duration[i] / 3600) + ' Stunden, Regenrisiko ' + rund(d.precipitation_probability_max[i]) + ' Prozent, ' + dez(d.precipitation_sum[i]) + ' Millimeter"><span>' + Ikon('sun') + dez(d.sunshine_duration[i] / 3600) + ' h</span><span>' + Ikon('tropfen') + rund(d.precipitation_probability_max[i]) + ' %</span><span>' + Ikon('tropfen') + dez(d.precipitation_sum[i]) + ' mm</span></div>' +
-        '<div class="tag-wind">' + windrose(d.wind_direction_10m_dominant[i]) + '<span><b>' + rund(d.wind_speed_10m_max[i]) + '</b><small>km/h</small></span></div></div>';
+        '<div class="tag-zusatz" aria-label="Sonne ' + dez(std3600(d.sunshine_duration[i])) + ' Stunden, Regenrisiko ' + rund(d.precipitation_probability_max[i]) + ' Prozent, ' + dez(d.precipitation_sum[i]) + ' Millimeter"><span>' + Ikon('sun') + dez(std3600(d.sunshine_duration[i])) + ' h</span><span>' + Ikon('tropfen') + rund(d.precipitation_probability_max[i]) + ' %</span><span>' + Ikon('tropfen') + dez(d.precipitation_sum[i]) + ' mm</span></div>' +
+        '<div class="tag-wind">' + windrose(d.wind_direction_10m_dominant[i]) + '<span><b>' + windWert(d.wind_speed_10m_max[i]) + '</b><small>' + EINHEITEN[windEinheit] + '</small></span></div></div>';
     }).join('');
     var tage = '<section class="kachel tage" aria-label="Vorhersage für die nächsten Tage">' + zeilen + '</section>';
     $('#tab-wetter').innerHTML = akt + std + regen + tage;
@@ -204,6 +234,8 @@
   function renderGraphs() {
     var h = daten.hourly, i0 = stundenIndex(), n = 48, B = 680, H = 260, l = 34, r = 10, o = 14, u = 30;
     var temp = h.temperature_2m.slice(i0, i0 + n), regen = h.precipitation.slice(i0, i0 + n), zeit = h.time.slice(i0, i0 + n);
+    var leer = temp.indexOf(null); if (leer > 1) { n = leer; temp = temp.slice(0, n); regen = regen.slice(0, n); zeit = zeit.slice(0, n); }   // Modelle mit kürzerer Reichweite
+    regen = regen.map(function (v) { return v || 0; });
     var tmin = Math.floor(Math.min.apply(null, temp) - 1), tmax = Math.ceil(Math.max.apply(null, temp) + 1), rmax = Math.max(2, Math.max.apply(null, regen));
     var x = function (i) { return l + i * (B - l - r) / (n - 1); }, y = function (t) { return o + (tmax - t) * (H - o - u) / (tmax - tmin); };
     var gitter = '', schritt = Math.max(1, Math.round((tmax - tmin) / 4));
@@ -223,52 +255,85 @@
       '<p class="info">' + (summe < 0.2 ? 'In den nächsten zwei Tagen fällt kaum Regen.' : 'In den nächsten zwei Tagen fallen etwa ' + dez(summe) + ' mm Regen.') + '</p></section>';
   }
 
-  /* ---------- Karten und Radar (Leaflet, erst beim Öffnen laden) ---------- */
-  var karte = null, radarKarte = null, radar = { frames: [], i: 0, ebene: null, timer: null, host: '' };
+  /* ---------- Rad/Sat mit Ebenen: Radar, Satellit, Infrarot, Karte (Leaflet, erst beim Öffnen laden) ---------- */
+  // Satellit: EUMETSAT (Meteosat, frei ohne Schlüssel, WMS wie in WetterPro Tool/gemeinsam/wpkarte.js), jeweils das neueste Bild
+  var EUMETSAT_WMS = 'https://view.eumetsat.int/geoserver/wms';
+  var EBENEN = [['radar', 'Radar'], ['sat', 'Satellit'], ['ir', 'Infrarot'], ['karte', 'Karte']];
+  var ebene = speicher.lesen('wpc-ebene', 'radar'); if (!EBENEN.some(function (e) { return e[0] === ebene; })) ebene = 'radar';
+  var radarKarte = null, radar = { frames: [], i: 0, ebene: null, timer: null, host: '' }, satEbenen = {}, marken = null, markenOrt = '';
   function leafletBereit(fn, n) { if (window.L) return fn(); if ((n || 0) > 50) return; setTimeout(function () { leafletBereit(fn, (n || 0) + 1); }, 100); }
   function grundKarte(el, zoom) {
     var k = L.map(el, { zoomControl: true, attributionControl: true }).setView([ort.lat, ort.lon], zoom);
     L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 15, attribution: 'Karte: © <a href="https://opentopomap.org">OpenTopoMap</a>, Daten © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(k);
     return k;
   }
-  function renderKarten() {
-    var s = $('#tab-karten');
-    if (!s.dataset.gebaut) {
-      s.innerHTML = '<div class="karte" id="karte" role="region" aria-label="Karte mit Temperaturen"></div><div class="karte-fuss"><span>Aktuelle Temperaturen an deinen Orten.</span></div>';
-      s.dataset.gebaut = '1';
-    }
-    leafletBereit(function () {
-      if (!karte) karte = grundKarte($('#karte'), 9);
-      karte.invalidateSize(); karte.setView([ort.lat, ort.lon], karte.getZoom());
-      var orte = STANDARDORTE.concat(STANDARDORTE.some(function (o) { return o.name === ort.name; }) ? [] : [ort]);
-      holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + orte.map(function (o) { return o.lat; }).join(',') + '&longitude=' + orte.map(function (o) { return o.lon; }).join(',') + '&current=temperature_2m,weather_code,is_day&timezone=auto')
-        .then(function (antw) {
-          [].concat(antw).forEach(function (a, i) {
-            var o = orte[i], c = a.current;
-            L.marker([o.lat, o.lon], { icon: L.divIcon({ className: '', html: '<span class="temp-marke">' + sym(wArt(c.weather_code, c.is_day)) + rund(c.temperature_2m) + '°</span>', iconAnchor: [28, 16] }), title: o.name + ': ' + rund(c.temperature_2m) + ' Grad' }).addTo(karte);
-          });
-        }).catch(function () { });
-    });
-  }
+  var EBENEN_QUELLE = {
+    radar: 'Regenradar von <a href="https://www.rainviewer.com" rel="noopener">RainViewer</a>, letzte 2 Stunden.',
+    sat: 'Satellitenbild in Farbe von <a href="https://view.eumetsat.int" rel="noopener">EUMETSAT</a> (Meteosat), neuestes Bild. Nachts dunkel.',
+    ir: 'Infrarot-Satellitenbild von <a href="https://view.eumetsat.int" rel="noopener">EUMETSAT</a> (Meteosat): weiß sind hohe, kalte Wolken, auch nachts.',
+    karte: 'Aktuelle Temperaturen an deinen Orten, Daten von <a href="https://open-meteo.com" rel="noopener">Open-Meteo</a>.'
+  };
   function renderRadsat() {
     var s = $('#tab-radsat');
     if (!s.dataset.gebaut) {
-      s.innerHTML = '<div class="karte" id="radarKarte" role="region" aria-label="Regenradar der letzten 2 Stunden"></div>' +
+      s.innerHTML = '<div class="chips ebenen" id="ebenenWahl" role="radiogroup" aria-label="Ebene der Karte">' +
+        EBENEN.map(function (e) { return '<button class="chip tippbar" role="radio" data-ebene="' + e[0] + '">' + e[1] + '</button>'; }).join('') + '</div>' +
+        '<div class="karte" id="radarKarte" role="region" aria-label="Karte"></div>' +
         '<div class="karte-fuss"><button class="chip tippbar" id="radarPlay" aria-pressed="false">' + Ikon('chevron') + '<span>Abspielen</span></button><span id="radarZeit" class="zahl" aria-live="polite"></span></div>' +
-        '<p class="info">Regenradar von <a href="https://www.rainviewer.com" rel="noopener">RainViewer</a>, letzte 2 Stunden.</p>';
+        '<p class="info" id="ebeneQuelle"></p>';
       s.dataset.gebaut = '1';
       $('#radarPlay').addEventListener('click', radarAbspielen);
+      $('#ebenenWahl').addEventListener('click', function (e) { var b = e.target.closest('[data-ebene]'); if (!b) return; ebene = b.dataset.ebene; speicher.schreiben('wpc-ebene', ebene); ebeneZeigen(); });
     }
     leafletBereit(function () {
       if (!radarKarte) radarKarte = grundKarte($('#radarKarte'), 7);
       radarKarte.invalidateSize(); radarKarte.setView([ort.lat, ort.lon], radarKarte.getZoom());
-      holeJson('https://api.rainviewer.com/public/weather-maps.json').then(function (m) {
-        radar.host = m.host; radar.frames = (m.radar && m.radar.past) || []; radar.i = radar.frames.length - 1; radarZeigen();
-      }).catch(function () { $('#radarZeit').textContent = 'Radar gerade nicht erreichbar.'; });
+      ebeneZeigen();
     });
   }
+  function ebeneZeigen() {
+    $$('#ebenenWahl [data-ebene]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.ebene === ebene)); });
+    $('#ebeneQuelle').innerHTML = EBENEN_QUELLE[ebene];
+    $('#radarPlay').hidden = ebene !== 'radar';
+    if (!radarKarte) return;
+    // Radar
+    if (ebene !== 'radar') { if (radar.ebene) { radarKarte.removeLayer(radar.ebene); radar.ebene = null; } clearInterval(radar.timer); var p = $('#radarPlay'); p.setAttribute('aria-pressed', 'false'); $('span', p).textContent = 'Abspielen'; }
+    // Satellit
+    ['sat', 'ir'].forEach(function (k) { if (satEbenen[k] && k !== ebene) radarKarte.removeLayer(satEbenen[k]); });
+    if (marken && ebene !== 'karte') radarKarte.removeLayer(marken);
+    var z = $('#radarZeit'); z.textContent = '';
+    if (ebene === 'radar') {
+      holeJson('https://api.rainviewer.com/public/weather-maps.json').then(function (m) {
+        if (ebene !== 'radar') return;
+        radar.host = m.host; radar.frames = (m.radar && m.radar.past) || []; radar.i = radar.frames.length - 1; radarZeigen();
+      }).catch(function () { z.textContent = 'Radar gerade nicht erreichbar.'; });
+    } else if (ebene === 'sat' || ebene === 'ir') {
+      if (!satEbenen[ebene]) {
+        satEbenen[ebene] = L.tileLayer.wms(EUMETSAT_WMS, { layers: ebene === 'sat' ? 'mtg_fd:rgb_geocolour' : 'mtg_fd:ir105_hrfi', styles: ebene === 'sat' ? '' : 'mtg_fd:mtg_fd_ir105_hrfi_grayscale',
+          format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, opacity: .9, attribution: '© EUMETSAT' });
+        satEbenen[ebene].on('tileerror', function () { z.textContent = 'Satellitenbild gerade nicht erreichbar.'; });
+      }
+      satEbenen[ebene].addTo(radarKarte);
+      z.textContent = ebene === 'sat' ? 'Satellit · neuestes Bild' : 'Infrarot · neuestes Bild';
+    } else {
+      if (!marken) marken = L.layerGroup();
+      marken.addTo(radarKarte);
+      if (markenOrt !== ortKey(ort)) temperaturMarken();
+    }
+  }
+  function temperaturMarken() {
+    var orte = favoriten.concat(STANDARDORTE).concat([ort]).filter(function (o, i, a) { return a.findIndex(function (x) { return ortKey(x) === ortKey(o); }) === i; });
+    holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + orte.map(function (o) { return o.lat; }).join(',') + '&longitude=' + orte.map(function (o) { return o.lon; }).join(',') + '&current=temperature_2m,weather_code,is_day&timezone=auto')
+      .then(function (antw) {
+        marken.clearLayers(); markenOrt = ortKey(ort);
+        [].concat(antw).forEach(function (a, i) {
+          var o = orte[i], c = a.current;
+          L.marker([o.lat, o.lon], { icon: L.divIcon({ className: '', html: '<span class="temp-marke">' + sym(wArt(c.weather_code, c.is_day)) + rund(c.temperature_2m) + '°</span>', iconAnchor: [28, 16] }), title: o.name + ': ' + rund(c.temperature_2m) + ' Grad' }).addTo(marken);
+        });
+      }).catch(function () { $('#radarZeit').textContent = 'Temperaturen gerade nicht erreichbar.'; });
+  }
   function radarZeigen() {
-    var f = radar.frames[radar.i]; if (!f || !radarKarte) return;
+    var f = radar.frames[radar.i]; if (!f || !radarKarte || ebene !== 'radar') return;
     var neu = L.tileLayer(radar.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', { opacity: .75, maxNativeZoom: 7, maxZoom: 15 });
     neu.addTo(radarKarte); if (radar.ebene) radarKarte.removeLayer(radar.ebene); radar.ebene = neu;
     $('#radarZeit').textContent = new Date(f.time * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
@@ -277,27 +342,87 @@
     var b = $('#radarPlay'), an = b.getAttribute('aria-pressed') !== 'true';
     b.setAttribute('aria-pressed', String(an)); $('span', b).textContent = an ? 'Anhalten' : 'Abspielen';
     clearInterval(radar.timer);
-    if (an) radar.timer = setInterval(function () { radar.i = (radar.i + 1) % radar.frames.length; radarZeigen(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700);
+    if (an) radar.timer = setInterval(function () { if (!radar.frames.length) return; radar.i = (radar.i + 1) % radar.frames.length; radarZeigen(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700);
   }
 
-  /* ---------- Mehr: Ortssuche, Orte, Info ---------- */
+  /* ---------- Mehr: Ortssuche, Orte mit Favoriten, Modell, Einheiten, Quellen, Webcam ---------- */
+  // Webcam-Kandidaten: nur Hinweisliste. Bilder erst nach schriftlicher Erlaubnis des Betreibers (siehe WEBCAMS oben).
+  var WEBCAM_KANDIDATEN = [
+    ['oststadt', 'Mannheim-Oststadt (Himmel)', 'Wetterstation Mannheim-Oststadt', 'https://www.klymiuk.info/wetter/webcam.html'],
+    ['seckenheim', 'Mannheim-Seckenheim (Skycam)', 'mannheim-wetter.info', 'https://www.mannheim-wetter.info/cam/'],
+    ['airport', 'City Airport Mannheim', 'City Airport Mannheim', 'https://www.flugplatz-mannheim.de/'],
+    ['boxberg', 'Heidelberg-Boxberg, Blick Rheinebene', 'berghalde.com', 'https://www.berghalde.com/'],
+    ['ladenburg', 'Ladenburg Wasserturm', 'Stadt Ladenburg', 'https://www.ladenburg.de/de/Aktuelles/Webcam'],
+    ['edingen', 'Edingen-Neckarhausen (Neckar)', 'Gemeinde Edingen-Neckarhausen', 'https://www.edingen-neckarhausen.de/gemeinde/webcam']
+  ];
+  var sternSvg = function () { return '<svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.25 1 6L12 17l-5.35 2.85 1-6L3.3 9.6l6-.9Z"/></svg>'; };
+  var istFavorit = function (o) { return favoriten.some(function (f) { return ortKey(f) === ortKey(o); }); };
+  function meineOrte() {
+    var liste = favoriten.concat(STANDARDORTE.filter(function (o) { return !istFavorit(o); }));
+    if (!liste.some(function (o) { return ortKey(o) === ortKey(ort); }) && ort.name !== 'Mein Standort') liste.push(ort);
+    return liste;
+  }
+  function seg(name, wert, optionen, label) {
+    return '<div class="seg" role="radiogroup" aria-label="' + esc(label) + '" data-seg="' + name + '">' + optionen.map(function (o) { return '<button type="button" role="radio" class="tippbar" data-v="' + o[0] + '" aria-checked="' + (String(o[0]) === String(wert)) + '">' + o[1] + '</button>'; }).join('') + '</div>';
+  }
+  function quellenHtml() {
+    var m = modellInfo();
+    return '<p>Diese Liste entsteht automatisch aus den Diensten, die die App gerade nutzt.</p><ul class="quellen">' +
+      '<li>Wetterdaten: <a href="https://open-meteo.com" rel="noopener">Open-Meteo</a>, Lizenz CC BY 4.0</li>' +
+      '<li>Wettermodell: ' + esc(m[1]) + ' (' + esc(m[2]) + '), über Open-Meteo</li>' +
+      '<li>Regenradar: <a href="https://www.rainviewer.com" rel="noopener">RainViewer</a></li>' +
+      '<li>Satellit: <a href="https://view.eumetsat.int" rel="noopener">EUMETSAT</a> (Meteosat)</li>' +
+      '<li>Karte: <a href="https://opentopomap.org" rel="noopener">OpenTopoMap</a>, © OpenStreetMap-Mitwirkende</li>' +
+      '<li>Ortssuche: Open-Meteo Geocoding (GeoNames, CC BY 4.0)</li>' +
+      '<li>Luftqualität beim Teilen: Open-Meteo Air Quality (CAMS)</li>' +
+      '<li>Wettersymbole: eigene Zeichnung „Klassisch". Beispielfoto: Mannheim, eigene Aufnahme.</li></ul>';
+  }
   function renderMehr() {
     var s = $('#tab-mehr');
-    var orteHtml = STANDARDORTE.map(function (o, i) { return '<button class="tippbar" data-ort="' + i + '"' + (o.name === ort.name ? ' aria-current="true"' : '') + '><span>' + esc(o.name) + '</span><span class="leise">' + esc(o.land) + '</span></button>'; }).join('');
+    var orteHtml = meineOrte().map(function (o, i) {
+      var fav = istFavorit(o);
+      return '<div class="ort-zeile"><button class="tippbar ort-wahl" data-ort="' + i + '"' + (ortKey(o) === ortKey(ort) ? ' aria-current="true"' : '') + '><span>' + esc(o.name) + '</span><span class="leise">' + esc(o.land || '') + '</span></button>' +
+        '<button class="tippbar stern" data-stern="' + i + '" aria-pressed="' + fav + '" aria-label="' + esc(o.name) + (fav ? ' aus den Favoriten nehmen' : ' als Favorit merken') + '">' + sternSvg() + '</button></div>';
+    }).join('');
     s.innerHTML = '<section class="kachel" aria-labelledby="sTitel"><h2 class="kachel-titel" id="sTitel">' + Ikon('search') + 'Ort suchen</h2>' +
       '<form class="suche" id="sucheForm" role="search"><input id="sucheFeld" type="search" placeholder="Stadt oder Ort" autocomplete="off" enterkeyhint="search" aria-label="Ort suchen"><button class="button">Suchen</button></form></section>' +
       '<div class="liste" id="sucheErgebnis" aria-live="polite"></div>' +
-      '<h2 class="abschnitt-titel">Meine Orte</h2><div class="liste" id="orteListe">' + orteHtml +
+      '<h2 class="abschnitt-titel">Meine Orte · Stern = Favorit, steht oben</h2><div class="liste" id="orteListe">' + orteHtml +
       '<button class="tippbar" id="btnStandort"><span>' + Ikon('pin') + ' Mein Standort</span><span class="leise">fragt einmal nach</span></button></div>' +
+      '<h2 class="abschnitt-titel">Wettermodell</h2><div class="liste" id="modellListe">' +
+      MODELLE.map(function (m) { return '<label class="tippbar"><span class="modell-text"><span>' + m[1] + '</span><small class="leise">' + m[2] + '</small></span><input type="radio" name="modell" value="' + m[0] + '"' + (m[0] === modell ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
+      '<p class="info hilfe">Das Modell steht oben unter dem Ort. „Beste Mischung" passt fast immer; andere Modelle zum Vergleichen.</p>' +
+      '<h2 class="abschnitt-titel">Einheit für Wind</h2><div class="kachel">' + seg('wind', windEinheit, [['kmh', 'km/h'], ['ms', 'm/s'], ['kn', 'Knoten'], ['bft', 'Beaufort']], 'Einheit für Wind') + '</div>' +
       '<h2 class="abschnitt-titel">Aktuell-Kachel: links antippen wechselt rechts zu</h2><div class="liste" id="ansichtListe">' +
       Object.keys(ANSICHT_NAMEN).map(function (k) { return '<label class="tippbar"><span>' + ANSICHT_NAMEN[k] + '</span><input type="checkbox" value="' + k + '"' + (ansichten().indexOf(k) >= 0 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
+      '<h2 class="abschnitt-titel">Webcam</h2><section class="kachel info"><p><b>Folgt nach Erlaubnis.</b> Webcam-Bilder zeigt die App erst, wenn der Betreiber schriftlich zugestimmt hat. Angefragt sind diese Kameras:</p></section>' +
+      '<div class="liste" id="webcamListe">' + WEBCAM_KANDIDATEN.map(function (w) { return '<a class="tippbar" href="' + esc(w[3]) + '" target="_blank" rel="noopener"><span class="modell-text"><span>' + esc(w[1]) + '</span><small class="leise">' + esc(w[2]) + '</small></span><span aria-hidden="true">↗</span></a>'; }).join('') + '</div>' +
+      '<h2 class="abschnitt-titel">Quellen</h2><section class="kachel info" id="quellen">' + quellenHtml() + '</section>' +
       '<h2 class="abschnitt-titel">Über die App</h2><section class="kachel info">' +
-      '<p><b>WetterProCamera</b> ist eine Test-App, gestaltet mit dem Design-Konfigurator nach den Empfehlungen der KI.</p>' +
-      '<p>Wetterdaten: <a href="https://open-meteo.com" rel="noopener">Open-Meteo</a> (CC BY 4.0). Regenradar: <a href="https://www.rainviewer.com" rel="noopener">RainViewer</a>. Karte: <a href="https://opentopomap.org" rel="noopener">OpenTopoMap</a>, © OpenStreetMap-Mitwirkende. Wettersymbole: eigene Zeichnung „Klassisch". Foto: Mannheim, eigene Aufnahme.</p></section>';
+      '<p><b>WetterProCamera</b> ist eine Test-App, gestaltet mit dem Design-Konfigurator nach den Empfehlungen der KI.</p></section>';
     $('#sucheForm').addEventListener('submit', function (e) { e.preventDefault(); suchen($('#sucheFeld').value); });
-    $('#orteListe').addEventListener('click', function (e) { var b = e.target.closest('[data-ort]'); if (b) ortSetzen(STANDARDORTE[+b.dataset.ort]); });
+    $('#orteListe').addEventListener('click', function (e) {
+      var liste = meineOrte(), st = e.target.closest('[data-stern]'), b = e.target.closest('[data-ort]');
+      if (st) {
+        var o = liste[+st.dataset.stern];
+        favoriten = istFavorit(o) ? favoriten.filter(function (f) { return ortKey(f) !== ortKey(o); }) : favoriten.concat([o]);
+        speicher.schreiben('wpc-favoriten', favoriten); markenOrt = ''; renderMehr();
+        var neu = $('[data-stern]', $('#orteListe')); var ziel = $$('#orteListe [data-stern]').filter(function (x) { return x.getAttribute('aria-label').indexOf(o.name) === 0; })[0] || neu; if (ziel) ziel.focus();
+        return;
+      }
+      if (b) ortSetzen(liste[+b.dataset.ort]);
+    });
     $('#btnStandort').addEventListener('click', standort);
     $('#ansichtListe').addEventListener('change', function () { var a = $$('#ansichtListe input:checked').map(function (c) { return c.value; }); speicher.schreiben('wpc-ansichten', a.length ? a : ['werte']); });
+    $('#modellListe').addEventListener('change', function (e) {
+      modell = e.target.value; speicher.schreiben('wpc-modell', modell); kopfModell(); $('#quellen').innerHTML = quellenHtml();
+      daten = null; laden(); hinweisKurz('Lade Vorhersage von ' + modellInfo()[1] + ' …');
+    });
+    $('[data-seg="wind"]').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-v]'); if (!b) return;
+      windEinheit = b.dataset.v; speicher.schreiben('wpc-wind', windEinheit);
+      $$('[data-seg="wind"] [data-v]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); });
+    });
   }
   function suchen(text) {
     var ziel = $('#sucheErgebnis'); text = (text || '').trim(); if (text.length < 2) return;
@@ -305,39 +430,55 @@
     holeJson('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(text) + '&count=8&language=de&format=json').then(function (r) {
       var t = r.results || [];
       ziel.innerHTML = t.length ? t.map(function (o, i) { return '<button class="tippbar" data-treffer="' + i + '"><span>' + esc(o.name) + '</span><span class="leise">' + esc([o.admin1, o.country].filter(Boolean).join(', ')) + '</span></button>'; }).join('') : '<div class="leise">Kein Ort gefunden. Anders schreiben?</div>';
-      $$('[data-treffer]', ziel).forEach(function (b) { b.addEventListener('click', function () { var o = t[+b.dataset.treffer]; ortSetzen({ name: o.name, land: o.country || '', lat: o.latitude, lon: o.longitude }); }); });
+      $$('[data-treffer]', ziel).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var o = t[+b.dataset.treffer];
+          // Stadtteil (PPLX): als Stadt die Gemeinde merken, damit das Teilen-Bild „nur Stadt" zeigen kann
+          var stadt = /^PPLX/.test(o.feature_code || '') ? (o.admin4 || o.admin3 || o.name) : o.name;
+          ortSetzen({ name: o.name, land: o.country || '', lat: o.latitude, lon: o.longitude, stadt: stadt });
+        });
+      });
     }).catch(function () { ziel.innerHTML = '<div class="leise">Suche gerade nicht möglich. Bitte Internetverbindung prüfen.</div>'; });
   }
   function standort() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(function (p) {
       var lat = +p.coords.latitude.toFixed(3), lon = +p.coords.longitude.toFixed(3);
-      holeJson('https://geocoding-api.open-meteo.com/v1/search?name=' + lat + ',' + lon + '&count=1&language=de').catch(function () { return {}; }).then(function () { ortSetzen({ name: 'Mein Standort', land: '', lat: lat, lon: lon }); });
+      ortSetzen({ name: 'Mein Standort', land: '', lat: lat, lon: lon });
     }, function () { var b = $('#btnStandort .leise'); if (b) b.textContent = 'nicht erlaubt'; });
   }
-  function ortSetzen(o) { ort = o; speicher.schreiben('wpgt-ort', o); daten = null; $('#ortName').textContent = o.name; zeigeTab('wetter'); laden(); }
+  function ortSetzen(o) { ort = o; speicher.schreiben('wpgt-ort', o); daten = null; luft = null; $('#ortName').textContent = o.name; zeigeTab('wetter'); laden(); }
 
-  /* ---------- Tabs ---------- */
-  var TABS = [['wetter', 'Wetter', 'cloudsun'], ['graphs', 'Graphs', 'chart'], ['karten', 'Karten', 'map'], ['radsat', 'Rad/Sat', 'radar'], ['mehr', 'Mehr', 'more']];
+  /* ---------- Tabs: Wetter, Graphs, Kamera (Mitte, öffnet Teilen), Rad/Sat, Mehr ---------- */
+  var TABS = [['wetter', 'Wetter', 'cloudsun'], ['graphs', 'Graphs', 'chart'], ['kamera', 'Kamera', 'camera'], ['radsat', 'Rad/Sat', 'radar'], ['mehr', 'Mehr', 'more']];
+  var SEITEN = TABS.filter(function (t) { return t[0] !== 'kamera'; });
   var aktiv = 'wetter';
   function baueTabs() {
-    $('#tabbar').innerHTML = TABS.map(function (t) { return '<button role="tab" id="tb-' + t[0] + '" aria-controls="tab-' + t[0] + '" data-tab="' + t[0] + '" class="tippbar">' + Ikon(t[2]) + '<span>' + t[1] + '</span></button>'; }).join('');
-    $('#tabbar').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (b) zeigeTab(b.dataset.tab); });
+    $('#tabbar').innerHTML = TABS.map(function (t) {
+      if (t[0] === 'kamera') return '<button role="tab" aria-selected="false" tabindex="-1" id="tb-kamera" data-kamera="1" class="tippbar tab-kamera" aria-haspopup="dialog" aria-label="Kamera: Wetter mit Foto teilen"><span class="ausloeser">' + Ikon('camera') + '</span><span aria-hidden="true">Kamera</span></button>';
+      return '<button role="tab" id="tb-' + t[0] + '" aria-controls="tab-' + t[0] + '" data-tab="' + t[0] + '" class="tippbar">' + Ikon(t[2]) + '<span>' + t[1] + '</span></button>';
+    }).join('');
+    $('#tabbar').addEventListener('click', function (e) {
+      if (e.target.closest('[data-kamera]')) return teilenOeffnen();
+      var b = e.target.closest('[data-tab]'); if (b) zeigeTab(b.dataset.tab);
+    });
     $('#tabbar').addEventListener('keydown', function (e) {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-      var i = TABS.findIndex(function (t) { return t[0] === aktiv; }), n = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length][0];
-      zeigeTab(n); $('#tb-' + n).focus();
+      var ids = TABS.map(function (t) { return t[0]; }), i = ids.indexOf(document.activeElement && document.activeElement.id ? document.activeElement.id.slice(3) : aktiv);
+      if (i < 0) i = ids.indexOf(aktiv);
+      var n = ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length];
+      if (n !== 'kamera') zeigeTab(n);
+      $('#tb-' + n).focus();
     });
   }
   function zeigeTab(id) {
     aktiv = id;
-    TABS.forEach(function (t) { var an = t[0] === id, b = $('#tb-' + t[0]); b.setAttribute('aria-selected', String(an)); b.tabIndex = an ? 0 : -1; $('#tab-' + t[0]).hidden = !an; });
+    SEITEN.forEach(function (t) { var an = t[0] === id, b = $('#tb-' + t[0]); b.setAttribute('aria-selected', String(an)); b.tabIndex = an ? 0 : -1; $('#tab-' + t[0]).hidden = !an; });
     try { sessionStorage.setItem('wpgt-tab', id); } catch (e) { }
     window.scrollTo(0, 0); render();
   }
   function render() {
     if (aktiv === 'mehr') return renderMehr();
-    if (aktiv === 'karten') return renderKarten();
     if (aktiv === 'radsat') return renderRadsat();
     if (!daten) return;
     $('#ortName').textContent = ort.name;
@@ -346,57 +487,261 @@
   }
   document.addEventListener('click', function (e) { var g = e.target.closest('[data-gehe]'); if (g) zeigeTab(g.dataset.gehe); });
 
-  /* ---------- Wetter mit Foto teilen (Canvas, 3:4, 1080 × 1440) ---------- */
-  var foto = null, stil = speicher.lesen('wpgt-stil', 'klassisch');
-  var STILE = [['klassisch', 'Klassisch'], ['glas', 'Glas'], ['minimal', 'Minimal'], ['rahmen', 'Rahmen']];
+  /* ---------- Wetter mit Foto teilen (Canvas). Einstellungen in localStorage „wpc-teilen", Schema wie im Konfigurator ---------- */
+  var TEILEN_STANDARD = { format: 'hoch', stil: 'klassisch', infos: ['temp', 'symbol', 'ort', 'datum', 'wind', 'regen', 'sonne'], ortStufe: 'stadt', text: '', ton: 'dunkel', logo: 'appname', partner: false, groesse: 1080, datei: 'jpeg', qualitaet: 90 };
+  var T = (function () {
+    var gespeichert = speicher.lesen('wpc-teilen', null), t = Object.assign({}, TEILEN_STANDARD, gespeichert || {});
+    if (!gespeichert) { var alt = speicher.lesen('wpgt-stil', null); if (alt) t.stil = alt; }
+    t.partner = false;   // „Shot on ProCamera" nur mit Freigabe von Cocologics
+    return t;
+  })();
+  var FORMATE = [['hoch', '3:4', 3, 4], ['portrait', '4:5', 4, 5], ['quadrat', '1:1', 1, 1], ['story', '9:16', 9, 16], ['quer', '16:9', 16, 9], ['original', 'Original', 0, 0]];
+  var STILE = [['klassisch', 'Klassisch'], ['glas', 'Glas'], ['minimal', 'Minimal'], ['rahmen', 'Rahmen'], ['polaroid', 'Polaroid'], ['zeitstempel', 'Zeitstempel']];
+  var INFOS = { temp: 'Temperatur', symbol: 'Wettersymbol', lage: 'Wetterlage', ort: 'Ort', datum: 'Datum', zeit: 'Uhrzeit', wind: 'Wind', boeen: 'Böen', regen: 'Regenmenge heute', regenrisiko: 'Regenrisiko', sonne: 'Sonnenstunden', sonnenzeiten: 'Sonnenaufgang und -untergang', uv: 'UV-Index', feuchte: 'Luftfeuchte', druck: 'Luftdruck', luft: 'Luftqualität', mond: 'Mond', vorhersage: 'Vorhersage für morgen', text: 'Eigener Text' };
+  if (!FORMATE.some(function (f) { return f[0] === T.format; })) T.format = 'hoch';
+  if (!STILE.some(function (s) { return s[0] === T.stil; })) T.stil = 'klassisch';
+  T.infos = (T.infos || []).filter(function (k) { return INFOS[k]; });
+  var tSpeichern = function () { speicher.schreiben('wpc-teilen', T); };
+  var foto = null, luft = null;
+
   function ladeBild(src) { return new Promise(function (ok, f) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = f; i.src = src; }); }
   function symbolBild(art) { var defs = (document.getElementById('ws-defs') || {}).outerHTML || ''; var m = defs.match(/<defs>[\s\S]*<\/defs>/); var svg = WetterSymbol(art).replace(/^<svg([^>]*)>/, function (a, b) { return '<svg' + b.replace(/\s(class|aria-hidden|data-art)="[^"]*"/g, '') + ' xmlns="http://www.w3.org/2000/svg" width="256" height="256">' + (m ? m[0] : ''); }); return ladeBild('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)); }
-  function fuellen(ctx, img, w, h) { var s = Math.max(w / img.width, h / img.height), bw = img.width * s, bh = img.height * s; ctx.drawImage(img, (w - bw) / 2, (h - bh) / 2, bw, bh); }
-  function text(ctx, t, x, y, px, gewicht, farbe, ausr) { ctx.font = gewicht + ' ' + px + 'px ' + getComputedStyle(document.body).fontFamily; ctx.fillStyle = farbe; ctx.textAlign = ausr || 'left'; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, x, y); }
-  function zeichne(cv, welcher, breite) {
+  function fuellen(ctx, img, x, y, w, h) { var s = Math.max(w / img.width, h / img.height), bw = img.width * s, bh = img.height * s; ctx.drawImage(img, x + (w - bw) / 2, y + (h - bh) / 2, bw, bh); }
+  var SCHRIFT = function () { return getComputedStyle(document.body).fontFamily; };
+  var HAND = '"Noteworthy", "Marker Felt", "Bradley Hand", "Segoe Print", cursive';
+  var MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+  function schrift(ctx, px, gewicht, familie) { ctx.font = gewicht + ' ' + Math.round(px) + 'px ' + (familie || SCHRIFT()); }
+  // Text schreiben; zu lange Zeilen werden kleiner gesetzt (höchstens bis 70 %), danach gestaucht
+  function text(ctx, t, x, y, px, gewicht, farbe, ausr, maxB, familie) {
+    schrift(ctx, px, gewicht, familie); ctx.fillStyle = farbe; ctx.textAlign = ausr || 'left'; ctx.textBaseline = 'alphabetic';
+    if (maxB) { var w = ctx.measureText(t).width; if (w > maxB) { schrift(ctx, Math.max(px * .7, px * maxB / w), gewicht, familie); } }
+    if (maxB) ctx.fillText(t, x, y, maxB); else ctx.fillText(t, x, y);
+  }
+  function umbrechen(ctx, t, maxB) {
+    var woerter = t.split(' '), zeilen = [], z = '';
+    woerter.forEach(function (w) { var probe = z ? z + ' ' + w : w; if (ctx.measureText(probe).width > maxB && z) { zeilen.push(z); z = w; } else z = probe; });
+    if (z) zeilen.push(z); return zeilen;
+  }
+  // Mittlere Helligkeit eines Bildbereichs (0 = schwarz, 1 = weiß) für den Farbton „automatisch"
+  function helligkeit(ctx, x, y, w, h) {
+    try {
+      var d = ctx.getImageData(Math.max(0, x | 0), Math.max(0, y | 0), Math.max(1, w | 0), Math.max(1, h | 0)).data, s = 0, n = 0, schritt = 4 * Math.max(1, Math.floor(d.length / 4 / 4000));
+      for (var i = 0; i < d.length; i += schritt) { s += (.2126 * d[i] + .7152 * d[i + 1] + .0722 * d[i + 2]) / 255; n++; }
+      return n ? s / n : .3;
+    } catch (e) { return .3; }
+  }
+  var FARBEN = { dunkel: { flaeche: 'rgba(0,0,0,.55)', text: '#fff', leise: 'rgba(255,255,255,.85)' }, hell: { flaeche: 'rgba(255,255,255,.75)', text: '#111', leise: 'rgba(0,0,0,.72)' } };
+  function tonFuer(ctx, x, y, w, h) { return T.ton === 'auto' ? (helligkeit(ctx, x, y, w, h) > .58 ? 'hell' : 'dunkel') : T.ton === 'hell' ? 'hell' : 'dunkel'; }
+
+  // Mondphase aus dem bekannten Neumond am 6.1.2000, 18:14 UTC
+  function mondText() {
+    var syn = 29.530588853, alter = ((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 864e5) % syn; if (alter < 0) alter += syn;
+    var licht = Math.round((1 - Math.cos(2 * Math.PI * alter / syn)) / 2 * 100);
+    return 'Mond ' + licht + ' %, ' + (licht > 97 ? 'Vollmond' : licht < 3 ? 'Neumond' : alter < syn / 2 ? 'zunehmend' : 'abnehmend');
+  }
+  var uvWort = function (u) { return u == null ? '' : u < 3 ? 'niedrig' : u < 6 ? 'mäßig' : u < 8 ? 'hoch' : u < 11 ? 'sehr hoch' : 'extrem'; };
+  var luftWort = function (a) { return a < 20 ? 'sehr gut' : a < 40 ? 'gut' : a < 60 ? 'mäßig' : a < 80 ? 'schlecht' : a < 100 ? 'sehr schlecht' : 'extrem schlecht'; };
+  function luftHolen() {
+    if (luft || T.infos.indexOf('luft') < 0) return;
+    luft = { text: '' };
+    holeJson('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + ort.lat + '&longitude=' + ort.lon + '&current=european_aqi').then(function (r) {
+      var a = r.current && r.current.european_aqi; if (a == null) return;
+      luft.text = 'Luft ' + luftWort(a) + ' (AQI ' + Math.round(a) + ')'; teilenZeichnen();
+    }).catch(function () { });
+  }
+  function ortFuerBild() {
+    if (T.ortStufe === 'aus' || ort.name === 'Mein Standort') return '';
+    return T.ortStufe === 'stadtteil' ? ort.name : (ort.stadt || ort.name);
+  }
+  // Alle gewählten Infos als fertige Texte, getrennt nach Kopf (Symbol/Temperatur), Titelzeile (Ort/Datum/Zeit) und Details
+  function infoTexte() {
+    var c = daten.current, d = daten.daily, jetzt = new Date();
+    var w = {
+      lage: wText(c.weather_code, c.is_day), ort: ortFuerBild(),
+      datum: jetzt.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' }),
+      zeit: jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr',
+      wind: 'Wind ' + windTxt(c.wind_speed_10m) + ' ' + richtung(c.wind_direction_10m), boeen: 'Böen ' + windTxt(c.wind_gusts_10m),
+      regen: 'Regen ' + dez(d.precipitation_sum[0]) + ' mm', regenrisiko: 'Regenrisiko ' + rund(d.precipitation_probability_max[0]) + ' %',
+      sonne: 'Sonne ' + (d.sunshine_duration[0] == null ? '–' : dez(d.sunshine_duration[0] / 3600)) + ' h', sonnenzeiten: '↑ ' + hm(d.sunrise[0]) + '  ↓ ' + hm(d.sunset[0]),
+      uv: d.uv_index_max && d.uv_index_max[0] != null ? 'UV ' + rund(d.uv_index_max[0]) + ' ' + uvWort(d.uv_index_max[0]) : '',
+      feuchte: 'Feuchte ' + rund(c.relative_humidity_2m) + ' %', druck: rund(c.pressure_msl) + ' hPa', luft: luft ? luft.text : '', mond: mondText(),
+      vorhersage: d.temperature_2m_max[1] == null ? '' : 'Morgen ' + wText(d.weather_code[1], 1) + ' ' + rund(d.temperature_2m_max[1]) + '°/' + rund(d.temperature_2m_min[1]) + '°',
+      text: (T.text || '').trim()
+    };
+    var an = function (k) { return T.infos.indexOf(k) >= 0; };
+    return {
+      temp: an('temp') ? rund(c.temperature_2m) + '°' : '', symbol: an('symbol'),
+      titel: T.infos.filter(function (k) { return k === 'ort' || k === 'datum' || k === 'zeit'; }).map(function (k) { return w[k]; }).filter(Boolean).join(' · '),
+      details: T.infos.filter(function (k) { return ['temp', 'symbol', 'ort', 'datum', 'zeit'].indexOf(k) < 0; }).map(function (k) { return w[k]; }).filter(Boolean),
+      datum: w.datum, zeit: w.zeit
+    };
+  }
+  function masse(format, kurz, img) {
+    var f = FORMATE.filter(function (x) { return x[0] === format; })[0] || FORMATE[0], a = f[2], b = f[3];
+    if (!a) { a = img.width; b = img.height; var r = a / b; if (r > 16 / 9) { a = 16; b = 9; } else if (r < 9 / 16) { a = 9; b = 16; } }
+    return a <= b ? [kurz, Math.round(kurz * b / a)] : [Math.round(kurz * a / b), kurz];
+  }
+  // Tafel: links Symbol + Temperatur und darunter die Titelzeile, rechts die Details untereinander
+  function tafelHoehe(inf, k) {
+    var hero = inf.temp || inf.symbol, links = 30 * k + (hero ? 150 * k : 0) + (inf.titel ? (hero ? 28 : 40) * k + 20 * k : 0) + 30 * k;
+    return Math.max(links, 40 * k + inf.details.length * 50 * k + 20 * k, 140 * k);
+  }
+  function tafel(ctx, inf, s, x, y, w, h, k, f, familie) {
+    var hero = inf.temp || inf.symbol, sx = x + 36 * k, links = 0;
+    var heroY = y + (h - tafelHoehe(inf, k)) / 2;
+    if (inf.symbol) { ctx.drawImage(s, sx, heroY + 30 * k, 150 * k, 150 * k); sx += 164 * k; }
+    if (inf.temp) { text(ctx, inf.temp, sx, heroY + 140 * k, 110 * k, 300, f.text, 'left', null, familie); sx += ctx.measureText(inf.temp).width; }
+    links = sx - x;
+    var rechtsB = w - 40 * k - Math.max(links, 0) - 40 * k;
+    if (inf.titel) {
+      var titelB = inf.details.length ? Math.max(w * .5, w - 80 * k - 300 * k) : w - 80 * k;
+      text(ctx, inf.titel, x + 44 * k, hero ? heroY + 208 * k : y + h / 2 + 12 * k, 34 * k, 600, f.text, 'left', titelB, familie);
+      links = Math.max(links, Math.min(ctx.measureText(inf.titel).width, titelB) + 44 * k);
+      rechtsB = w - 40 * k - links - 40 * k;
+    }
+    var n = inf.details.length, start = y + (h - n * 50 * k) / 2 + 38 * k;
+    inf.details.forEach(function (t, i) { text(ctx, t, x + w - 40 * k, start + i * 50 * k, 34 * k, 500, f.text, 'right', Math.max(rechtsB, w * .35), familie); });
+  }
+  function logo(ctx, W, H, k, farbe, links) {
+    if (T.logo !== 'appname') return;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = farbe === '#fff' || /255,255,255/.test(farbe) ? 6 * k : 0;
+    text(ctx, 'WetterProCamera', links ? links : W - 40 * k, H - 36 * k, 26 * k, 600, farbe, links ? 'left' : 'right');
+    if (T.partner) text(ctx, 'Shot on ProCamera', links ? links : W - 40 * k, H - 70 * k, 22 * k, 500, farbe, links ? 'left' : 'right');   // nur mit Freigabe von Cocologics
+    ctx.restore();
+  }
+  var zeichenNr = 0;
+  function zeichne(cv, welcher, kurz, format) {
     if (!daten) return Promise.resolve();
-    var W = breite, H = Math.round(breite * 4 / 3), k = W / 1080, ctx = cv.getContext('2d'); cv.width = W; cv.height = H;
-    var c = daten.current, d = daten.daily;
+    var nr = ++zeichenNr; cv._nr = nr;
+    var c = daten.current;
     return Promise.all([foto ? Promise.resolve(foto) : ladeBild('foto-mannheim.jpg'), symbolBild(wArt(c.weather_code, c.is_day))]).then(function (b) {
-      var img = b[0], s = b[1], rand = welcher === 'rahmen' ? 48 * k : 0;
+      if (cv._nr !== nr) return;
+      var img = b[0], s = b[1], m = masse(format, kurz, img), W = m[0], H = m[1], k = Math.min(W, H) / 1080, ctx = cv.getContext('2d');
+      cv.width = W; cv.height = H;
+      var inf = infoTexte(), th = tafelHoehe(inf, k), f;
       ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
-      ctx.save(); if (rand) { ctx.beginPath(); ctx.rect(rand, rand, W - 2 * rand, H - 2 * rand - 200 * k); ctx.clip(); }
-      fuellen(ctx, img, W, H); ctx.restore();
-      var temp = rund(c.temperature_2m) + '°', ortT = ort.name, dat = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
-      var wind = rund(c.wind_speed_10m) + ' km/h ' + richtung(c.wind_direction_10m), regen = dez(d.precipitation_sum[0]) + ' mm', sonne = dez(d.sunshine_duration[0] / 3600) + ' h';
       if (welcher === 'klassisch') {
-        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, 230 * k);
-        ctx.drawImage(s, 36 * k, 30 * k, 150 * k, 150 * k);
-        text(ctx, temp, 200 * k, 140 * k, 110 * k, 300, '#fff'); text(ctx, ortT + ' · ' + dat, 44 * k, 208 * k, 34 * k, 600, '#fff');
-        text(ctx, 'Wind ' + wind, W - 40 * k, 90 * k, 34 * k, 500, '#fff', 'right'); text(ctx, 'Regen ' + regen, W - 40 * k, 140 * k, 34 * k, 500, '#fff', 'right'); text(ctx, 'Sonne ' + sonne, W - 40 * k, 190 * k, 34 * k, 500, '#fff', 'right');
+        fuellen(ctx, img, 0, 0, W, H); f = FARBEN[tonFuer(ctx, 0, 0, W, th)];
+        ctx.fillStyle = f.flaeche; ctx.fillRect(0, 0, W, th);
+        tafel(ctx, inf, s, 0, 0, W, th, k, f);
+        logo(ctx, W, H, k, 'rgba(255,255,255,.9)');
       } else if (welcher === 'glas') {
-        ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2 * k;
-        var y0 = H - 360 * k; ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(40 * k, y0, W - 80 * k, 300 * k, 40 * k); else ctx.rect(40 * k, y0, W - 80 * k, 300 * k); ctx.fill(); ctx.stroke();
-        ctx.drawImage(s, 70 * k, y0 + 40 * k, 140 * k, 140 * k); text(ctx, temp, 230 * k, y0 + 150 * k, 120 * k, 300, '#fff');
-        text(ctx, ortT + ' · ' + dat, 80 * k, y0 + 245 * k, 34 * k, 600, '#fff'); text(ctx, wind + ' · ' + regen + ' · ☀ ' + sonne, W - 80 * k, y0 + 90 * k, 30 * k, 500, '#fff', 'right');
+        fuellen(ctx, img, 0, 0, W, H);
+        var gb = Math.min(W - 80 * k, 1400 * k), gx = (W - gb) / 2, gy = H - th - 90 * k; f = FARBEN[tonFuer(ctx, gx, gy, gb, th)];
+        ctx.fillStyle = f === FARBEN.hell ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.2)'; ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2 * k;
+        ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(gx, gy, gb, th, 40 * k); else ctx.rect(gx, gy, gb, th); ctx.fill(); ctx.stroke();
+        if (f === FARBEN.dunkel) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fill(); }
+        tafel(ctx, inf, s, gx, gy, gb, th, k, f);
+        logo(ctx, W, H, k, 'rgba(255,255,255,.9)');
       } else if (welcher === 'minimal') {
-        var g = ctx.createLinearGradient(0, H * .55, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.6)'); ctx.fillStyle = g; ctx.fillRect(0, H * .55, W, H * .45);
-        text(ctx, temp, 60 * k, H - 140 * k, 180 * k, 200, '#fff'); text(ctx, ortT + ' · ' + dat, 66 * k, H - 70 * k, 36 * k, 600, '#fff');
+        fuellen(ctx, img, 0, 0, W, H);
+        schrift(ctx, 30 * k, 500); var dz = umbrechen(ctx, inf.details.join(' · '), W - 130 * k);
+        var hoehe = (inf.temp || inf.symbol ? 190 * k : 0) + (inf.titel ? 56 * k : 0) + dz.length * 42 * k + 120 * k;
+        var ton = tonFuer(ctx, 0, H - hoehe, W, hoehe); f = FARBEN[ton];
+        var g = ctx.createLinearGradient(0, H - hoehe - 120 * k, 0, H), farbe = ton === 'hell' ? '255,255,255' : '0,0,0';
+        g.addColorStop(0, 'rgba(' + farbe + ',0)'); g.addColorStop(1, 'rgba(' + farbe + ',.7)'); ctx.fillStyle = g; ctx.fillRect(0, H - hoehe - 120 * k, W, hoehe + 120 * k);
+        var y = H - 90 * k;
+        if (inf.titel) { text(ctx, inf.titel, 66 * k, y, 36 * k, 600, f.text, 'left', W - 360 * k); y -= 56 * k; }
+        dz.slice().reverse().forEach(function (z) { text(ctx, z, 66 * k, y, 30 * k, 500, f.leise); y -= 42 * k; });
+        if (inf.temp || inf.symbol) {
+          var hx = 60 * k;
+          if (inf.symbol) { ctx.drawImage(s, hx, y - 150 * k, 150 * k, 150 * k); hx += 166 * k; }
+          if (inf.temp) text(ctx, inf.temp, hx, y - 6 * k, 180 * k, 200, f.text);
+        }
+        logo(ctx, W, H, k, f.leise);
+      } else if (welcher === 'rahmen' || welcher === 'polaroid') {
+        var pol = welcher === 'polaroid', rand = (pol ? 56 : 48) * k, fuss = Math.max(th + (pol ? 40 : 20) * k, H * (pol ? .2 : .16));
+        ctx.fillStyle = pol ? '#FBFAF6' : '#fff'; ctx.fillRect(0, 0, W, H);
+        ctx.save(); ctx.beginPath(); ctx.rect(rand, rand, W - 2 * rand, H - rand - fuss); ctx.clip(); fuellen(ctx, img, rand, rand, W - 2 * rand, H - rand - fuss); ctx.restore();
+        f = { text: pol ? '#26221C' : '#111', leise: '#555' };
+        tafel(ctx, inf, s, rand - 36 * k + 16 * k, H - fuss, W - 2 * rand + 40 * k, fuss - (T.logo === 'appname' ? 30 * k : 0), k, f, pol ? HAND : null);
+        if (T.logo === 'appname') text(ctx, 'WetterProCamera', rand, H - 24 * k, 22 * k, 600, '#6B6B6B');
       } else {
-        ctx.fillStyle = '#fff'; ctx.fillRect(0, H - rand - 200 * k, W, 200 * k + rand);
-        ctx.drawImage(s, rand, H - 220 * k, 150 * k, 150 * k); text(ctx, temp, rand + 170 * k, H - 110 * k, 100 * k, 300, '#111');
-        text(ctx, ortT + ' · ' + dat, W - rand, H - 150 * k, 34 * k, 600, '#111', 'right'); text(ctx, wind + ' · ' + regen, W - rand, H - 100 * k, 30 * k, 500, '#555', 'right');
+        // Zeitstempel: orange Ziffern unten rechts wie bei Analogkameras, mit leichtem Leuchten
+        fuellen(ctx, img, 0, 0, W, H);
+        var zeilen = (inf.temp ? [inf.temp + (inf.titel ? '  ' + inf.titel.split(' · ').filter(function (t) { return t !== inf.datum && t !== inf.zeit; }).join(' ') : '')] : (inf.titel ? [inf.titel.split(' · ').filter(function (t) { return t !== inf.datum && t !== inf.zeit; }).join(' ')] : [])).concat(inf.details);
+        var d0 = new Date(), stempel = String(d0.getDate()).padStart(2, '0') + ' ' + String(d0.getMonth() + 1).padStart(2, '0') + " '" + String(d0.getFullYear()).slice(2);
+        if (T.infos.indexOf('zeit') >= 0) stempel += '  ' + inf.zeit.replace(' Uhr', '');
+        ctx.save(); ctx.shadowColor = 'rgba(255,80,0,.75)'; ctx.shadowBlur = 10 * k;
+        var yy = H - 60 * k; text(ctx, stempel, W - 60 * k, yy, 64 * k, 700, '#FF8A1F', 'right', W - 120 * k, MONO);
+        zeilen.filter(Boolean).reverse().forEach(function (z) { yy -= 54 * k; text(ctx, z, W - 60 * k, yy, 38 * k, 700, '#FF8A1F', 'right', W - 120 * k, MONO); });
+        ctx.restore();
+        if (T.logo === 'appname') { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 6 * k; text(ctx, 'WetterProCamera', 40 * k, H - 36 * k, 24 * k, 600, 'rgba(255,255,255,.9)'); ctx.restore(); }
       }
-      if (welcher !== 'rahmen') text(ctx, 'WetterProCamera', W - 40 * k, H - 36 * k, 26 * k, 600, 'rgba(255,255,255,.85)', 'right');
-      else text(ctx, 'WetterProCamera', rand, H - 36 * k, 24 * k, 600, '#777');
+      cv.dataset.stand = format + '/' + welcher + '/' + W + 'x' + H;
     });
+  }
+  function teilenZeichnen() {
+    if (!$('#teilen').open) return Promise.resolve();
+    $$('#tStile canvas').forEach(function (cv, i) { zeichne(cv, STILE[i][0], 216, 'hoch'); });
+    return zeichne($('#tBild'), T.stil, T.groesse, T.format);
   }
   function teilenOeffnen() {
     if (!daten) { hinweisKurz('Die Wetterdaten laden noch. Gleich noch einmal tippen.'); return; }
     var dlg = $('#teilen');
-    $('#tStile').innerHTML = STILE.map(function (s) { return '<button role="radio" aria-checked="' + (s[0] === stil) + '" data-stil="' + s[0] + '" class="tippbar"><canvas width="54" height="72"></canvas><span>' + s[1] + '</span></button>'; }).join('');
-    $$('#tStile canvas').forEach(function (cv, i) { zeichne(cv, STILE[i][0], 216); });
-    zeichne($('#tBild'), stil, 1080);
-    dlg.showModal();
+    $('#tFormate').innerHTML = FORMATE.map(function (f) { return '<button type="button" role="radio" class="t-chip tippbar" data-format="' + f[0] + '" aria-checked="' + (f[0] === T.format) + '"' + (f[0] === 'original' ? ' aria-label="Original: Seitenverhältnis des Fotos"' : '') + '>' + f[1] + '</button>'; }).join('');
+    $('#tStile').innerHTML = STILE.map(function (s) { return '<button type="button" role="radio" aria-checked="' + (s[0] === T.stil) + '" data-stil="' + s[0] + '" class="tippbar"><canvas width="54" height="72"></canvas><span>' + s[1] + '</span></button>'; }).join('');
+    if (!dlg.open) dlg.showModal();
+    luftHolen(); teilenZeichnen();
+    var akt = $('#tStile [aria-checked="true"]'); if (akt && akt.scrollIntoView) akt.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
+  /* Blatt „Infos": Haken-Liste mit Reihenfolge (↑ ↓) und weitere Einstellungen */
+  function blattBauen() {
+    var reihe = T.infos.concat(Object.keys(INFOS).filter(function (k) { return T.infos.indexOf(k) < 0; }));
+    var zeilen = reihe.map(function (k) {
+      var an = T.infos.indexOf(k) >= 0, i = T.infos.indexOf(k);
+      return '<li><label class="tippbar"><input type="checkbox" data-info="' + k + '"' + (an ? ' checked' : '') + '><span>' + INFOS[k] + '</span></label>' +
+        '<button type="button" class="pfeil tippbar" data-hoch="' + k + '"' + (!an || i === 0 ? ' disabled' : '') + ' aria-label="' + INFOS[k] + ' nach oben">↑</button>' +
+        '<button type="button" class="pfeil tippbar" data-runter="' + k + '"' + (!an || i === T.infos.length - 1 ? ' disabled' : '') + ' aria-label="' + INFOS[k] + ' nach unten">↓</button></li>';
+    }).join('');
+    $('#tBlattInhalt').innerHTML =
+      '<p class="blatt-hilfe">Hake an, was aufs Foto soll. Mit ↑ und ↓ legst du die Reihenfolge fest.</p><ul class="blatt-liste" id="tInfoListe">' + zeilen + '</ul>' +
+      '<h3>Ort auf dem Foto</h3>' + seg('ortStufe', T.ortStufe, [['stadt', 'Stadt'], ['stadtteil', 'Stadtteil'], ['aus', 'Aus']], 'Ort auf dem Foto') +
+      '<p class="blatt-hilfe">„Stadt" verrät am wenigsten über dich. Stadtteil gibt es nur, wenn du einen Stadtteil gesucht hast.</p>' +
+      '<h3 id="tTextTitel">Eigener Text oder Hashtag</h3><input id="tText" aria-labelledby="tTextTitel" class="blatt-feld" type="text" maxlength="60" placeholder="z. B. #Mannheim" value="' + esc(T.text) + '">' +
+      '<h3>Farbton der Fläche</h3>' + seg('ton', T.ton, [['dunkel', 'Dunkel'], ['hell', 'Hell'], ['auto', 'Automatisch']], 'Farbton der Fläche') +
+      '<p class="blatt-hilfe">Automatisch misst die Helligkeit des Fotos dort, wo die Infos stehen.</p>' +
+      '<h3>Logo</h3>' + seg('logo', T.logo, [['appname', 'App-Name'], ['keins', 'Keins']], 'Logo') +
+      '<label class="blatt-aus"><input type="checkbox" disabled><span>Shot on ProCamera<small>Nur mit Freigabe von Cocologics, deshalb noch aus.</small></span></label>' +
+      '<h3>Größe</h3>' + seg('groesse', T.groesse, [[1080, '1080 px'], [2160, '2160 px']], 'Größe') +
+      '<h3>Dateityp</h3>' + seg('datei', T.datei, [['jpeg', 'JPEG (klein)'], ['png', 'PNG (verlustfrei)']], 'Dateityp') +
+      '<p class="blatt-hilfe">Datenschutz: Das Bild wird neu aus Pixeln gezeichnet. Es enthält keinen Aufnahmeort (GPS) und keine anderen Daten des Fotos.</p>';
+  }
+  function blattAuf() { blattBauen(); $('#tBlatt').hidden = false; $('#tInfosAuf').setAttribute('aria-expanded', 'true'); var e = $('#tInfosZu'); if (e) e.focus(); }
+  function blattZu() { $('#tBlatt').hidden = true; $('#tInfosAuf').setAttribute('aria-expanded', 'false'); $('#tInfosAuf').focus(); }
   function bindTeilen() {
-    $('#tAbbrechen').addEventListener('click', function () { $('#teilen').close(); });
-    $('#tStile').addEventListener('click', function (e) { var b = e.target.closest('[data-stil]'); if (!b) return; stil = b.dataset.stil; speicher.schreiben('wpgt-stil', stil); $$('#tStile [data-stil]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); }); zeichne($('#tBild'), stil, 1080); });
+    $('#tAbbrechen').addEventListener('click', function () { $('#tBlatt').hidden = true; $('#teilen').close(); });
+    $('#tInfosAuf').addEventListener('click', blattAuf);
+    $('#tInfosZu').addEventListener('click', blattZu);
+    $('#tFormate').addEventListener('click', function (e) { var b = e.target.closest('[data-format]'); if (!b) return; T.format = b.dataset.format; tSpeichern(); $$('#tFormate [data-format]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); }); teilenZeichnen(); });
+    $('#tStile').addEventListener('click', function (e) { var b = e.target.closest('[data-stil]'); if (!b) return; T.stil = b.dataset.stil; tSpeichern(); $$('#tStile [data-stil]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); }); zeichne($('#tBild'), T.stil, T.groesse, T.format); });
+    var blatt = $('#tBlattInhalt');
+    blatt.addEventListener('change', function (e) {
+      var k = e.target.dataset.info; if (!k) return;
+      if (e.target.checked) { if (T.infos.indexOf(k) < 0) T.infos.push(k); } else T.infos = T.infos.filter(function (x) { return x !== k; });
+      tSpeichern(); blattBauen(); var neu = $('[data-info="' + k + '"]', blatt); if (neu) neu.focus(); luftHolen(); teilenZeichnen();
+    });
+    blatt.addEventListener('click', function (e) {
+      var h = e.target.closest('[data-hoch],[data-runter]'), sg = e.target.closest('[data-seg] [data-v]');
+      if (h) {
+        var k = h.dataset.hoch || h.dataset.runter, i = T.infos.indexOf(k), j = i + (h.dataset.hoch ? -1 : 1);
+        if (i < 0 || j < 0 || j >= T.infos.length) return;
+        T.infos[i] = T.infos[j]; T.infos[j] = k; tSpeichern(); blattBauen();
+        var f = $('[data-' + (h.dataset.hoch ? 'hoch' : 'runter') + '="' + k + '"]', blatt); if (f && !f.disabled) f.focus(); else { f = $('[data-info="' + k + '"]', blatt); if (f) f.focus(); }
+        teilenZeichnen(); return;
+      }
+      if (sg) {
+        var name = sg.parentNode.dataset.seg, v = sg.dataset.v;
+        T[name] = name === 'groesse' ? +v : v; tSpeichern();
+        $$('[data-v]', sg.parentNode).forEach(function (x) { x.setAttribute('aria-checked', String(x === sg)); });
+        teilenZeichnen();
+      }
+    });
+    blatt.addEventListener('input', function (e) {
+      if (e.target.id !== 'tText') return;
+      T.text = e.target.value; if (T.text.trim() && T.infos.indexOf('text') < 0) { T.infos.push('text'); var cb = $('[data-info="text"]', blatt); if (cb) cb.checked = true; }
+      tSpeichern(); clearTimeout(blattBauen.t); blattBauen.t = setTimeout(teilenZeichnen, 250);
+    });
     ['#tFotos', '#tKamera'].forEach(function (id) {
       $(id).addEventListener('change', function (e) {
         var f = e.target.files && e.target.files[0]; if (!f) return;
@@ -404,12 +749,13 @@
       });
     });
     $('#tTeilen').addEventListener('click', function () {
+      var typ = T.datei === 'png' ? 'image/png' : 'image/jpeg';
       $('#tBild').toBlob(function (blob) {
         if (!blob) return;
-        var datei = new File([blob], 'wetter-' + ort.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.jpg', { type: 'image/jpeg' });
-        if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetter in ' + ort.name }).catch(function () { }); return; }
+        var datei = new File([blob], 'wetter-' + (ortFuerBild() || 'foto').toLowerCase().replace(/[^a-z0-9]+/g, '-') + (T.datei === 'png' ? '.png' : '.jpg'), { type: typ });
+        if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetter' + (ortFuerBild() ? ' in ' + ortFuerBild() : '') }).catch(function () { }); return; }
         var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = datei.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
-      }, 'image/jpeg', .9);
+      }, typ, T.qualitaet / 100);
     });
   }
 
@@ -419,9 +765,9 @@
   $('#btnMenue').addEventListener('click', function () { zeigeTab('mehr'); });
   $('#btnSuche').addEventListener('click', function () { zeigeTab('mehr'); setTimeout(function () { var f = $('#sucheFeld'); if (f) f.focus(); }, 50); });
   $('#btnTeilen').addEventListener('click', teilenOeffnen);
-  baueTabs(); bindTeilen();
+  baueTabs(); bindTeilen(); kopfModell();
   var start = 'wetter'; try { start = sessionStorage.getItem('wpgt-tab') || 'wetter'; } catch (e) { }
-  zeigeTab(TABS.some(function (t) { return t[0] === start; }) ? start : 'wetter');
+  zeigeTab(SEITEN.some(function (t) { return t[0] === start; }) ? start : 'wetter');
   laden();
   window.addEventListener('online', laden);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && stand && Date.now() - stand > 15 * 60 * 1000) laden(); });

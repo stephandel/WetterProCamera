@@ -108,8 +108,10 @@
     --akzent-2: var(--label);   /* keine Zweitfarbe: Werte in Textfarbe */
     --schatten: none;
     --gruen: #30D158; --orange: #FF9F0A; --rot: #FF453A;
-    --tag-a: #1F2938;
-    --tag-b: #2F2433;
+    /* Tagestönung dunkel abgeschwächt (15.10.2026): Mitte zwischen den bisherigen Tönen #1F2938/#2F2433 und --bg-2 #1C1C1E,
+       Farbstärke etwa halbiert, damit die Zeilen im Dunkeln nicht bunt wirken. Weißer Text bleibt über 14:1. */
+    --tag-a: #1E2329;
+    --tag-b: #26202A;
   }
 }
 

@@ -134,7 +134,9 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .karte-fuss { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; font-size: var(--fs-footnote); color: var(--label-2); }
 .chips { display: flex; gap: var(--s2); flex-wrap: wrap; }
 .chip { min-height: var(--tap); height: auto; }
-.chip[aria-pressed="true"] { background: var(--akzent); color: var(--auf-akzent); }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--akzent); color: var(--auf-akzent); }
+.ebenen { margin: 0 0 calc(-1 * var(--s2)); }
+.ebenen .chip { padding: 0 var(--s4); }
 .temp-marke { background: var(--bg-2); color: var(--label); border-radius: var(--r-chip); padding: 2px var(--s2); font-weight: 600; font-size: var(--fs-footnote); box-shadow: var(--glas-schatten); white-space: nowrap; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 2px; }
 .temp-marke .wsym { width: 22px; height: 22px; }
 .leaflet-container { font-family: var(--font); background: var(--bg-2); }
@@ -163,12 +165,22 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 
 /* ---------- Teilen-Bildschirm: immer schwarz ---------- */
 dialog.teilen { inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: calc(var(--safe-top) + var(--s2)) var(--rand) calc(var(--safe-bottom) + var(--s4)); background: #000; color: #fff; }
-dialog.teilen[open] { display: grid; grid-template-rows: auto 1fr auto auto; gap: var(--s4); }
+/* Der Teilen-Bildschirm ist immer dunkel: eigene Werte aus den dunklen Apple-Systemfarben (wie tokens.css dunkel) */
+dialog.teilen { --t-flaeche: #1C1C1E; --t-fuellung: rgba(120,120,128,.36); --t-leise: rgba(235,235,245,.6); --t-trenner: rgba(84,84,88,.6); --t-akzent: #0A84FF; overflow: hidden; }
+dialog.teilen[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: var(--s3); }
 dialog.teilen::backdrop { background: #000; }
-.teilen-text { color: #fff; font-size: var(--fs-body); min-height: var(--tap); padding: 0 var(--s2); }
-.teilen-bild { min-height: 0; display: grid; place-items: center; }
-.teilen-bild canvas { max-width: 100%; max-height: 100%; border-radius: var(--s2); }
-.teilen-stile { display: flex; gap: var(--s3); justify-content: center; }
+.teilen-kopf { display: flex; justify-content: space-between; align-items: center; }
+.teilen-text { color: #fff; font-size: var(--fs-body); min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); }
+#tInfosAuf, #tInfosZu { color: var(--t-akzent); font-weight: 600; }
+.teilen-bild { min-height: 0; display: grid; place-items: center; overflow: hidden; }
+.teilen-bild canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: var(--s2); }
+/* Format-Chips über den Vorlagen; zu viele für die Breite: waagrecht wischen */
+.teilen-formate { display: flex; gap: var(--s2); overflow-x: auto; justify-content: safe center; scrollbar-width: none; padding: 2px; }
+.teilen-formate::-webkit-scrollbar, .teilen-stile::-webkit-scrollbar { display: none; }
+.t-chip { flex: none; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s4); border-radius: var(--r-chip); background: var(--t-fuellung); color: #fff; font-size: var(--fs-subhead); font-weight: 600; font-variant-numeric: tabular-nums; }
+.t-chip[aria-checked="true"] { background: #fff; color: #000; }
+.teilen-stile { display: flex; gap: var(--s3); justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 4px; }
+.teilen-stile button { flex: none; }
 .teilen-stile button { display: grid; gap: var(--s1); justify-items: center; color: #fff; font-size: var(--fs-caption); min-height: var(--tap); }
 .teilen-stile canvas { width: 54px; height: 72px; border-radius: 6px; outline: 2px solid transparent; outline-offset: 2px; }
 .teilen-stile button[aria-checked="true"] canvas { outline-color: #fff; }
@@ -177,6 +189,55 @@ dialog.teilen::backdrop { background: #000; }
 .teilen-rund.klein > span:first-of-type { width: var(--tap); height: var(--tap); border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; }
 .teilen-rund.gross { width: 76px; height: 76px; border-radius: 50%; background: #fff; color: #000; display: grid; place-items: center; box-shadow: 0 0 0 4px #000, 0 0 0 7px #fff; }
 .teilen-rund.gross .ikon { width: 30px; height: 30px; }
+
+/* Blatt „Infos" im Teilen-Bildschirm (deckend, kein Glas auf Glas) */
+.teilen-blatt { position: absolute; left: 0; right: 0; bottom: 0; max-height: 78dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--t-flaeche); border-radius: var(--r-kachel) var(--r-kachel) 0 0; z-index: 2; color: #fff; }
+.blatt-kopf { display: flex; justify-content: space-between; align-items: center; padding: var(--s2) var(--rand) var(--s2) var(--s4); border-bottom: 1px solid var(--t-trenner); }
+.blatt-kopf h2 { font-size: var(--fs-body); margin: 0; }
+.blatt-inhalt { overflow-y: auto; padding: var(--s3) var(--rand) calc(var(--safe-bottom) + var(--s6)); overscroll-behavior: contain; }
+.blatt-inhalt h3 { font-size: var(--fs-footnote); font-weight: 600; color: var(--t-leise); margin: var(--s5) 0 var(--s2); }
+.blatt-hilfe { font-size: var(--fs-footnote); color: var(--t-leise); margin: var(--s2) 0; max-width: 65ch; }
+.blatt-liste { list-style: none; margin: 0; padding: 0; border-radius: var(--r-button); background: var(--t-fuellung); overflow: hidden; }
+.blatt-liste li { display: flex; align-items: center; }
+.blatt-liste li + li { border-top: 1px solid var(--t-trenner); }
+.blatt-liste label { flex: 1; min-height: var(--tap); display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); font-size: var(--fs-body); }
+.blatt-liste input, .blatt-aus input { width: 22px; height: 22px; accent-color: var(--t-akzent); flex: none; }
+.pfeil { width: var(--tap); height: var(--tap); color: #fff; font-size: var(--fs-title3); flex: none; }
+.pfeil:disabled { color: var(--t-trenner); }
+.blatt-feld { width: 100%; min-height: var(--tap); border-radius: var(--r-button); border: 1px solid var(--t-trenner); background: var(--t-fuellung); color: #fff; padding: 0 var(--s3); font-size: var(--fs-body); }
+.blatt-feld::placeholder { color: var(--t-leise); }
+.blatt-aus { display: flex; gap: var(--s3); align-items: center; min-height: var(--tap); margin-top: var(--s3); color: var(--t-leise); }
+.blatt-aus small { display: block; font-size: var(--fs-footnote); }
+.teilen .seg { background: var(--t-fuellung); }
+.teilen .seg button { color: #fff; }
+.teilen .seg button[aria-checked="true"] { background: #fff; color: #000; }
+
+/* Segment-Wahl (Wind-Einheit, Blatt-Einstellungen) */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 2px; border-radius: var(--r-button); background: var(--fuellung); }
+.seg button { min-height: var(--tap); border-radius: calc(var(--r-button) - 2px); font-size: var(--fs-subhead); font-weight: 500; padding: 0 var(--s1); }
+.seg button[aria-checked="true"] { background: var(--bg-2); color: var(--akzent); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+/* Mehr: Orte mit Favoriten-Stern, Modelle, Webcam-Liste, Quellen */
+.liste > .ort-zeile { padding: 0; gap: 0; }
+.ort-wahl { flex: 1; min-height: var(--tap); display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding: var(--s3) var(--s2) var(--s3) var(--s4); text-align: left; }
+.ort-wahl[aria-current="true"] { color: var(--akzent); font-weight: 600; }
+.stern { width: var(--tap); height: var(--tap); margin-right: var(--s1); display: grid; place-items: center; color: var(--label-2); flex: none; }
+.stern[aria-pressed="true"] { color: var(--akzent); }
+.stern[aria-pressed="true"] .ikon { fill: currentColor; }
+.modell-text { display: grid; gap: 2px; }
+.modell-text small { font-size: var(--fs-footnote); }
+#modellListe label { justify-content: space-between; }
+#modellListe input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.liste > a { color: var(--label); text-decoration: none; justify-content: space-between; }
+.liste > a > span[aria-hidden] { color: var(--akzent); }
+.quellen { margin: 0; padding-left: var(--s5); display: grid; gap: var(--s1); }
+.info.hilfe { margin: calc(-1 * var(--s2)) var(--s4) 0; }
+
+/* Tab-Leiste: Kamera als mittlerer Tab mit Auslöser */
+.tab-kamera .ausloeser { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--akzent); color: var(--auf-akzent); box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--akzent); }
+.tab-kamera .ausloeser svg { width: 18px; height: 18px; }
+.tabbar.pille .tab-kamera { color: var(--label); }
+@media (min-width: 768px) { .tab-kamera .ausloeser { width: 28px; height: 28px; } }
 
 /* Zugänglichkeit */
 @media (prefers-reduced-transparency: reduce) { .glas { background: var(--bg-2); -webkit-backdrop-filter: none; backdrop-filter: none; } }
