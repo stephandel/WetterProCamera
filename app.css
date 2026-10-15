@@ -50,6 +50,26 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .wind-wert small { display: block; font-size: var(--fs-caption); color: var(--label-2); }
 .boeen { margin-left: auto; text-align: right; font-size: var(--fs-caption); color: var(--label-2); }
 
+/* Rechte Hälfte der Aktuell-Kachel: Werte, Radar oder Webcam */
+.akt-l[role="button"] { cursor: pointer; }
+.akt-r { position: relative; }
+.akt-r.medien { padding: 0; overflow: hidden; border-radius: 0 var(--r-kachel) var(--r-kachel) 0; min-height: 230px; background: var(--fuellung); }
+.mk-grund { filter: grayscale(1) brightness(.5) contrast(1.15); }   /* dunkle Grundkarte, damit der Regen leuchtet */
+.mini-karte, .mk-bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mk-zeit, .mk-label { position: absolute; z-index: 500; font-size: var(--fs-footnote); font-weight: 600; color: #fff; background: rgba(0,0,0,.55); padding: 2px var(--s2); }
+.mk-zeit { top: 0; right: 0; border-bottom-left-radius: var(--s2); }
+.mk-label { bottom: 0; right: 0; border-top-left-radius: var(--s2); text-decoration: none; }
+.mk-leer { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: var(--s4); color: var(--label-2); font-size: var(--fs-footnote); }
+.mk-leer .ikon { width: 32px; height: 32px; margin: 0 auto var(--s2); }
+.mk-leer p { margin: 0; }
+.akt-punkte { position: absolute; z-index: 500; left: var(--s3); bottom: var(--s2); display: flex; gap: 5px; }
+.akt-r:not(.medien) .akt-punkte { position: static; margin-top: var(--s3); }
+.akt-punkte i { width: 6px; height: 6px; border-radius: 50%; background: var(--label-3); }
+.akt-punkte i.an { background: var(--label); }
+.medien .akt-punkte i { background: rgba(255,255,255,.45); } .medien .akt-punkte i.an { background: #fff; }
+#ansichtListe label { justify-content: space-between; }
+#ansichtListe input { width: 22px; height: 22px; accent-color: var(--akzent); }
+
 /* (2) Drei Stundenspalten */
 .std { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0; }
 .std > div { padding: var(--s3) var(--s3); display: grid; gap: var(--s1); min-width: 0; }

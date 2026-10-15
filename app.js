@@ -112,18 +112,63 @@
     if (erster === 0) { var ende = p.findIndex(function (x, i) { return i > 0 && x < schwelle; }); return ende < 0 ? 'Es regnet die nächsten 2 Stunden.' : 'Regen bis etwa ' + hm(t[ende]) + ' Uhr.'; }
     return 'Bis ' + hm(t[erster]) + ' Uhr trocken, danach Regen.';
   }
+  /* ---------- Aktuell-Kachel: rechte Hälfte umschaltbar wie bei WeatherPro (links antippen) ---------- */
+  // Webcams: erst nach Erlaubnis des Betreibers eintragen (siehe KONZEPT-KAMERA-WEBCAM.md im Konfigurator)
+  // Geprüft am 15.10.2026. ALLE erst nach schriftlicher Erlaubnis des Betreibers einkommentieren.
+  // Keine liefert CORS: Zum Teilen als Bild und für den Rückblick braucht es einen Worker wie bei Fuerte (fuerte-sync).
+  var WEBCAMS = [
+    // { name: 'Mannheim-Oststadt (Himmel)', live: 'https://klymiuk.info/wetter/webcam/webcam/current.jpg', quelle: 'Wetterstation Mannheim-Oststadt', seite: 'https://www.klymiuk.info/wetter/webcam.html' },
+    // { name: 'Mannheim-Seckenheim (Skycam)', live: 'https://www.mannheim-wetter.info/cam/cam1/mannheim-himmel-0.jpg', quelle: 'mannheim-wetter.info', seite: 'https://www.mannheim-wetter.info/cam/' },
+    // { name: 'City Airport Mannheim', live: 'http://edfmcam.dyndns.org/record/current.jpg', quelle: 'City Airport Mannheim', seite: 'https://www.flugplatz-mannheim.de/' },   // nur http: braucht Worker
+    // { name: 'Heidelberg-Boxberg, Blick Rheinebene', live: 'https://www.berghalde.com/picam/capt0001.jpg', quelle: 'berghalde.com', seite: 'https://www.berghalde.com/' },
+    // { name: 'Ladenburg Wasserturm', live: 'https://www.stadt-ladenburg.de/webcam/fetch.php', quelle: 'Stadt Ladenburg', seite: 'https://www.ladenburg.de/de/Aktuelles/Webcam' },
+    // { name: 'Edingen-Neckarhausen (Neckar)', live: 'https://ursel-hirsch-woelfl.de/edingen-neckarhausen.webcam.ftp/ftpData/current.jpg', quelle: 'Gemeinde Edingen-Neckarhausen', seite: 'https://www.edingen-neckarhausen.de/gemeinde/webcam' }
+  ];
+  var ANSICHT_NAMEN = { werte: 'Werte', radar: 'Radar', webcam: 'Webcam' };
+  var ansichten = function () { var a = speicher.lesen('wpc-ansichten', ['werte', 'radar', 'webcam']).filter(function (x) { return ANSICHT_NAMEN[x]; }); return a.length ? a : ['werte']; };
+  var rechtsAnsicht = function () { var a = ansichten(), x = speicher.lesen('wpc-rechts', 'werte'); return a.indexOf(x) >= 0 ? x : a[0]; };
+  var punkte = function (an) { var a = ansichten(); return a.length < 2 ? '' : '<div class="akt-punkte" aria-hidden="true">' + a.map(function (x) { return '<i class="' + (x === an ? 'an' : '') + '"></i>'; }).join('') + '</div>'; };
+  var miniKarte = null;
+  function rechtsMedien(ansicht) {
+    var inhalt;
+    if (ansicht === 'radar') inhalt = '<div class="mini-karte" id="miniKarte" aria-label="Regenradar um ' + esc(ort.name) + '"></div><span class="mk-zeit zahl" id="mkZeit"></span><span class="mk-label">Radar</span>';
+    else if (WEBCAMS.length) { var w = WEBCAMS[0]; inhalt = '<img class="mk-bild" src="' + esc(w.live) + '?t=' + Math.floor(Date.now() / 60000) + '" alt="Webcam ' + esc(w.name) + '"><span class="mk-zeit">LIVE</span><a class="mk-label" href="' + esc(w.seite) + '" target="_blank" rel="noopener">' + esc(w.quelle) + ' ↗</a>'; }
+    else inhalt = '<div class="mk-leer"><div>' + Ikon('camera') + '</div><p>Webcam für ' + esc(ort.name) + ' folgt, sobald der Betreiber zugestimmt hat.</p></div><span class="mk-label">Webcam</span>';
+    return '<div class="akt-r medien">' + inhalt + punkte(ansicht) + '</div>';
+  }
+  function bindUmschalter(ansicht) {
+    var u = $('#aktUmschalter'); if (!u) return;
+    var weiter = function () { var a = ansichten(), i = a.indexOf(ansicht); speicher.schreiben('wpc-rechts', a[(i + 1) % a.length]); renderWetter(); var n = $('#aktUmschalter'); if (n) n.focus(); };
+    u.addEventListener('click', weiter);
+    u.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); weiter(); } });
+    if (miniKarte) { miniKarte.remove(); miniKarte = null; }
+    if (ansicht !== 'radar') return;
+    leafletBereit(function () {
+      var el = $('#miniKarte'); if (!el) return;
+      miniKarte = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, tap: false }).setView([ort.lat, ort.lon], 7);
+      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 10, className: 'mk-grund' }).addTo(miniKarte);   // CARTO verlangt inzwischen einen Schlüssel
+      L.circleMarker([ort.lat, ort.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#0A84FF', fillOpacity: 1 }).addTo(miniKarte);
+      holeJson('https://api.rainviewer.com/public/weather-maps.json').then(function (m) {
+        var f = m.radar && m.radar.past && m.radar.past[m.radar.past.length - 1]; if (!f || !miniKarte) return;
+        L.tileLayer(m.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', { opacity: .8, maxNativeZoom: 7, maxZoom: 10 }).addTo(miniKarte);
+        var z = $('#mkZeit'); if (z) z.textContent = new Date(f.time * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      }).catch(function () { });
+    });
+  }
+
   function renderWetter() {
     var c = daten.current, d = daten.daily, h = daten.hourly, i0 = stundenIndex();
+    var ansicht = rechtsAnsicht(), name = ANSICHT_NAMEN[ansicht];
     var akt = '<section class="kachel akt" aria-label="Aktuelles Wetter">' +
-      '<div class="akt-l"><div class="akt-kopf"><b>Aktuell</b> <span class="leise zahl">' + hm(c.time) + '</span></div>' +
+      '<div class="akt-l tippbar" id="aktUmschalter" role="button" tabindex="0" aria-label="Rechte Hälfte umschalten, jetzt: ' + name + '"><div class="akt-kopf"><b>Aktuell</b> <span class="leise zahl">' + hm(c.time) + '</span></div>' +
       sym(wArt(c.weather_code, c.is_day), 'akt-sym', wText(c.weather_code, c.is_day)) +
       '<div class="akt-fuss"><span class="akt-temp zahl">' + rund(c.temperature_2m) + '°C</span><span class="akt-regen zahl">' + dez(c.precipitation) + ' mm/h</span></div></div>' +
-      '<div class="akt-r"><div class="akt-lage">' + esc(wText(c.weather_code, c.is_day)) + '</div><dl class="werte">' +
+      (ansicht === 'werte' ? '<div class="akt-r"><div class="akt-lage">' + esc(wText(c.weather_code, c.is_day)) + '</div><dl class="werte">' +
       '<div><dt>Gefühlt</dt><dd>' + rund(c.apparent_temperature) + '°C</dd></div>' +
       '<div><dt>Rel. Feuchte</dt><dd>' + rund(c.relative_humidity_2m) + ' %</dd></div>' +
       '<div><dt>Luftdruck</dt><dd>' + dez(c.pressure_msl) + ' hPa</dd></div></dl>' +
-      '<div class="windzeile">' + windrose(c.wind_direction_10m) + '<div class="wind-wert"><b>' + rund(c.wind_speed_10m) + '</b><small>km/h ' + richtung(c.wind_direction_10m) + '</small></div><div class="boeen">Böen<br><span class="zahl">' + rund(c.wind_gusts_10m) + ' km/h</span></div></div>' +
-      '</div></section>';
+      '<div class="windzeile">' + windrose(c.wind_direction_10m) + '<div class="wind-wert"><b>' + rund(c.wind_speed_10m) + '</b><small>km/h ' + richtung(c.wind_direction_10m) + '</small></div><div class="boeen">Böen<br><span class="zahl">' + rund(c.wind_gusts_10m) + ' km/h</span></div></div>' + punkte(ansicht) +
+      '</div>' : rechtsMedien(ansicht)) + '</section>';
     // Drei Stundenspalten im Abstand von 6 Stunden
     var spalten = [i0 + 5, i0 + 11, i0 + 17].map(function (i) {
       if (!h.time[i]) return '';
@@ -152,6 +197,7 @@
     }).join('');
     var tage = '<section class="kachel tage" aria-label="Vorhersage für die nächsten Tage">' + zeilen + '</section>';
     $('#tab-wetter').innerHTML = akt + std + regen + tage;
+    bindUmschalter(ansicht);
   }
 
   /* ---------- Graphs: Temperatur und Regen, 48 Stunden ---------- */
@@ -243,12 +289,15 @@
       '<div class="liste" id="sucheErgebnis" aria-live="polite"></div>' +
       '<h2 class="abschnitt-titel">Meine Orte</h2><div class="liste" id="orteListe">' + orteHtml +
       '<button class="tippbar" id="btnStandort"><span>' + Ikon('pin') + ' Mein Standort</span><span class="leise">fragt einmal nach</span></button></div>' +
+      '<h2 class="abschnitt-titel">Aktuell-Kachel: links antippen wechselt rechts zu</h2><div class="liste" id="ansichtListe">' +
+      Object.keys(ANSICHT_NAMEN).map(function (k) { return '<label class="tippbar"><span>' + ANSICHT_NAMEN[k] + '</span><input type="checkbox" value="' + k + '"' + (ansichten().indexOf(k) >= 0 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
       '<h2 class="abschnitt-titel">Über die App</h2><section class="kachel info">' +
       '<p><b>WetterProCamera</b> ist eine Test-App, gestaltet mit dem Design-Konfigurator nach den Empfehlungen der KI.</p>' +
       '<p>Wetterdaten: <a href="https://open-meteo.com" rel="noopener">Open-Meteo</a> (CC BY 4.0). Regenradar: <a href="https://www.rainviewer.com" rel="noopener">RainViewer</a>. Karte: <a href="https://opentopomap.org" rel="noopener">OpenTopoMap</a>, © OpenStreetMap-Mitwirkende. Wettersymbole: eigene Zeichnung „Klassisch". Foto: Mannheim, eigene Aufnahme.</p></section>';
     $('#sucheForm').addEventListener('submit', function (e) { e.preventDefault(); suchen($('#sucheFeld').value); });
     $('#orteListe').addEventListener('click', function (e) { var b = e.target.closest('[data-ort]'); if (b) ortSetzen(STANDARDORTE[+b.dataset.ort]); });
     $('#btnStandort').addEventListener('click', standort);
+    $('#ansichtListe').addEventListener('change', function () { var a = $$('#ansichtListe input:checked').map(function (c) { return c.value; }); speicher.schreiben('wpc-ansichten', a.length ? a : ['werte']); });
   }
   function suchen(text) {
     var ziel = $('#sucheErgebnis'); text = (text || '').trim(); if (text.length < 2) return;
