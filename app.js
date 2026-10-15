@@ -246,6 +246,7 @@
 
   /* ---------- Graphs: Temperatur und Regen, 48 Stunden ---------- */
   function renderGraphs() {
+    if (graphsModus() === 'meteo') return renderMeteo();   // Paket C: Meteogramm
     // Breite in echten Pixeln (1 Einheit = 1 px), damit die Achsenzahlen wirklich 12 px groß sind (UX-Prüfung A7)
     var seite = $('#tab-graphs'), breite = Math.round((seite.clientWidth || 358) - 32);
     var h = daten.hourly, i0 = stundenIndex(), n = 48, B = Math.max(280, breite), H = Math.round(Math.min(300, Math.max(200, B * .62))), l = 34, r = 10, o = 14, u = 30;
@@ -264,7 +265,7 @@
     var flaeche = pfad + ' L' + x(n - 1) + ' ' + (H - u) + ' L' + x(0) + ' ' + (H - u) + ' Z';
     var tMaxI = temp.indexOf(Math.max.apply(null, temp)), tMinI = temp.indexOf(Math.min.apply(null, temp));
     var summe = regen.reduce(function (a, b) { return a + b; }, 0);
-    $('#tab-graphs').innerHTML = '<section class="kachel graph" aria-labelledby="gTitel"><h2 class="kachel-titel" id="gTitel">' + Ikon('chart') + 'Temperatur und Regen · 48 Stunden</h2>' +
+    $('#tab-graphs').innerHTML = graphsKopf() + '<section class="kachel graph" aria-labelledby="gTitel"><h2 class="kachel-titel" id="gTitel">' + Ikon('chart') + 'Temperatur und Regen · 48 Stunden</h2>' +
       '<svg viewBox="0 0 ' + B + ' ' + H + '" role="img" aria-label="Temperatur zwischen ' + rund(Math.min.apply(null, temp)) + ' und ' + rund(Math.max.apply(null, temp)) + ' Grad, Regen insgesamt ' + dez(summe) + ' Millimeter">' +
       gitter + balken + '<path class="flaeche" d="' + flaeche + '"/><path class="linie" d="' + pfad + '"/>' +
       '<line class="jetzt" x1="' + x(0) + '" x2="' + x(0) + '" y1="' + o + '" y2="' + (H - u) + '"/>' + achse +
@@ -303,8 +304,8 @@
   // Erklärung und Quelle je Ebene; die Quelle als eigene Zeile mit 44 px Tippfläche statt Inline-Link
   var EBENEN_QUELLE = {
     radar: ['Regenradar der letzten 2 Stunden. Regen erscheint als blaue bis rote Flecken.', 'RainViewer', 'https://www.rainviewer.com'],
-    sat: ['Satellitenbild in Farbe (Meteosat), neuestes Bild. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
-    ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts.', 'EUMETSAT', 'https://view.eumetsat.int'],
+    sat: ['Satellitenbild in Farbe (Meteosat). „Abspielen" zeigt die letzten 2 Stunden. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
+    ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts. „Abspielen" zeigt die letzten 2 Stunden.', 'EUMETSAT', 'https://view.eumetsat.int'],
     karte: ['Aktuelle Temperaturen an deinen Orten.', 'Open-Meteo', 'https://open-meteo.com']
   };
   // Regnet es gerade oder in den nächsten 2 Stunden am Ort? (aus der Vorhersage, nicht aus dem Radarbild)
@@ -333,10 +334,11 @@
     });
   }
   function ebeneZeigen() {
+    satStopp();   // Paket C: Satellitenfilm beenden
     $$('#ebenenWahl [data-ebene]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.ebene === ebene)); });
     var eq = EBENEN_QUELLE[ebene];
     $('#ebeneQuelle').innerHTML = '<p class="info">' + eq[0] + '</p><div class="liste quellen-liste"><a class="tippbar" href="' + eq[2] + '" target="_blank" rel="noopener"><span>Quelle: ' + eq[1] + '</span><span aria-hidden="true">↗</span></a></div>';
-    $('#radarPlay').hidden = ebene !== 'radar';
+    $('#radarPlay').hidden = ebene === 'karte';   // Paket C: auch Satellit und Infrarot spielen ab
     var rs = $('#radarSatz'); rs.hidden = ebene !== 'radar' || regenInSicht();
     rs.textContent = 'Kein Regen in Sicht um ' + ort.name + '. Deshalb zeigt das Radar dort gerade keine Flecken.';
     if (!radarKarte) return;
@@ -359,6 +361,7 @@
       }
       satEbenen[ebene].addTo(radarKarte);
       z.textContent = ebene === 'sat' ? 'Satellit · neuestes Bild' : 'Infrarot · neuestes Bild';
+      satHinweis();
     } else {
       if (!marken) marken = L.layerGroup();
       marken.addTo(radarKarte);
@@ -383,6 +386,7 @@
     $('#radarZeit').textContent = new Date(f.time * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
   }
   function radarAbspielen() {
+    if (ebene === 'sat' || ebene === 'ir') return satAbspielen();   // Paket C
     var b = $('#radarPlay'), an = b.getAttribute('aria-pressed') !== 'true';
     b.setAttribute('aria-pressed', String(an)); $('span', b).textContent = an ? 'Anhalten' : 'Abspielen';
     clearInterval(radar.timer);
@@ -451,6 +455,7 @@
       '<h2 class="abschnitt-titel">Quellen</h2><p class="info hilfe">Diese Liste entsteht automatisch aus den Diensten, die die App gerade nutzt.</p><div class="liste" id="quellen">' + quellenHtml() + '</div>' +
       '<h2 class="abschnitt-titel">Über die App</h2><section class="kachel info">' +
       '<p><b>WetterProCamera</b> ist eine Test-App, gestaltet mit dem Design-Konfigurator nach den Empfehlungen der KI.</p></section>';
+    galerieZeileMehr(s);   // Paket C
     $('#sucheForm').addEventListener('submit', function (e) { e.preventDefault(); suchen($('#sucheFeld').value); });
     $('#orteListe').addEventListener('click', function (e) {
       var liste = meineOrte(), st = e.target.closest('[data-stern]'), b = e.target.closest('[data-ort]');
@@ -672,6 +677,7 @@
     inf.details.forEach(function (t, i) { text(ctx, t, x + w - 40 * k, start + i * 50 * k, 34 * k, 500, f.text, 'right', Math.max(rechtsB, w * .35), familie); });
   }
   function logo(ctx, W, H, k, farbe, links) {
+    if (T.logo === 'eigen') return eigenesLogo(ctx, W, H, k, links);   // Paket C
     if (T.logo !== 'appname') return;
     ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = farbe === '#fff' || /255,255,255/.test(farbe) ? 6 * k : 0;
     text(ctx, 'WetterProCamera', links ? links : W - 40 * k, H - 36 * k, 26 * k, 600, farbe, links ? 'left' : 'right');
@@ -723,8 +729,9 @@
         ctx.fillStyle = pol ? '#FBFAF6' : '#fff'; ctx.fillRect(0, 0, W, H);
         ctx.save(); ctx.beginPath(); ctx.rect(rand, rand, W - 2 * rand, H - rand - fuss); ctx.clip(); fuellen(ctx, img, rand, rand, W - 2 * rand, H - rand - fuss); ctx.restore();
         f = { text: pol ? '#26221C' : '#111', leise: '#555' };
-        tafel(ctx, inf, s, rand - 36 * k + 16 * k, H - fuss, W - 2 * rand + 40 * k, fuss - (T.logo === 'appname' ? 30 * k : 0), k, f, pol ? HAND : null);
+        tafel(ctx, inf, s, rand - 36 * k + 16 * k, H - fuss, W - 2 * rand + 40 * k, fuss - (T.logo === 'appname' ? 30 * k : T.logo === 'eigen' ? 40 * k : 0), k, f, pol ? HAND : null);
         if (T.logo === 'appname') text(ctx, 'WetterProCamera', rand, H - 24 * k, 22 * k, 600, '#6B6B6B');
+        else if (T.logo === 'eigen') eigenesLogo(ctx, W, H, k, rand, 22, 14);
       } else {
         // Zeitstempel: orange Ziffern unten rechts wie bei Analogkameras, mit leichtem Leuchten
         fuellen(ctx, img, 0, 0, W, H);
@@ -738,6 +745,7 @@
         // Wettersymbol über den Ziffern, rechtsbündig, mit dunklem Schein für helle Fotos (Paket 3)
         if (inf.symbol) symbolZeichnen(ctx, s, W - 60 * k - 120 * k, yy - 54 * k - 120 * k, 120 * k, helligkeit(ctx, W - 180 * k, yy - 174 * k, 120 * k, 120 * k) > .45, k);
         if (T.logo === 'appname') { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 6 * k; text(ctx, 'WetterProCamera', 40 * k, H - 36 * k, 24 * k, 600, 'rgba(255,255,255,.9)'); ctx.restore(); }
+        else if (T.logo === 'eigen') eigenesLogo(ctx, W, H, k, 40 * k);
       }
       cv.dataset.stand = format + '/' + welcher + '/' + W + 'x' + H;
     });
@@ -773,10 +781,11 @@
       '<h3 id="tTextTitel">Eigener Text oder Hashtag</h3><input id="tText" aria-labelledby="tTextTitel" class="blatt-feld" type="text" maxlength="60" placeholder="z. B. #Mannheim" value="' + esc(T.text) + '">' +
       '<h3>Farbton der Fläche</h3>' + seg('ton', T.ton, [['dunkel', 'Dunkel'], ['hell', 'Hell'], ['auto', 'Automatisch']], 'Farbton der Fläche') +
       '<p class="blatt-hilfe">Automatisch misst die Helligkeit des Fotos dort, wo die Infos stehen.</p>' +
-      '<h3>Logo</h3>' + seg('logo', T.logo, [['appname', 'App-Name'], ['keins', 'Keins']], 'Logo') +
+      '<h3>Logo</h3>' + seg('logo', T.logo, [['appname', 'App-Name'], ['keins', 'Keins'], ['eigen', 'Eigenes Logo']], 'Logo') + logoBereich() +
       '<label class="blatt-aus"><input type="checkbox" disabled><span>Shot on ProCamera<small>Nur mit Freigabe von Cocologics, deshalb noch aus.</small></span></label>' +
       '<h3>Größe</h3>' + seg('groesse', T.groesse, [[1080, '1080 px'], [2160, '2160 px']], 'Größe') +
       '<h3>Dateityp</h3>' + seg('datei', T.datei, [['jpeg', 'JPEG (klein)'], ['png', 'PNG (verlustfrei)']], 'Dateityp') +
+      galerieSchalter() +
       '<p class="blatt-hilfe">Datenschutz: Das Bild wird neu aus Pixeln gezeichnet. Es enthält keinen Aufnahmeort (GPS) und keine anderen Daten des Fotos.</p>';
   }
   function blattAuf() { blattBauen(); $('#tBlatt').hidden = false; $('#tInfosAuf').setAttribute('aria-expanded', 'true'); var e = $('#tInfosZu'); if (e) e.focus(); }
@@ -825,9 +834,9 @@
       $('#tBild').toBlob(function (blob) {
         if (!blob) return;
         var datei = new File([blob], 'wetter-' + (ortFuerBild() || 'foto').toLowerCase().replace(/[^a-z0-9]+/g, '-') + (T.datei === 'png' ? '.png' : '.jpg'), { type: typ });
-        var sichern = function () { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = datei.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800); teilenErfolg('gesichert'); };
+        var sichern = function () { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = datei.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800); galerieSichern(); teilenErfolg('gesichert'); };   // Paket C: Kopie in „Meine Wetterfotos"
         // Erfolg: Bildschirm schließen und kurz bestätigen; Abbruch durch dich (AbortError) ohne Hinweis (Paket A)
-        if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetter' + (ortFuerBild() ? ' in ' + ortFuerBild() : '') }).then(function () { teilenErfolg('geteilt'); }, function (e) { if (!e || e.name !== 'AbortError') sichern(); }); return; }
+        if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetter' + (ortFuerBild() ? ' in ' + ortFuerBild() : '') }).then(function () { galerieSichern(); teilenErfolg('geteilt'); }, function (e) { if (!e || e.name !== 'AbortError') sichern(); }); return; }
         sichern();
       }, typ, T.qualitaet / 100);
     });
@@ -1275,6 +1284,442 @@
   }
   var renderMehrOhneA = renderMehr;
   renderMehr = function () { renderMehrOhneA(); mehrErgaenzen(); };
+  /* === Paket C: App-Funktionen (15.10.2026) === */
+  // Gemeinsame Helfer: kurze Meldung im obersten offenen Dialog (sonst im Hinweisband oben)
+  function pcMeldung(t) {
+    var offen = $$('dialog[open]'), ziel = offen.length ? offen[offen.length - 1] : null;
+    if (!ziel) return hinweisKurz(t);
+    var m = $('.pc-meldung', ziel);
+    if (!m) { m = document.createElement('div'); m.className = 'pc-meldung'; m.setAttribute('role', 'status'); m.setAttribute('aria-live', 'polite'); ziel.appendChild(m); }
+    m.textContent = t; m.hidden = false; clearTimeout(pcMeldung.t); pcMeldung.t = setTimeout(function () { m.hidden = true; }, 3500);
+  }
+  // Rückfrage im eigenen Dialog statt confirm(): Promise mit true (ja) oder false (abbrechen)
+  function pcFrage(text, ja) {
+    return new Promise(function (fertig) {
+      var d = document.createElement('dialog'); d.className = 'pc-frage'; d.setAttribute('aria-labelledby', 'pcFrageText');
+      d.innerHTML = '<p id="pcFrageText">' + esc(text) + '</p><div class="pc-frage-knoepfe"><button type="button" class="button leise tippbar" data-a="0">Abbrechen</button><button type="button" class="button pc-gefahr tippbar" data-a="1">' + esc(ja) + '</button></div>';
+      document.body.appendChild(d);
+      var ende = function (w) { if (d.open) d.close(); d.remove(); fertig(w); };
+      d.addEventListener('click', function (e) { var b = e.target.closest('[data-a]'); if (b) ende(b.dataset.a === '1'); });
+      d.addEventListener('cancel', function (e) { e.preventDefault(); ende(false); });
+      d.showModal(); $('[data-a="0"]', d).focus();
+    });
+  }
+  var tagSchluessel = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  var MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  var WT_LANG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+  /* --- (1) Eigenes Logo fürs Teilen-Bild: Daten-URL in localStorage „wpc-logo", höchstens 512 px, ca. 300 KB --- */
+  var LOGO_GRENZE = 300 * 1024, eigenLogo = null;
+  function eigenLogoLaden() {
+    var d = speicher.lesen('wpc-logo', null); eigenLogo = null;
+    if (!d) return Promise.resolve();
+    return ladeBild(d).then(function (i) { eigenLogo = i; }, function () { });
+  }
+  // Höhe wie die Textzeile des App-Namens (Schriftgröße × 1,4), Seitenverhältnis bleibt, höchstens 40 % der Bildbreite
+  function eigenesLogo(ctx, W, H, k, links, schriftPx, untenPx) {
+    if (!eigenLogo) return;
+    var iw = eigenLogo.naturalWidth || eigenLogo.width || 1, ih = eigenLogo.naturalHeight || eigenLogo.height || 1;
+    var h = (schriftPx || 26) * 1.4 * k, w = h * iw / ih;
+    if (w > W * .4) { w = W * .4; h = w * ih / iw; }
+    var x = links ? links : W - 40 * k - w, y = H - (untenPx == null ? 30 : untenPx) * k - h;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 6 * k; ctx.drawImage(eigenLogo, x, y, w, h); ctx.restore();
+  }
+  function logoBereich() {
+    var d = speicher.lesen('wpc-logo', null);
+    return '<div class="pc-logo" id="pcLogo"' + (T.logo === 'eigen' ? '' : ' hidden') + '>' +
+      (d ? '<img class="pc-logo-bild" src="' + esc(d) + '" alt="Dein Logo">' : '<p class="blatt-hilfe">Noch kein Logo gewählt. Ohne Logo bleibt die Ecke leer.</p>') +
+      '<div class="pc-logo-knoepfe"><label class="t-chip tippbar pc-datei" tabindex="0" role="button"><input type="file" id="pcLogoDatei" accept="image/png,image/jpeg,image/svg+xml,.svg" hidden>' + (d ? 'Anderes Logo wählen' : 'Logo wählen') + '</label>' +
+      (d ? '<button type="button" class="t-chip tippbar" id="pcLogoWeg">Logo entfernen</button>' : '') + '</div>' +
+      '<p class="blatt-hilfe">PNG, JPEG oder SVG. Die App verkleinert es auf höchstens 512 Pixel. Bleibt nur auf deinem Gerät.</p></div>';
+  }
+  function logoDatei(f) {
+    if (!f) return;
+    if (!/^image\/(png|jpeg|svg\+xml)$/.test(f.type) && !/\.(png|jpe?g|svg)$/i.test(f.name || '')) { pcMeldung('Bitte ein Bild als PNG, JPEG oder SVG wählen.'); return; }
+    var r = new FileReader();
+    r.onload = function () {
+      ladeBild(r.result).then(function (img) {
+        var w0 = img.naturalWidth || img.width || 512, h0 = img.naturalHeight || img.height || 512, url = null;
+        try {
+          // Erst 512 px; wird die Datei zu groß, kleiner rechnen
+          [512, 384, 256].some(function (max) {
+            var s = Math.min(1, max / Math.max(w0, h0)), cv = document.createElement('canvas');
+            cv.width = Math.max(1, Math.round(w0 * s)); cv.height = Math.max(1, Math.round(h0 * s));
+            cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+            var png = cv.toDataURL('image/png');
+            if (png.length * .75 <= LOGO_GRENZE) url = png;
+            else if (/jpeg/.test(f.type)) { var jpg = cv.toDataURL('image/jpeg', .85); if (jpg.length * .75 <= LOGO_GRENZE) url = jpg; }
+            return !!url;
+          });
+        } catch (e) { pcMeldung('Dieses Bild ließ sich nicht verarbeiten. Bitte ein PNG oder JPEG wählen.'); return; }
+        if (!url) { pcMeldung('Das Logo ist zu groß (über 300 KB). Bitte ein einfacheres Bild wählen.'); return; }
+        try { localStorage.setItem('wpc-logo', JSON.stringify(url)); } catch (e) { pcMeldung('Der Speicher ist voll. Das Logo ließ sich nicht sichern.'); return; }
+        T.logo = 'eigen'; tSpeichern();
+        eigenLogoLaden().then(function () { blattBauen(); teilenZeichnen(); pcMeldung('Logo gesichert.'); var z = $('#pcLogoWeg'); if (z) z.focus(); });
+      }, function () { pcMeldung('Dieses Bild ließ sich nicht öffnen.'); });
+    };
+    r.readAsDataURL(f);
+  }
+
+  /* --- (2) Satellit und Infrarot abspielen: 12 Bilder der letzten 2 Stunden (EUMETSAT-WMS mit time=) ---
+     GetCapabilities am 15.10.2026, 12:52 UTC geprüft (je Ebene: /geoserver/mtg_fd/<ebene>/wms?request=GetCapabilities, CORS offen):
+     <Dimension name="time" default="2026-10-15T12:30:00Z" units="ISO8601" nearestValue="1">2024-09-23T00:00:00.000Z/2026-10-15T12:30:00.000Z/PT10M</Dimension>
+     Also ein Bereich „Anfang/Ende/Schritt" mit 10 Minuten Schritt; das neueste Bild ist etwa 20–25 Minuten alt.
+     Gleich für mtg_fd:rgb_geocolour und mtg_fd:ir105_hrfi. Eine Liste mit Kommas wird ebenfalls verstanden. */
+  var SAT_LAYER = { sat: ['mtg_fd:rgb_geocolour', ''], ir: ['mtg_fd:ir105_hrfi', 'mtg_fd:mtg_fd_ir105_hrfi_grayscale'] };
+  var SAT_BILDER = 12;
+  var satFilm = { ebene: null, frames: [], i: 0, timer: null, zeiten: {} };
+  function satZeitListe(wert, n) {
+    var teil = String(wert || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean), letzt = teil[teil.length - 1] || '', liste = [];
+    if (letzt.indexOf('/') > 0) {
+      var p = letzt.split('/'), anfang = Date.parse(p[0]), ende = Date.parse(p[1]), m = /PT(?:(\d+)H)?(?:(\d+)M)?/.exec(p[2] || '');
+      var schritt = m && (m[1] || m[2]) ? ((+m[1] || 0) * 60 + (+m[2] || 0)) * 60000 : 600000;
+      for (var i = n - 1; i >= 0; i--) { var t = ende - i * schritt; if (!(t < anfang)) liste.push(new Date(t).toISOString()); }
+    } else liste = teil.slice(-n).map(function (x) { var t = Date.parse(x); return isNaN(t) ? null : new Date(t).toISOString(); });
+    return liste.filter(Boolean);
+  }
+  function satZeiten(k) {
+    var c = satFilm.zeiten[k]; if (c && Date.now() - c.at < 5 * 60000) return Promise.resolve(c.liste);
+    var name = SAT_LAYER[k][0].split(':');
+    var steuer = 'AbortController' in window ? new AbortController() : null, uhr = setTimeout(function () { if (steuer) steuer.abort(); }, 15000);
+    return fetch('https://view.eumetsat.int/geoserver/' + name[0] + '/' + name[1] + '/wms?service=WMS&version=1.3.0&request=GetCapabilities', steuer ? { signal: steuer.signal } : {})
+      .then(function (r) { clearTimeout(uhr); if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (xml) {
+        var dims = new DOMParser().parseFromString(xml, 'text/xml').getElementsByTagName('Dimension'), wert = '';
+        for (var i = 0; i < dims.length; i++) if (dims[i].getAttribute('name') === 'time') wert = dims[i].textContent;
+        var liste = satZeitListe(wert, SAT_BILDER); if (!liste.length) throw new Error('keine Zeitangaben');
+        satFilm.zeiten[k] = { at: Date.now(), liste: liste }; return liste;
+      });
+  }
+  function playKnopf(an) { var b = $('#radarPlay'); if (!b) return; b.setAttribute('aria-pressed', String(an)); $('span', b).textContent = an ? 'Anhalten' : 'Abspielen'; }
+  function satFrameZeigen() {
+    var n = satFilm.frames.length, f = satFilm.frames[satFilm.i]; if (!f) return;
+    satFilm.frames.forEach(function (x, j) { x.lage.setOpacity(j === satFilm.i ? .9 : 0); });
+    var z = $('#radarZeit'); if (z) z.textContent = (satFilm.ebene === 'sat' ? 'Satellit' : 'Infrarot') + ' · ' + new Date(f.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr (' + (satFilm.i + 1) + ' von ' + n + ')';
+  }
+  // Nächstes fertig geladenes Bild; Bilder mit Fehlern werden übersprungen
+  function satWeiter() {
+    var n = satFilm.frames.length; if (!n) return;
+    for (var s = 1; s <= n; s++) { var j = (satFilm.i + s) % n, f = satFilm.frames[j]; if (f.geladen && !f.fehler) { satFilm.i = j; break; } }
+    satFrameZeigen();
+  }
+  function satLos() { clearInterval(satFilm.timer); satFilm.timer = setInterval(satWeiter, matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700); }
+  function satAbspielen() {
+    var an = $('#radarPlay').getAttribute('aria-pressed') !== 'true', k = ebene, z = $('#radarZeit');
+    playKnopf(an); clearInterval(satFilm.timer); satFilm.timer = null;
+    if (!an) return;
+    if (satFilm.ebene === k && satFilm.frames.length) return satLos();
+    z.textContent = 'Lade Satellitenbilder der letzten 2 Stunden …';
+    satZeiten(k).then(function (liste) {
+      if (ebene !== k || !radarKarte) return;
+      satAufraeumen(); satFilm.ebene = k;
+      satFilm.frames = liste.map(function (iso) {
+        var f = { zeit: iso, geladen: false, fehler: false };
+        f.lage = L.tileLayer.wms(EUMETSAT_WMS, { layers: SAT_LAYER[k][0], styles: SAT_LAYER[k][1], format: 'image/jpeg', transparent: false, version: '1.3.0', crs: L.CRS.EPSG3857, opacity: 0, time: iso, attribution: '© EUMETSAT' });
+        f.lage.on('load', function () { f.geladen = true; });
+        f.lage.on('tileerror', function () { f.fehler = true; });
+        f.lage.addTo(radarKarte);   // unsichtbar vorladen
+        return f;
+      });
+      satFilm.i = satFilm.frames.length - 1;
+      if (satEbenen[k]) radarKarte.removeLayer(satEbenen[k]);
+      satFrameZeigen();
+      if ($('#radarPlay').getAttribute('aria-pressed') === 'true') satLos();
+    }).catch(function (e) {
+      console.warn('Satellitenfilm', e);
+      if (ebene !== k) return;
+      playKnopf(false); z.textContent = 'Satellitenfilm gerade nicht erreichbar. Du siehst das neueste Bild.';
+    });
+  }
+  function satAufraeumen() {
+    clearInterval(satFilm.timer); satFilm.timer = null;
+    if (radarKarte) satFilm.frames.forEach(function (f) { radarKarte.removeLayer(f.lage); });
+    satFilm.frames = []; satFilm.ebene = null;
+  }
+  function satStopp() {
+    var lief = satFilm.timer || satFilm.frames.length;
+    satAufraeumen();
+    if (lief) playKnopf(false);
+  }
+  function satHinweis() {
+    var rs = $('#radarSatz'), nacht = daten && daten.current && daten.current.is_day === 0;
+    if (!rs || ebene !== 'sat' || !nacht) return;
+    rs.hidden = false; rs.textContent = 'Bei ' + ort.name + ' ist gerade Nacht: Das Farbbild bleibt dort dunkel. Infrarot zeigt die Wolken auch nachts.';
+  }
+
+  /* --- (3) „Meine Wetterfotos": IndexedDB „wpc-galerie", Store „fotos", höchstens 200 Fotos, nur auf dem Gerät --- */
+  var GALERIE_MAX = 200, galerieDb = null, gal = { monat: null, tag: null, fotos: [], urls: [] };
+  function dbOeffnen() {
+    if (galerieDb) return galerieDb;
+    galerieDb = new Promise(function (ok, f) {
+      if (!window.indexedDB) return f(new Error('IndexedDB fehlt'));
+      // Fehlt der Store (z. B. leere Datenbank aus einem Abbruch), mit höherer Version neu öffnen
+      var auf = function (version) {
+        var r = version ? indexedDB.open('wpc-galerie', version) : indexedDB.open('wpc-galerie');
+        r.onupgradeneeded = function () { if (!r.result.objectStoreNames.contains('fotos')) r.result.createObjectStore('fotos', { keyPath: 'id', autoIncrement: true }).createIndex('tag', 'tag'); };
+        r.onsuccess = function () { var db = r.result; if (db.objectStoreNames.contains('fotos')) return ok(db); var v = db.version + 1; db.close(); auf(v); };
+        r.onerror = function () { f(r.error); };
+      };
+      auf(0);
+    });
+    galerieDb.catch(function () { galerieDb = null; });
+    return galerieDb;
+  }
+  function dbAktion(modus, fn) {
+    return dbOeffnen().then(function (db) {
+      return new Promise(function (ok, f) {
+        var tx = db.transaction('fotos', modus), q = fn(tx.objectStore('fotos')), erg;
+        if (q) q.onsuccess = function () { erg = q.result; };
+        tx.oncomplete = function () { ok(erg); }; tx.onerror = tx.onabort = function () { f(tx.error); };
+      });
+    });
+  }
+  var galerieAlle = function () { return dbAktion('readonly', function (s) { return s.getAll(); }); };
+  var galerieZahl = function () { return dbAktion('readonly', function (s) { return s.count(); }); };
+  var galerieAn = function () { return speicher.lesen('wpc-galerie-an', true) !== false; };
+  function galerieSchalter() {
+    return '<h3>Meine Wetterfotos</h3><label class="pc-schalter tippbar"><span>In „Meine Wetterfotos" sichern<small>Nach dem Teilen oder Sichern kommt eine Kopie in deine Galerie (Tab „Mehr"). Nur auf deinem Gerät.</small></span>' +
+      '<input type="checkbox" role="switch" id="pcGalerieAn"' + (galerieAn() ? ' checked' : '') + '></label>';
+  }
+  // Fertiges Bild (längste Seite 1080 px, JPEG 0,8) mit Wetterwerten, Ort, Datum und Uhrzeit ablegen
+  function galerieSichern() {
+    if (!galerieAn() || !daten) return Promise.resolve();
+    var quelle = $('#tBild'); if (!quelle || !quelle.width) return Promise.resolve();
+    var klein = function (max, q) {
+      return new Promise(function (ok) {
+        var s = Math.min(1, max / Math.max(quelle.width, quelle.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(quelle.width * s); cv.height = Math.round(quelle.height * s);
+        cv.getContext('2d').drawImage(quelle, 0, 0, cv.width, cv.height);
+        cv.toBlob(function (b) { ok({ b: b, w: cv.width, h: cv.height }); }, 'image/jpeg', q);
+      });
+    };
+    var c = daten.current, d = daten.daily, jetzt = new Date();
+    var eintrag = {
+      zeit: jetzt.getTime(), tag: tagSchluessel(jetzt), ort: ortFuerBild() || ort.name, art: wArt(c.weather_code, c.is_day), lage: wText(c.weather_code, c.is_day),
+      werte: [rund(c.temperature_2m) + ' °C', wText(c.weather_code, c.is_day), 'Wind ' + windTxt(c.wind_speed_10m) + ' ' + richtung(c.wind_direction_10m), 'Regen heute ' + dez(d.precipitation_sum[0]) + ' mm', 'Sonne ' + (d.sunshine_duration[0] == null ? '–' : dez(d.sunshine_duration[0] / 3600)) + ' h']
+    };
+    return galerieZahl().then(function (n) {
+      if (n >= GALERIE_MAX) { pcMeldung('„Meine Wetterfotos" ist voll (200 Fotos). Lösche alte Fotos, dann sichert die App wieder.'); return; }
+      return Promise.all([klein(1080, .8), klein(200, .7)]).then(function (b) {
+        if (!b[0].b) throw new Error('Bild leer');
+        eintrag.w = b[0].w; eintrag.h = b[0].h;
+        // Als ArrayBuffer ablegen: WebKit speichert Blobs in manchen Fällen nicht (privates Surfen, Testbrowser)
+        return Promise.all([b[0].b.arrayBuffer(), b[1].b ? b[1].b.arrayBuffer() : null]);
+      }).then(function (ab) {
+        eintrag.bild = ab[0]; eintrag.mini = ab[1];
+        return dbAktion('readwrite', function (s) { return s.add(eintrag); });
+      }).then(function () { pcMeldung('In „Meine Wetterfotos" gesichert (' + (n + 1) + ' von ' + GALERIE_MAX + ').'); });
+    }).catch(function (e) { console.warn('Galerie', e); });
+  }
+  function galerieZeileMehr(s) {
+    var liste = $('#orteListe', s); if (!liste) return;
+    var vor = liste.previousElementSibling || liste;
+    var titel = document.createElement('h2'); titel.className = 'abschnitt-titel'; titel.textContent = 'Meine Wetterfotos';
+    var box = document.createElement('div'); box.className = 'liste';
+    box.innerHTML = '<button class="tippbar" id="pcGalMehr" aria-haspopup="dialog"><span class="pc-zeile-text">' + Ikon('image') + '<span>Meine Wetterfotos <span class="zahl leise" id="pcGalZahl"></span></span></span><span class="leise" aria-hidden="true">›</span></button>';
+    s.insertBefore(titel, vor); s.insertBefore(box, vor);
+    $('#pcGalMehr', s).addEventListener('click', galerieOeffnen);
+    galerieZahl().then(function (n) { var z = $('#pcGalZahl'); if (z) z.textContent = '(' + n + ')'; }, function () { var z = $('#pcGalZahl'); if (z) z.textContent = '(nicht verfügbar)'; });
+  }
+  function urlsFrei() { gal.urls.forEach(function (u) { URL.revokeObjectURL(u); }); gal.urls = []; }
+  var alsBlob = function (x) { return x instanceof Blob ? x : new Blob([x], { type: 'image/jpeg' }); };
+  function objUrl(b) { var u = URL.createObjectURL(alsBlob(b)); gal.urls.push(u); return u; }
+  function galerieOeffnen() {
+    var d = $('#pcGalerie');
+    if (!d) {
+      d = document.createElement('dialog'); d.id = 'pcGalerie'; d.className = 'pc-voll'; d.setAttribute('aria-labelledby', 'pcGalTitel');
+      d.innerHTML = '<div class="pc-voll-kopf"><button type="button" class="pc-kopf-knopf tippbar" data-zu="1">Schließen</button><h2 id="pcGalTitel">Meine Wetterfotos</h2>' +
+        '<button type="button" class="pc-kopf-knopf tippbar" id="pcAlleWeg">Alle löschen</button></div><div class="pc-voll-inhalt" id="pcGalInhalt"></div>';
+      document.body.appendChild(d);
+      d.addEventListener('close', function () { urlsFrei(); var z = $('#pcGalZahl'); if (z) z.textContent = '(' + gal.fotos.length + ')'; });
+      d.addEventListener('click', galerieKlick);
+    }
+    gal.monat = null; gal.tag = null;
+    if (!d.open) d.showModal();
+    galerieZeichnen().then(function () { var f = $('[data-tag][aria-pressed="true"]', d) || $('[data-zu]', d); if (f) f.focus(); });
+  }
+  function galerieZeichnen() {
+    return galerieAlle().then(function (fotos) {
+      fotos.sort(function (a, b) { return b.zeit - a.zeit; }); gal.fotos = fotos; urlsFrei();
+      var inhalt = $('#pcGalInhalt'); $('#pcAlleWeg').hidden = !fotos.length;
+      if (!fotos.length) {
+        inhalt.innerHTML = '<section class="kachel leer-zustand">' + Ikon('image') + '<p><b>Noch keine Wetterfotos.</b><br>Teile ein Foto mit dem Wetter, dann landet es hier, mit Ort, Datum und Werten.</p>' +
+          '<button type="button" class="button tippbar" data-kamera-auf="1">Foto mit Wetter machen</button></section>';
+        return;
+      }
+      if (!gal.monat) { var n0 = new Date(fotos[0].zeit); gal.monat = [n0.getFullYear(), n0.getMonth()]; gal.tag = fotos[0].tag; }
+      var nachTag = {}; fotos.forEach(function (f) { (nachTag[f.tag] = nachTag[f.tag] || []).push(f); });
+      var j = gal.monat[0], m = gal.monat[1], versatz = (new Date(j, m, 1).getDay() + 6) % 7, tage = new Date(j, m + 1, 0).getDate(), heute = tagSchluessel(new Date());
+      var zellen = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(function (w) { return '<span class="pc-wt" aria-hidden="true">' + w + '</span>'; }).join('');
+      for (var v = 0; v < versatz; v++) zellen += '<span aria-hidden="true"></span>';
+      for (var t = 1; t <= tage; t++) {
+        var key = j + '-' + String(m + 1).padStart(2, '0') + '-' + String(t).padStart(2, '0'), liste = nachTag[key], kl = key === heute ? ' heute' : '';
+        zellen += liste ? '<button type="button" class="pc-kal-tag hat tippbar' + kl + '" data-tag="' + key + '" aria-pressed="' + (key === gal.tag) + '" aria-label="' + t + '. ' + MONATE[m] + ', ' + liste.length + (liste.length === 1 ? ' Foto' : ' Fotos') + '">' +
+          '<img src="' + objUrl(liste[0].mini || liste[0].bild) + '" alt=""><span class="zahl">' + t + '</span></button>'
+          : '<span class="pc-kal-tag zahl' + kl + '">' + t + '</span>';
+      }
+      var tagFotos = nachTag[gal.tag] || [], td = gal.tag ? new Date(gal.tag + 'T12:00:00') : null;
+      var tagHtml = !gal.tag || gal.tag.slice(0, 7) !== j + '-' + String(m + 1).padStart(2, '0') ? '<p class="info pc-gal-hilfe">Tippe auf einen Tag mit Bild, um seine Fotos zu sehen.</p>' :
+        '<h3 class="abschnitt-titel pc-tag-titel" id="pcTagTitel" tabindex="-1">' + WT_LANG[td.getDay()] + ', ' + td.getDate() + '. ' + MONATE[td.getMonth()] + '</h3>' +
+        (tagFotos.length ? tagFotos.map(function (f) {
+          var z = new Date(f.zeit), uhr = z.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+          return '<section class="kachel pc-foto"><img src="' + objUrl(f.bild) + '" width="' + (f.w || 1080) + '" height="' + (f.h || 1440) + '" alt="Wetterfoto vom ' + z.toLocaleDateString('de-DE') + ', ' + uhr + (f.ort ? ', ' + esc(f.ort) : '') + '">' +
+            '<div class="pc-foto-text"><b>' + uhr + (f.ort ? ' · ' + esc(f.ort) : '') + '</b><p class="pc-foto-werte">' + (f.art ? sym(f.art, 'pc-foto-sym') : '') + '<span>' + (f.werte || []).map(esc).join(' · ') + '</span></p></div>' +
+            '<div class="pc-foto-knoepfe"><button type="button" class="button tippbar" data-teilen="' + f.id + '">' + Ikon('share') + '<span>Teilen</span></button>' +
+            '<button type="button" class="button leise tippbar" data-loeschen="' + f.id + '">Löschen</button></div></section>';
+        }).join('') : '<p class="info pc-gal-hilfe">An diesem Tag gibt es keine Fotos mehr.</p>');
+      inhalt.innerHTML = '<section class="kachel pc-kalender" aria-labelledby="pcMonat"><div class="pc-kal-kopf"><button type="button" class="pc-rund tippbar" data-monat="-1" aria-label="Voriger Monat">‹</button>' +
+        '<h3 id="pcMonat" aria-live="polite">' + MONATE[m] + ' ' + j + '</h3><button type="button" class="pc-rund tippbar" data-monat="1" aria-label="Nächster Monat">›</button></div>' +
+        '<div class="pc-kal">' + zellen + '</div></section>' + tagHtml +
+        '<p class="info pc-gal-hilfe">' + fotos.length + ' von ' + GALERIE_MAX + ' Fotos · gespeichert nur auf diesem Gerät.' + (fotos.length >= GALERIE_MAX ? ' Die Galerie ist voll: Lösche Fotos, damit neue dazukommen.' : '') + '</p>';
+    }).catch(function (e) {
+      console.warn('Galerie', e);
+      $('#pcGalInhalt').innerHTML = '<section class="kachel leer-zustand">' + Ikon('image') + '<p><b>Galerie nicht verfügbar.</b><br>Der Browser erlaubt hier keinen Speicher, zum Beispiel im privaten Modus.</p></section>';
+    });
+  }
+  function galerieKlick(e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var d = $('#pcGalerie');
+    if (b.dataset.zu) return d.close();
+    if (b.dataset.kameraAuf) { d.close(); return teilenOeffnen(); }
+    if (b.dataset.monat) {
+      var m = gal.monat[1] + +b.dataset.monat, j = gal.monat[0] + Math.floor(m / 12); gal.monat = [j, (m + 12) % 12];
+      return galerieZeichnen().then(function () { var n = $('[data-monat="' + b.dataset.monat + '"]', d); if (n) n.focus(); });
+    }
+    if (b.dataset.tag) { gal.tag = b.dataset.tag; return galerieZeichnen().then(function () { var t = $('#pcTagTitel'); if (t) { t.focus({ preventScroll: true }); t.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }); }
+    var foto = function (id) { return gal.fotos.filter(function (f) { return String(f.id) === String(id); })[0]; };
+    if (b.dataset.teilen) { var f = foto(b.dataset.teilen); if (f) galerieTeilen(f); return; }
+    if (b.dataset.loeschen) {
+      var id = +b.dataset.loeschen;
+      return pcFrage('Dieses Foto löschen? Das lässt sich nicht rückgängig machen.', 'Löschen').then(function (ja) {
+        if (!ja) return b.focus();
+        return dbAktion('readwrite', function (s) { return s.delete(id); }).then(galerieZeichnen).then(function () { pcMeldung('Foto gelöscht.'); var z = $('#pcTagTitel') || $('[data-zu]', d); if (z) z.focus(); });
+      });
+    }
+    if (b.id === 'pcAlleWeg') {
+      return pcFrage('Alle ' + gal.fotos.length + ' Wetterfotos löschen? Das lässt sich nicht rückgängig machen.', 'Alle löschen').then(function (ja) {
+        if (!ja) return b.focus();
+        return dbAktion('readwrite', function (s) { return s.clear(); }).then(function () { gal.monat = null; gal.tag = null; return galerieZeichnen(); }).then(function () { pcMeldung('Alle Fotos gelöscht.'); $('[data-zu]', d).focus(); });
+      });
+    }
+  }
+  function galerieTeilen(f) {
+    var datei = new File([alsBlob(f.bild)], 'wetterfoto-' + f.tag + '.jpg', { type: 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [datei] })) { navigator.share({ files: [datei], title: 'Wetterfoto' + (f.ort ? ' aus ' + f.ort : '') }).catch(function () { }); return; }
+    var a = document.createElement('a'); a.href = URL.createObjectURL(datei); a.download = datei.name; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+    pcMeldung('Bild gesichert.');
+  }
+
+  /* --- (4) Meteogramm im Tab „Graphs" (Baustein meteogramm.js/.css unverändert aus WetterPro Tool/gemeinsam) ---
+     Wahl „Kurve | Meteogramm" in wpc-graphs, Zeilen in wpc-meteo (Reihenfolge = Reihenfolge im Meteogramm). */
+  var METEO_STANDARD = ['sonne', 'temp', 'wind', 'regen'];
+  var mg = { instanz: null, schluessel: '' };
+  var graphsModus = function () { return speicher.lesen('wpc-graphs', 'kurve') === 'meteo' ? 'meteo' : 'kurve'; };
+  var meteoKatalog = function () { return (window.Meteogramm && window.Meteogramm.zeilen) || {}; };
+  function meteoZeilen() {
+    var k = meteoKatalog(), z = speicher.lesen('wpc-meteo', METEO_STANDARD);
+    z = Array.isArray(z) ? z.filter(function (id) { return k[id]; }) : [];
+    return z.length ? z : METEO_STANDARD.filter(function (id) { return k[id]; });
+  }
+  function graphsKopf() {
+    var m = graphsModus();
+    return '<div class="pc-graphs-kopf">' + seg('graphs', m, [['kurve', 'Kurve'], ['meteo', 'Meteogramm']], 'Darstellung') +
+      (m === 'meteo' ? '<button type="button" class="button leise tippbar pc-zeilen-knopf" id="pcZeilenAuf" aria-haspopup="dialog">' + Ikon('sliders') + '<span>Zeilen</span></button>' : '') + '</div>';
+  }
+  function mgAbbauen() {
+    if (mg.instanz) { try { mg.instanz.abbauen(); } catch (e) { console.warn('Meteogramm', e); } }
+    mg.instanz = null; mg.schluessel = ''; document.documentElement.classList.remove('pc-mg-voll');
+  }
+  function renderMeteo() {
+    var seite = $('#tab-graphs');
+    if (!window.Meteogramm) { mgAbbauen(); seite.innerHTML = graphsKopf() + '<section class="kachel leer-zustand">' + Ikon('chart') + '<p><b>Meteogramm fehlt.</b><br>Der Baustein ließ sich nicht laden. Lade die App neu.</p></section>'; return; }
+    var zeilen = meteoZeilen(), schl = [ort.lat, ort.lon, modell, zeilen.join(',')].join('|');
+    if (mg.instanz && mg.schluessel === schl && $('#pcMg', seite)) return;   // gleicher Ort, gleiches Modell, gleiche Zeilen: stehen lassen
+    mgAbbauen();
+    seite.innerHTML = graphsKopf() + '<div class="pc-mg" id="pcMg"></div>';
+    var ziel = $('#pcMg', seite), m = modellInfo();
+    ziel.style.setProperty('--mg-haft-oben', $('#titelzeile').offsetHeight + 'px');
+    // Die Zeilenwahl gehört der App (wpc-meteo): gemerkte Wahl des Bausteins löschen, damit cfg.zeilen gilt
+    try { localStorage.removeItem('wpc-mg-zeilen'); localStorage.removeItem('wpc-mg-reihenfolge'); } catch (e) { }
+    mg.instanz = Meteogramm.einbauen({
+      ziel: ziel, orte: [{ id: 'app', name: ort.name, lat: ort.lat, lon: ort.lon }],
+      modelle: [{ id: modell, name: m[1], lang: m[1], hinweis: m[2] }],
+      karte: false, zeilen: zeilen, zeilenStandard: zeilen, werteKlug: false,
+      merkschluessel: 'wpc-mg', zeitzone: (daten && daten.timezone) || 'auto',
+      vollbild: function (an) { document.documentElement.classList.toggle('pc-mg-voll', !!an); }
+    });
+    mg.schluessel = schl;
+  }
+  // Blatt „Zeilen": Haken für alle Zeilen aus dem Katalog, ↑ ↓ zum Sortieren
+  function zeilenListe() {
+    var k = meteoKatalog(), an = meteoZeilen(), reihe = an.concat(Object.keys(k).filter(function (id) { return an.indexOf(id) < 0; }));
+    var MEER = { welle: 1, tide: 1, wasser: 1 };
+    return reihe.map(function (id) {
+      var i = an.indexOf(id), titel = k[id].titel;
+      return '<li><label class="tippbar"><input type="checkbox" data-zeile="' + id + '"' + (i >= 0 ? ' checked' : '') + '><span>' + esc(titel) + (MEER[id] ? '<small>nur an der Küste</small>' : '') + '</span></label>' +
+        '<button type="button" class="pfeil tippbar" data-z-hoch="' + id + '"' + (i <= 0 ? ' disabled' : '') + ' aria-label="' + esc(titel) + ' nach oben">↑</button>' +
+        '<button type="button" class="pfeil tippbar" data-z-runter="' + id + '"' + (i < 0 || i === an.length - 1 ? ' disabled' : '') + ' aria-label="' + esc(titel) + ' nach unten">↓</button></li>';
+    }).join('');
+  }
+  function zeilenBlattAuf() {
+    var d = $('#pcZeilen');
+    if (!d) {
+      d = document.createElement('dialog'); d.id = 'pcZeilen'; d.className = 'pc-blatt'; d.setAttribute('aria-labelledby', 'pcZeilenTitel');
+      d.innerHTML = '<div class="pc-blatt-kopf"><h2 id="pcZeilenTitel">Zeilen im Meteogramm</h2><button type="button" class="pc-kopf-knopf tippbar" data-zu="1">Fertig</button></div>' +
+        '<div class="pc-blatt-inhalt"><p class="info">Hake an, was das Meteogramm zeigt. Mit ↑ und ↓ legst du die Reihenfolge fest.</p><ul class="pc-liste" id="pcZeilenListe"></ul></div>';
+      document.body.appendChild(d);
+      d.addEventListener('click', function (e) {
+        if (e.target.closest('[data-zu]')) return d.close();
+        var h = e.target.closest('[data-z-hoch],[data-z-runter]'); if (!h) return;
+        var id = h.dataset.zHoch || h.dataset.zRunter, an = meteoZeilen(), i = an.indexOf(id), j = i + (h.dataset.zHoch ? -1 : 1);
+        if (i < 0 || j < 0 || j >= an.length) return;
+        an[i] = an[j]; an[j] = id; speicher.schreiben('wpc-meteo', an); $('#pcZeilenListe').innerHTML = zeilenListe();
+        var f = $('[data-z-' + (h.dataset.zHoch ? 'hoch' : 'runter') + '="' + id + '"]', d); if (!f || f.disabled) f = $('[data-zeile="' + id + '"]', d); if (f) f.focus();
+      });
+      d.addEventListener('change', function (e) {
+        var id = e.target.dataset.zeile; if (!id) return;
+        var an = meteoZeilen().filter(function (x) { return x !== id; });
+        if (e.target.checked) an.push(id);
+        if (!an.length) { e.target.checked = true; pcMeldung('Mindestens eine Zeile bleibt an.'); return; }
+        speicher.schreiben('wpc-meteo', an); $('#pcZeilenListe').innerHTML = zeilenListe(); var f = $('[data-zeile="' + id + '"]', d); if (f) f.focus();
+      });
+      d.addEventListener('close', function () { if (aktiv === 'graphs' && daten) renderGraphs(); var k = $('#pcZeilenAuf'); if (k) k.focus(); });
+    }
+    $('#pcZeilenListe').innerHTML = zeilenListe();
+    d.showModal(); $('[data-zu]', d).focus();
+  }
+
+  function paketCStart() {
+    eigenLogoLaden().then(function () { if ($('#teilen').open) teilenZeichnen(); });
+    var blatt = $('#tBlattInhalt');
+    blatt.addEventListener('click', function (e) {
+      if (e.target.closest('[data-seg="logo"] [data-v]')) { var l = $('#pcLogo'); if (l) l.hidden = T.logo !== 'eigen'; }
+      if (e.target.closest('#pcLogoWeg')) {
+        try { localStorage.removeItem('wpc-logo'); } catch (x) { }
+        eigenLogo = null; if (T.logo === 'eigen') { T.logo = 'appname'; tSpeichern(); }
+        blattBauen(); teilenZeichnen(); pcMeldung('Logo entfernt. Jetzt steht wieder der App-Name auf dem Bild.');
+        var z = $('[data-seg="logo"] [aria-checked="true"]'); if (z) z.focus();
+      }
+    });
+    blatt.addEventListener('keydown', function (e) { var l = e.target.closest && e.target.closest('.pc-datei'); if (l && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); $('#pcLogoDatei').click(); } });
+    blatt.addEventListener('change', function (e) {
+      if (e.target.id === 'pcLogoDatei') { logoDatei(e.target.files && e.target.files[0]); e.target.value = ''; }
+      if (e.target.id === 'pcGalerieAn') speicher.schreiben('wpc-galerie-an', e.target.checked);
+    });
+    var g = $('#tGalerie'); if (g) g.addEventListener('click', galerieOeffnen);
+    $('#tab-graphs').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-seg="graphs"] [data-v]');
+      if (b) {
+        if (b.getAttribute('aria-checked') === 'true') return;
+        speicher.schreiben('wpc-graphs', b.dataset.v); if (b.dataset.v === 'kurve') mgAbbauen();
+        if (daten) renderGraphs();
+        var n = $('[data-seg="graphs"] [data-v="' + b.dataset.v + '"]'); if (n) n.focus();
+        return;
+      }
+      if (e.target.closest('#pcZeilenAuf')) zeilenBlattAuf();
+    });
+  }
 
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');
@@ -1283,7 +1728,7 @@
   $('#btnMenue').addEventListener('click', function () { zeigeTab('mehr'); var l = $('#orteListe'); if (l) { var t = l.previousElementSibling || l; window.scrollTo(0, Math.max(0, t.getBoundingClientRect().top + window.scrollY - $('#titelzeile').offsetHeight - 16)); var e = $('#orteListe [aria-current="true"]') || $('#orteListe button'); if (e) e.focus({ preventScroll: true }); } });
   $('#btnSuche').addEventListener('click', function () { zeigeTab('mehr'); setTimeout(function () { var f = $('#sucheFeld'); if (f) f.focus(); }, 50); });
   $('#btnTeilen').addEventListener('click', teilenOeffnen);
-  baueTabs(); bindTeilen(); kopfModell();
+  baueTabs(); bindTeilen(); kopfModell(); paketCStart();
   var start = 'wetter'; try { start = sessionStorage.getItem('wpgt-tab') || 'wetter'; } catch (e) { }
   zeigeTab(SEITEN.some(function (t) { return t[0] === start; }) ? start : 'wetter');
   laden();
