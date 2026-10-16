@@ -348,7 +348,7 @@ async function tabsPruefen(p, name, bilder) {
     pruefe('Mannheim: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     // Mehr → Startseite: Schalter, Haken und Quelle Marine-API
     await s.p.click('#tb-mehr');
-    const mehr = await s.p.evaluate(() => ({ schalter: document.querySelectorAll('#a5Start input[role="switch"]').length, arten: document.querySelectorAll('#a5Arten input').length, groesseVersteckt: document.getElementById('a5Groesse').hidden, quelle: /Ebbe und Flut: Open-Meteo Marine/.test(document.getElementById('quellen').textContent) }));
+    const mehr = await s.p.evaluate(() => ({ schalter: document.querySelectorAll('#a5Start input[role="switch"]').length, arten: document.querySelectorAll('#a5Arten input').length, groesseVersteckt: document.getElementById('a5Groesse').hidden, quelle: /Meer: Open-Meteo Marine/.test(document.getElementById('quellen').textContent) }));
     pruefe('Mehr: Abschnitt „Startseite" mit 2 Schaltern, 9 Tipp-Haken, Größe erst bei Meteogramm an', mehr.schalter === 2 && mehr.arten === 9 && mehr.groesseVersteckt, mehr);
     pruefe('Quellen nennen Open-Meteo Marine', mehr.quelle);
     // Leerzustand: goldene Stunde und Sterne abwählen
@@ -382,11 +382,11 @@ async function tabsPruefen(p, name, bilder) {
     pruefe('Zurück auf Wetter: Startseiten-Meteogramm wieder da, ohne neu zu laden', await s.p.evaluate(() => document.querySelectorAll('#tab-wetter #a5Mg .mg-ax-titel').length) === 4);
     pruefe('Meteogramm Startseite: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     await s.ctx.close();
-    // b) Mannheim mit Regen und Frost (geänderte Antwort): Schirm mit Uhrzeit, Frost
-    s = await neueSeite(b, { colorScheme: 'dark' }, { omAendern: d => { d.daily.precipitation_probability_max[0] = 70; d.daily.temperature_2m_min[0] = -2; d.hourly.time.forEach((z, i) => { if (z >= '2026-10-15T16:00') d.hourly.precipitation_probability[i] = 60; }); return d; } });
+    // b) Mannheim mit Regen und Frost (geänderte Antwort): Schirm mit Uhrzeit, Frost (Welle 3: Tipps gelten nur für den Rest des Tages, darum Frost am Abend und Regenrisiko 60 % ab 16 Uhr)
+    s = await neueSeite(b, { colorScheme: 'dark' }, { omAendern: d => { d.daily.precipitation_probability_max[0] = 70; d.daily.temperature_2m_min[0] = -2; d.hourly.time.forEach((z, i) => { if (z >= '2026-10-15T16:00') d.hourly.precipitation_probability[i] = 60; if (z >= '2026-10-15T21:00' && z < '2026-10-16') d.hourly.temperature_2m[i] = -2; }); return d; } });
     await s.p.goto(BASIS); await warteTipps(s.p, 'schirm'); t = await tipps(s.p);
     pruefe('Mannheim Regen/Frost: Tipps Schirm, Frost (in dieser Reihenfolge)', t && t.arten[0] === 'schirm' && t.arten[1] === 'frost', t);
-    pruefe('Schirm-Satz mit Risiko und Uhrzeit', t && /Regenrisiko 70 %, ab etwa 16:00 Uhr/.test(t.saetze[0]), t && t.saetze[0]);
+    pruefe('Schirm-Satz mit Risiko und Uhrzeit', t && /Regenrisiko 60 %, ab etwa 16:00 Uhr/.test(t.saetze[0]), t && t.saetze[0]);
     pruefe('Frost-Satz mit Tiefstwert', t && /Frost bis −2 °C/.test(t.saetze[1]), t && t.saetze[1]);
     await s.p.$eval('#a5Tipps', e => e.scrollIntoView({ block: 'center' })); await foto(s.p, 'dunkel-390-a5-schirm-frost');
     m5 = await s.p.evaluate(MESSEN);

@@ -646,3 +646,72 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .a5-groesse-titel { margin: 0; font-size: var(--fs-subhead); font-weight: 600; }
 .a5-groesse .info { margin: 0; }
 .a5-mg-kachel .pc-mg .mg-ecke { display: none; }   /* Zoomen geht mit zwei Fingern; Knöpfe nur im Tab „Graphs" */
+
+/* === Welle 3 Wetter und Karte (16.10.2026) === */
+:root { --w3-linie-2: color-mix(in srgb, var(--orange) 62%, var(--label)); --w3-linie-3: color-mix(in srgb, var(--gruen) 55%, var(--label)); }
+/* Tage antippbar */
+.tag[data-w3-tag] { cursor: pointer; }
+.tag[data-w3-tag]:focus-visible { outline-offset: -2px; }
+.w3-tag-hilfe { grid-column: 1 / -1; margin: 0; padding: var(--s2) var(--s4) var(--s3); }
+/* Blätter: Tagesdetail, Sonne und Mond */
+.w3-h3 { font-size: var(--fs-subhead); font-weight: 600; margin: var(--s4) 0 var(--s2); }
+.w3-summe { margin: var(--s2) 0; }
+.w3-std-liste { list-style: none; margin: 0; padding: 0; display: grid; }
+.w3-std-zeile { display: grid; grid-template-columns: 3.2em var(--sym-groesse) 3.4em minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--s2); min-height: var(--tap); border-top: 1px solid var(--trenner); font-size: var(--fs-subhead); }
+.w3-std-zeile .w3-sym { width: var(--sym-groesse); height: var(--sym-groesse); }
+.w3-std-zeile.vorbei { color: var(--label-2); }
+.w3-std-zeile .w3-r, .w3-std-zeile .w3-w { font-size: var(--fs-footnote); text-align: right; }
+.w3-liste-werte { margin: 0 0 var(--s2); }
+.w3-mond-kopf { display: flex; align-items: center; gap: var(--s4); }
+.w3-mond-kopf .regen-satz { margin: 0; }
+.w3-mond-bild { width: 56px; height: 56px; flex: none; }
+.w3-mond-dunkel { fill: var(--fuellung); stroke: var(--trenner); stroke-width: .8; }
+.w3-mond-hell { fill: var(--gelb); }
+.w3-leise { font-weight: 400; font-size: var(--fs-subhead); color: var(--label-2); }
+.w3-bogen { width: 100%; height: auto; display: block; }
+.w3-horizont { stroke: var(--trenner); stroke-width: 1; }
+.w3-sonne-linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; }
+.w3-sonne-jetzt { fill: var(--orange); stroke: var(--bg-2); stroke-width: 2; }
+/* Meer */
+.w3-werte { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2) var(--s4); margin: 0 0 var(--s3); font-size: var(--fs-subhead); }
+.w3-werte > div { display: flex; flex-direction: column; }
+.w3-werte dt { font-size: var(--fs-footnote); color: var(--label-2); }
+.w3-werte dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.w3-tide { width: 100%; height: 90px; display: block; }
+.w3-tide-linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.w3-null, .w3-tide .jetzt { stroke: var(--label-3); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.w3-achse { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--label-2); margin-top: var(--s1); }
+.w3-meer .info, .w3-calima .info { margin: var(--s2) 0 0; }
+/* Modellvergleich */
+.w3-vgl { display: grid; gap: var(--s3); }
+.w3-schalter { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); }
+.w3-schalter input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.w3-vgl .info { margin: 0; }
+.w3-chip { display: inline-flex; align-items: center; }
+.w3-chip-linie { width: 28px; height: 10px; margin-right: var(--s2); flex: none; }
+.w3-titel { margin: var(--s2) 0 0; }
+.w3-graph svg { width: 100%; height: auto; display: block; overflow: visible; cursor: default; }
+.w3-linie { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.w3-legende { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); font-size: var(--fs-footnote); color: var(--label-2); }
+.w3-legende li { display: flex; align-items: center; gap: var(--s2); }
+.w3-legende small { font-size: var(--fs-caption); }
+.w3-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-subhead); }
+.w3-tabelle caption { text-align: left; font-size: var(--fs-footnote); color: var(--label-2); padding-bottom: var(--s1); }
+.w3-tabelle th, .w3-tabelle td { padding: var(--s2) var(--s1); border-top: 1px solid var(--trenner); text-align: right; font-weight: 400; }
+.w3-tabelle th[scope="row"], .w3-tabelle thead th:first-child { text-align: left; font-weight: 600; }
+.w3-tabelle thead th { font-size: var(--fs-footnote); color: var(--label-2); border-top: 0; }
+/* Kartensteuerung */
+.w3-zoom-knopf { width: var(--tap); height: var(--tap); display: grid; place-items: center; border-radius: var(--r-button); background: var(--bg-2); color: var(--label); border: 1px solid var(--trenner); box-shadow: var(--glas-schatten); margin-bottom: var(--s2); }
+.w3-zoom-knopf:disabled { opacity: .4; }
+.w3-zoom-knopf .ikon { width: var(--ikon-groesse); height: var(--ikon-groesse); }
+.w3-steuer { display: grid; gap: var(--s3); }
+.w3-steuer[hidden], .w3-spar-hinweis[hidden] { display: none; }
+.w3-zeile { display: flex; align-items: center; gap: var(--s3); }
+.w3-zeile .seg { flex: 1; max-width: 320px; }
+.w3-label { font-size: var(--fs-subhead); color: var(--label-2); min-width: 3.5em; }
+#w3Zeit { flex: 1; min-width: 0; min-height: var(--tap); accent-color: var(--akzent); }
+.w3-steuer .info, .w3-spar-hinweis { margin: 0; }
+/* Datensparmodus: Vorschlag */
+.w3-spar-vorschlag { display: grid; gap: var(--s3); margin-bottom: var(--kachel-abstand); }
+.w3-spar-vorschlag p { margin: 0; font-size: var(--fs-body); }
+.w3-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); }
