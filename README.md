@@ -88,6 +88,17 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - **Datensparmodus** (Mehr, `wpc-datensparen`): keine Satellitenfilme, Radar als Standbild, kein Modellvergleich, Karte nur bis Stufe 9. Bei `navigator.connection.saveData` schlägt die App ihn einmal vor.
 - Test: `PORT=8872 node tests/w3-g2.test.js`.
 
+### Welle 3 Foto und Teilen (16.10.2026)
+
+- **Sticker:** Im Teilen-Bildschirm unter „Infos" → „Sticker" Temperatur, Wettersymbol, Wind und Mini-Karte einschalten. Sie liegen frei auf dem Foto: mit Finger oder Maus ziehen, mit zwei Fingern die Größe ändern, oder die Regler (Größe, waagerecht, senkrecht) nehmen. Mit der Tastatur: Pfeile verschieben (Umschalt = groß), + und − ändern die Größe, Entf nimmt den Sticker weg. Lage und Größe werden in `wpc-teilen` gemerkt.
+- **Meteogramm-Streifen:** Schmales Band mit Temperatur (Linie) und Regen (Balken) für 24 Stunden, oben oder unten auf dem Foto (weicht den Infos der gewählten Gestaltung aus).
+- **Mini-Karte** (Kreis oder Rechteck): vereinfacht aus den Koordinaten gezeichnet (Gitternetz, 20-km-Maßstab, Nordpfeil, Farbton nach Temperatur). Echte Kartenkacheln dürfen wegen CORS nicht aufs Bild.
+- **Polaroid** und **Analog-Zeitstempel** gab es schon als Gestaltungen (weißer Rand mit Handschrift, orange Ziffern).
+- **Wetter zum Aufnahmezeitpunkt:** Bei einem Foto aus der Galerie liest die App Aufnahmedatum und Ort aus den Foto-Daten (EXIF, eigener kleiner Leser, auf dem Gerät). Ist das Foto älter als 3 Stunden, holt sie das Wetter von damals (bis 7 Tage zurück aus der Vorhersage-API mit `past_days`, älter aus dem Open-Meteo-Archiv) und schreibt „Wetter am 12.10. um 15:00" aufs Bild. Fehlt das EXIF-Datum, gilt das Datum der Datei; fehlt der Ort, der aktuelle Ort. Datum, Uhrzeit und Ort sind im Blatt „Infos" änderbar. Der genaue Ort geht nie weg: Open-Meteo bekommt nur einen auf etwa 10 km gerundeten Punkt. Liegt der Foto-Ort weit weg vom gewählten Ort, steht kein Ortsname auf dem Bild.
+- **Live-Kamera:** Im Teilen-Bildschirm oben „Live". Zeigt die Rückkamera mit dem Wetter-Overlay der gewählten Gestaltung; der runde Knopf macht das Foto und öffnet den Teilen-Bildschirm. Ohne Erlaubnis oder ohne Kamera erscheint ein ruhiger Hinweis mit dem Weg über die Galerie. Es wird nichts hochgeladen; die Kamera wird beim Schließen freigegeben.
+- **Vorgebaut, aus:** Feld „Shot on ProCamera" (`PARTNER_FREIGABE = false`, erst mit Freigabe von Cocologics) und Knopf „Mit ProCamera aufnehmen" (`PROCAMERA_URL = ''`, erscheint erst, wenn die Adresse eingetragen ist). Keine Logos eingebettet.
+- Datenschutz-Satz und Quelle „Open-Meteo Archiv" im Tab „Mehr" ergänzt. Test: `PORT=8871 node tests/w3-g1.test.js`.
+
 ## Dateien
 
 | Datei | Herkunft |
