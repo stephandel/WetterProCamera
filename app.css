@@ -770,3 +770,10 @@ dialog.w3-live::backdrop { background: #000; }
 .w3-live-meldung[hidden] { display: none; }
 .w3-live-meldung p { margin: 0; font-size: var(--fs-body); max-width: 40ch; }
 @media (min-width: 1024px) and (hover: hover) { dialog.w3-live { padding: var(--s3) var(--s8) var(--s4); } .w3-live-bild canvas { max-height: calc(100dvh - 12 * var(--s4)); } }
+
+/* === Kontrast auf Glas (16.10.2026, Skill ux-check): Akzentschrift in Tab-Leiste, Seitenleiste und „Aktualisieren"
+   etwas kräftiger, damit sie auf Glas ≥ 4,5:1 erreicht. Das Akzent-Blau aus tokens.css bleibt überall sonst unverändert. === */
+:root { --akzent-text: color-mix(in oklab, var(--akzent) 78%, #000); }
+@media (prefers-color-scheme: dark) { :root { --akzent-text: color-mix(in oklab, var(--akzent) 62%, #fff); } }
+.tabbar button[aria-selected="true"], .tabbar.pille button[aria-selected="true"],
+.seitenleiste [aria-current="page"], .seitenleiste [aria-selected="true"], .ml-knopf[aria-current], .button.leise, .button.rand { color: var(--akzent-text); }
