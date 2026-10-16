@@ -88,7 +88,7 @@
   function urlVorhersage(o) {
     return 'https://api.open-meteo.com/v1/forecast?latitude=' + o.lat + '&longitude=' + o.lon +
       '&current=temperature_2m,apparent_temperature,relative_humidity_2m,pressure_msl,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,is_day' +
-      '&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,is_day,cloud_cover' +
+      '&hourly=temperature_2m,precipitation,precipitation_probability,weather_code,is_day,cloud_cover,wind_speed_10m,wind_direction_10m,uv_index' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunshine_duration,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_direction_10m_dominant,sunrise,sunset,uv_index_max' +
       '&minutely_15=precipitation&forecast_minutely_15=8&timezone=auto&forecast_days=8&wind_speed_unit=kmh&models=' + modell;
   }
@@ -144,12 +144,15 @@
     for (var i = 0; i < h.length; i++) if (h[i].slice(0, 13) >= jetzt) return i;
     return 0;
   }
+  // Satz zu den 8 Balken (8 × 15 Minuten = 2 Stunden), Welle 3: „Regen ab 14:30 Uhr für 45 Minuten"
   function regenSatz(q) {
-    var t = q.time, p = q.precipitation, schwelle = 0.1;
+    var t = q.time, p = q.precipitation.slice(0, 8), schwelle = 0.1;
     var erster = p.findIndex(function (x) { return x >= schwelle; });
     if (erster < 0) return 'Die nächsten 2 Stunden bleibt es trocken.';
-    if (erster === 0) { var ende = p.findIndex(function (x, i) { return i > 0 && x < schwelle; }); return ende < 0 ? 'Es regnet die nächsten 2 Stunden.' : 'Regen bis etwa ' + hm(t[ende]) + ' Uhr.'; }
-    return 'Bis ' + hm(t[erster]) + ' Uhr trocken, danach Regen.';
+    var ende = erster; while (ende < p.length && p[ende] >= schwelle) ende++;
+    var bis = ende >= p.length, min = (ende - erster) * 15;
+    if (erster === 0) return bis ? 'Es regnet die nächsten 2 Stunden.' : 'Es regnet jetzt, noch etwa ' + w3Dauer(min) + '.';
+    return 'Regen ab ' + hm(t[erster]) + ' Uhr für ' + (bis ? 'mindestens ' : '') + w3Dauer(min) + '.';
   }
   /* ---------- Aktuell-Kachel: rechte Hälfte umschaltbar wie bei WeatherPro (links antippen) ---------- */
   // Webcams: erst nach Erlaubnis des Betreibers eintragen (siehe KONZEPT-KAMERA-WEBCAM.md im Konfigurator)
@@ -394,7 +397,7 @@
     var b = $('#radarPlay'), an = b.getAttribute('aria-pressed') !== 'true';
     b.setAttribute('aria-pressed', String(an)); $('span', b).textContent = an ? 'Anhalten' : 'Abspielen';
     clearInterval(radar.timer);
-    if (an) radar.timer = setInterval(function () { if (!radar.frames.length) return; radar.i = (radar.i + 1) % radar.frames.length; radarZeigen(); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700);
+    if (an) radar.timer = setInterval(function () { if (!radar.frames.length) return; radar.i = (radar.i + 1) % radar.frames.length; radarZeigen(); }, Math.round((matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700) * w3TempoFaktor()));
   }
 
   /* ---------- Mehr: Ortssuche, Orte mit Favoriten, Modell, Einheiten, Quellen, Webcam ---------- */
@@ -449,7 +452,7 @@
       MODELLE.map(function (m) { return '<label class="tippbar"><span class="modell-text"><span>' + m[1] + '</span><small class="leise">' + m[2] + '</small></span><input type="radio" name="modell" value="' + m[0] + '"' + (m[0] === modell ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
       '<p class="info hilfe">Das Modell steht oben unter dem Ort. „Beste Mischung" passt fast immer; andere Modelle zum Vergleichen.</p>' +
       '<h2 class="abschnitt-titel">Einheit für Wind</h2><div class="kachel">' + seg('wind', windEinheit, [['kmh', 'km/h'], ['ms', 'm/s'], ['kn', 'Knoten'], ['bft', 'Beaufort']], 'Einheit für Wind') + '</div>' +
-      '<h2 class="abschnitt-titel">Aktuell-Kachel: links antippen wechselt rechts zu</h2><div class="liste" id="ansichtListe">' +
+      '<h2 class="abschnitt-titel">Aktuell-Kachel: links ' + (tippe() === 'Klicke' ? 'anklicken' : 'antippen') + ' wechselt rechts zu</h2><div class="liste" id="ansichtListe">' +
       Object.keys(ANSICHT_NAMEN).map(function (k) {
         var geht = ansichtMoeglich(k);
         return '<label class="tippbar' + (geht ? '' : ' aus') + '"><span class="modell-text"><span>' + ANSICHT_NAMEN[k] + '</span>' + (geht ? '' : '<small class="leise">folgt nach Erlaubnis des Betreibers</small>') + '</span><input type="checkbox" value="' + k + '"' + (geht && ansichten().indexOf(k) >= 0 ? ' checked' : '') + (geht ? '' : ' disabled') + '></label>';
@@ -1407,7 +1410,7 @@
     for (var s = 1; s <= n; s++) { var j = (satFilm.i + s) % n, f = satFilm.frames[j]; if ((f.geladen || Date.now() - f.t0 > 4000) && !f.fehler) { satFilm.i = j; break; } }
     satFrameZeigen();
   }
-  function satLos() { clearInterval(satFilm.timer); satFilm.timer = setInterval(satWeiter, matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700); }
+  function satLos() { clearInterval(satFilm.timer); satFilm.timer = setInterval(satWeiter, Math.round((matchMedia('(prefers-reduced-motion: reduce)').matches ? 1500 : 700) * w3TempoFaktor())); }
   function satAbspielen() {
     var an = $('#radarPlay').getAttribute('aria-pressed') !== 'true', k = ebene, z = $('#radarZeit');
     playKnopf(an); clearInterval(satFilm.timer); satFilm.timer = null;
@@ -1906,7 +1909,7 @@
   /* --- Einstellungen „Startseite" (wpc-startseite) --- */
   var A5_ARTEN = [
     ['schirm', 'Schirm', 'Regenrisiko ab 40 %'], ['frost', 'Frost', 'Tiefstwert 0 °C oder darunter'], ['hitze', 'Hitze', 'Höchstwert ab 30 °C'],
-    ['uv', 'UV-Schutz', 'UV-Index ab 6'], ['strand', 'Strand und Baden', 'ab 22 °C, Regenrisiko unter 20 %, Wind unter 30 km/h'], ['kiten', 'Kiten', 'Wind 20 bis 40 km/h'],
+    ['uv', 'UV-Schutz', 'UV-Index ab 6'], ['strand', 'Strand und Baden', 'nur am Meer: ab 22 °C, Regenrisiko unter 20 %, Wind unter 30 km/h'], ['kiten', 'Kiten', 'nur am Meer: Wind 20 bis 40 km/h'],
     ['gezeiten', 'Ebbe und Flut', 'nur an der Küste, nächster Tief- und Höchststand'], ['gold', 'Goldene Stunde', '45 Minuten vor Sonnenuntergang'], ['sterne', 'Sterne', 'nachts höchstens 20 % Wolken']
   ];
   var A5_GROESSEN = ['klein', 'mittel', 'gross'];
@@ -1956,9 +1959,10 @@
     var c = d.current || {}, t = d.daily, h = d.hourly || {}, jetzt = (c.time || '').slice(0, 16), heute = jetzt.slice(0, 10), liste = [];
     if (!t || !t.time) return liste;
     var i = t.time.indexOf(heute); if (i < 0) i = 0;
-    var wert = function (k) { return t[k] && t[k][i] != null ? t[k][i] : null; };
-    var max = wert('temperature_2m_max'), min = wert('temperature_2m_min'), risiko = wert('precipitation_probability_max'), summe = wert('precipitation_sum');
-    var wind = wert('wind_speed_10m_max'), dir = wert('wind_direction_10m_dominant'), uv = wert('uv_index_max'), unter = wert('sunset');
+    var wert = function (k) { return t[k] && t[k][i] != null ? t[k][i] : null;  };
+    var rest = w3Rest(d, jetzt, heute, i);   // Welle 3: nur der Rest des Tages ab jetzt, nicht der ganze Tag
+    var max = rest.max, min = rest.min, risiko = rest.risiko, summe = rest.summe;
+    var wind = rest.wind, dir = rest.dir, uv = rest.uv, unter = wert('sunset');
     var trocken = risiko != null ? risiko < 20 : summe != null && summe < 0.5;
     var dazu = function (art, symbol, satz) { if (arten.indexOf(art) >= 0) liste.push({ art: art, sym: symbol, satz: satz }); };
     if (risiko != null && risiko >= 40) {
@@ -1969,8 +1973,8 @@
     if (min != null && min <= 0) dazu('frost', sym('schnee', 'a5-sym'), 'Frost bis ' + a5Grad(min) + ': Scheiben kratzen, empfindliche Pflanzen schützen.');
     if (max != null && max >= 30) dazu('hitze', sym('sonne', 'a5-sym'), 'Heiß, bis ' + a5Grad(max) + ': viel trinken, die Mittagssonne meiden.');
     if (uv != null && uv >= 6) dazu('uv', Ikon('sun'), 'UV-Index ' + rund(uv) + ' (' + uvWort(uv) + '): Sonnencreme, Hut und Sonnenbrille.');
-    if (max != null && max >= 22 && trocken && wind != null && wind < 30) dazu('strand', sym('sonne', 'a5-sym'), (kueste ? 'Strandwetter' : 'Badewetter') + ': bis ' + a5Grad(max) + ', kaum Regen, Wind bis ' + windTxt(wind) + '.');
-    if (wind != null && wind >= 20 && wind <= 40) dazu('kiten', sym('wind', 'a5-sym'), 'Gut zum Kiten: Wind bis ' + windTxt(wind) + (dir != null ? ' aus ' + richtung(dir) : '') + '.');
+    if (kueste && max != null && max >= 22 && trocken && wind != null && wind < 30) dazu('strand', sym('sonne', 'a5-sym'), (kueste ? 'Strandwetter' : 'Badewetter') + ': bis ' + a5Grad(max) + ', kaum Regen, Wind bis ' + windTxt(wind) + '.');
+    if (kueste && wind != null && wind >= 20 && wind <= 40) dazu('kiten', sym('wind', 'a5-sym'), 'Gut zum Kiten: Wind bis ' + windTxt(wind) + (dir != null ? ' aus ' + richtung(dir) : '') + '.');
     if (meer && meer.time) {
       var g = a5Gezeiten(meer, jetzt);
       if (g.length) dazu('gezeiten', Ikon('tropfen'), 'Nächste ' + g.map(function (x) { return (x.flut ? 'Flut' : 'Ebbe') + ' gegen ' + hm(x.zeit) + ' Uhr'; }).join(', danach ') + '.');
@@ -2048,7 +2052,7 @@
       var std = $('.std', s) || $('.akt', s);
       if (st.tipps && std) {
         std.insertAdjacentHTML('afterend', a5TippsHtml());
-        if (st.arten.indexOf('gezeiten') >= 0 || st.arten.indexOf('strand') >= 0) a5MeerHolen(ort, a5TippsNeu);
+        if (st.arten.indexOf('gezeiten') >= 0 || st.arten.indexOf('strand') >= 0 || st.arten.indexOf('kiten') >= 0) a5MeerHolen(ort, a5TippsNeu);
       }
       if (st.meteo) { var r = $('#regenTitel', s); a5MgEinsetzen(r ? r.closest('section') : $('#a5Tipps', s) || std); }
       else if (a5Mg.el) a5MgAbbauen();
@@ -2065,7 +2069,7 @@
   /* --- Tab „Mehr": Abschnitt „Startseite" vor „Aktuell-Kachel", Quelle Marine-API --- */
   quellenHtml = (function (alt) {
     return function () {
-      return alt() + '<a class="tippbar" href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noopener"><span class="modell-text"><span>Ebbe und Flut: Open-Meteo Marine</span><small class="leise">Wasserstand des Meeres, CC BY 4.0, nur an der Küste</small></span><span aria-hidden="true">↗</span></a>';
+      return alt() + '<a class="tippbar" href="https://open-meteo.com/en/docs/marine-weather-api" target="_blank" rel="noopener"><span class="modell-text"><span>Meer: Open-Meteo Marine</span><small class="leise">Wellen, Wassertemperatur, Ebbe und Flut, CC BY 4.0, nur an der Küste</small></span><span aria-hidden="true">↗</span></a>';
     };
   })(quellenHtml);
   renderMehr = (function (alt) { return function () { alt(); a5Mehr(); }; })(renderMehr);
@@ -2081,7 +2085,7 @@
       '<h2 class="abschnitt-titel" id="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>Welche Tipps dürfen erscheinen?</h2>' +
       '<div class="liste a5-liste" id="a5Arten" role="group" aria-labelledby="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>' +
       A5_ARTEN.map(function (a) { return '<label class="tippbar"><span class="modell-text"><span>' + a[1] + '</span><small class="leise">' + a[2] + '</small></span><input type="checkbox" value="' + a[0] + '"' + (st.arten.indexOf(a[0]) >= 0 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
-      '<p class="info hilfe" id="a5ArtenHilfe"' + (st.tipps ? '' : ' hidden') + '>Die App zeigt höchstens 3 Tipps, in dieser Reihenfolge. Ebbe und Flut kommen von Open-Meteo Marine und erscheinen nur an Orten am Meer.</p>';
+      '<p class="info hilfe" id="a5ArtenHilfe"' + (st.tipps ? '' : ' hidden') + '>Die App zeigt höchstens 3 Tipps, in dieser Reihenfolge, und betrachtet nur den Rest des Tages ab jetzt. Strand, Kiten sowie Ebbe und Flut kommen von Open-Meteo Marine und erscheinen nur an Orten am Meer.</p>';
     var vor = $$('h2.abschnitt-titel', s).filter(function (h) { return /^Aktuell-Kachel/.test(h.textContent.trim()); })[0];
     if (vor) vor.insertAdjacentHTML('beforebegin', html); else s.insertAdjacentHTML('beforeend', html);
     var sichtbar = function () { var x = startLesen(); $('#a5Groesse').hidden = !x.meteo; ['#a5ArtenTitel', '#a5Arten', '#a5ArtenHilfe'].forEach(function (id) { $(id).hidden = !x.tipps; }); };
@@ -2275,6 +2279,556 @@
       };
     })(renderMehr);
   })();
+
+  /* === Welle 3 Wetter und Karte: Resttag-Tipps, Modellvergleich, Tagesdetail, Sonne und Mond, Meer, Calima, Kartensteuerung, Datensparmodus (16.10.2026) === */
+  // Neue Einstellungen: wpc-datensparen (true/false, auch von der Webcam-Gruppe gelesen), wpc-calima {an, schwelle}, wpc-meer {an},
+  // wpc-vergleich {an, modelle}, wpc-tempo ('0.5' | '1' | '2'), wpc-meerpunkt {Ort: [lat, lon]}, wpc-datensparen-gefragt.
+  var w3Ikonen = {
+    plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>',
+    wellen: '<path d="M2 8c2.5-2 4.5 2 7 0s4.5 2 7 0 4.5 2 6 0M2 14c2.5-2 4.5 2 7 0s4.5 2 7 0 4.5 2 6 0M2 20c2.5-2 4.5 2 7 0s4.5 2 7 0 4.5 2 6 0"/>'
+  };
+  var w3Ikon = function (n) { return w3Ikonen[n] ? '<svg class="ikon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + w3Ikonen[n] + '</svg>' : Ikon(n); };
+
+  /* --- Einstellungen lesen --- */
+  var w3Spar = function () { return speicher.lesen('wpc-datensparen', false) === true; };
+  var w3Calima = function () { var s = speicher.lesen('wpc-calima', {}) || {}; return { an: s.an !== false, schwelle: [25, 50, 100].indexOf(+s.schwelle) >= 0 ? +s.schwelle : 50 }; };
+  var w3MeerEinst = function () { var s = speicher.lesen('wpc-meer', {}) || {}; return { an: s.an !== false }; };
+  var W3_VGL_STANDARD = ['best_match', 'ecmwf_ifs025', 'icon_seamless'];
+  var w3Vgl = function () {
+    var s = speicher.lesen('wpc-vergleich', {}) || {}, ids = MODELLE.map(function (m) { return m[0]; });
+    var m = Array.isArray(s.modelle) ? s.modelle.filter(function (x, i, a) { return ids.indexOf(x) >= 0 && a.indexOf(x) === i; }).slice(0, 3) : [];
+    return { an: s.an === true, modelle: m.length >= 2 ? m : W3_VGL_STANDARD };
+  };
+  var w3Tempo = function () { var t = String(speicher.lesen('wpc-tempo', '1')); return ['0.5', '1', '2'].indexOf(t) >= 0 ? t : '1'; };
+  function w3TempoFaktor() { return 1 / +w3Tempo(); }
+  function w3Dauer(min) { return min < 60 ? min + ' Minuten' : min === 60 ? '1 Stunde' : min % 60 === 0 ? (min / 60) + ' Stunden' : Math.floor(min / 60) + ' Std. ' + (min % 60) + ' Min.'; }
+
+  /* --- Zeit-Helfer (Ortszeit der Daten) --- */
+  var w3Jetzt = function () { return ((daten && daten.current && daten.current.time) || '').slice(0, 16); };
+  function w3Idx(zeiten) { var j = w3Jetzt().slice(0, 13); for (var i = 0; i < zeiten.length; i++) if (zeiten[i].slice(0, 13) >= j) return i; return 0; }
+  function w3TagWort(datum) {
+    var diff = Math.round((a5Ms(datum + 'T00:00') - a5Ms(w3Jetzt().slice(0, 10) + 'T00:00')) / 864e5);
+    return diff === 0 ? 'heute' : diff === 1 ? 'morgen' : teile(datum).wt;
+  }
+  var w3Nur = function (liste) { return liste.filter(function (v) { return v != null; }); };
+  var w3Max = function (l) { l = w3Nur(l); return l.length ? Math.max.apply(null, l) : null; };
+  var w3Min = function (l) { l = w3Nur(l); return l.length ? Math.min.apply(null, l) : null; };
+
+  /* --- 1. „Was heute geht" nur für den Rest des Tages (ab der laufenden Stunde bis 24 Uhr); fehlen Stundenwerte, gelten die Tageswerte --- */
+  function w3Rest(d, jetzt, heute, i) {
+    var t = d.daily, h = d.hourly || {}, stunde = jetzt.slice(0, 13), idx = [];
+    (h.time || []).forEach(function (z, k) { if (z.slice(0, 10) === heute && z.slice(0, 13) >= stunde) idx.push(k); });
+    var tag = function (k) { return t[k] && t[k][i] != null ? t[k][i] : null; };
+    var reihe = function (k) { if (!h[k] || !idx.length) return []; return w3Nur(idx.map(function (j) { return h[k][j]; })); };
+    var temp = reihe('temperature_2m'), p = reihe('precipitation'), prob = reihe('precipitation_probability'), wind = reihe('wind_speed_10m'), uv = reihe('uv_index');
+    var dir = null;
+    if (wind.length && h.wind_direction_10m) {
+      var best = -1; idx.forEach(function (j) { if (h.wind_speed_10m[j] != null && (best < 0 || h.wind_speed_10m[j] > h.wind_speed_10m[best])) best = j; });
+      if (best >= 0) dir = h.wind_direction_10m[best];
+    }
+    var maxOr = function (l, ersatz) { return l.length ? Math.max.apply(null, l) : ersatz; };
+    return {
+      max: temp.length ? Math.max.apply(null, temp) : tag('temperature_2m_max'), min: temp.length ? Math.min.apply(null, temp) : tag('temperature_2m_min'),
+      risiko: prob.length ? Math.max.apply(null, prob) : tag('precipitation_probability_max'),
+      summe: p.length ? p.reduce(function (a, b) { return a + b; }, 0) : tag('precipitation_sum'),
+      wind: maxOr(wind, tag('wind_speed_10m_max')), dir: wind.length ? dir : tag('wind_direction_10m_dominant'),
+      uv: uv.length ? Math.max.apply(null, uv) : tag('uv_index_max')
+    };
+  }
+
+  /* --- 2. Datensparmodus --- */
+  function w3SparAnwenden() {
+    var an = w3Spar();
+    if (radarKarte) { radarKarte.setMaxZoom(an ? 9 : 15); if (an && radarKarte.getZoom() > 9) radarKarte.setZoom(9); }
+    if (an) { satStopp(); clearInterval(radar.timer); playKnopf(false); }
+    w3SteuerStand();
+    if (aktiv === 'graphs' && daten) renderGraphs();
+  }
+  function w3SparSetzen(an) { speicher.schreiben('wpc-datensparen', !!an); w3SparAnwenden(); var c = $('#w3Liste [data-w3="spar"]'); if (c) c.checked = !!an; }
+  function w3SparVorschlag() {
+    var v = navigator.connection && navigator.connection.saveData;
+    if (!v || w3Spar() || speicher.lesen('wpc-datensparen-gefragt', false) === true || $('#w3SparVorschlag')) return;
+    var el = document.createElement('section');
+    el.className = 'kachel w3-spar-vorschlag'; el.id = 'w3SparVorschlag'; el.setAttribute('aria-labelledby', 'w3SparT');
+    el.innerHTML = '<p id="w3SparT"><b>Dein Gerät spart Daten.</b> Soll die App auch sparen? Dann zeigt sie keine Satellitenfilme, das Radar nur als Standbild und lädt weniger Kartenkacheln.</p>' +
+      '<div class="w3-knoepfe"><button type="button" class="button tippbar" data-w3-spar="ja">Sparmodus einschalten</button><button type="button" class="button leise tippbar" data-w3-spar="nein">Nein, danke</button></div>';
+    var haupt = $('main.inhalt'); haupt.insertBefore(el, haupt.firstChild);
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-w3-spar]'); if (!b) return;
+      speicher.schreiben('wpc-datensparen-gefragt', true); if (b.dataset.w3Spar === 'ja') w3SparSetzen(true);
+      el.remove(); toast(b.dataset.w3Spar === 'ja' ? 'Datensparmodus an' : 'Wie bisher, ohne Sparmodus');
+    });
+  }
+
+  /* --- 3. Saharastaub (Calima): Open-Meteo Luftqualität, Feld dust --- */
+  var w3Staub = {};
+  function w3StaubHolen(o) {
+    var k = a5PosKey(o), m = w3Staub[k];
+    if (!w3Calima().an || (m && (m.laedt || Date.now() - m.zeit < 3 * 3600e3))) return;
+    w3Staub[k] = { laedt: true, zeit: 0, d: m && m.d };
+    holeJson('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + o.lat + '&longitude=' + o.lon + '&hourly=dust&forecast_days=3&timezone=auto').then(function (r) {
+      var h = r && r.hourly; w3Staub[k] = { zeit: Date.now(), d: h && h.dust && h.time ? h : null }; w3ZusatzNeu();
+    }, function () { w3Staub[k] = { zeit: Date.now() - 2.5 * 3600e3, d: m && m.d }; });
+  }
+  var w3StaubWort = function (v) { return v < 50 ? 'klare Luft' : v < 150 ? 'leichter Dunst' : v < 300 ? 'Calima' : 'starke Calima'; };
+  function w3CalimaHtml() {
+    var e = w3Calima(), m = w3Staub[a5PosKey(ort)]; if (!e.an || !m || !m.d) return '';
+    var h = m.d, i0 = w3Idx(h.time), ende = Math.min(h.time.length, i0 + 48), max = null, mi = -1;
+    for (var i = i0; i < ende; i++) { var v = h.dust[i]; if (v != null && (max == null || v > max)) { max = v; mi = i; } }
+    if (max == null || max < e.schwelle) return '';
+    var jetzt = h.dust[i0], tag = h.time[mi].slice(0, 10);
+    return '<section class="kachel w3-calima" id="w3Calima" aria-labelledby="w3CalimaT"><h2 class="kachel-titel" id="w3CalimaT">' + Ikon('cloud') + 'Saharastaub (Calima)</h2>' +
+      '<p class="regen-satz">Staub in der Luft: bis ' + rund(max) + ' µg/m³ ' + w3TagWort(tag) + ' um ' + hm(h.time[mi]) + ' Uhr (' + w3StaubWort(max) + ').</p>' +
+      '<p class="info">' + (jetzt != null ? 'Jetzt: ' + rund(jetzt) + ' µg/m³. ' : '') + 'Dein Schwellenwert steht bei ' + e.schwelle + ' µg/m³, du kannst ihn unter „Mehr“ ändern. Der Staub kann die Sicht trüben und Augen und Atemwege reizen.</p></section>';
+  }
+
+  /* --- 4. Meer: Wellen, Wassertemperatur, Gezeiten (Open-Meteo Marine); der Meerespunkt aus der Antwort wird je Ort gemerkt --- */
+  var w3MeerD = {}, w3MeerPunkte = speicher.lesen('wpc-meerpunkt', {}) || {};
+  function w3MeerHolen(o) {
+    var k = a5PosKey(o), m = w3MeerD[k];
+    if (!w3MeerEinst().an || a5Kueste[k] === false || (m && (m.laedt || Date.now() - m.zeit < 3 * 3600e3))) return;
+    w3MeerD[k] = { laedt: true, zeit: 0, d: m && m.d };
+    var p = w3MeerPunkte[k] || [o.lat, o.lon], felder = ['wave_height', 'wave_period', 'wave_direction', 'sea_surface_temperature', 'sea_level_height_msl'];
+    holeJson('https://marine-api.open-meteo.com/v1/marine?latitude=' + p[0] + '&longitude=' + p[1] + '&hourly=' + felder.join(',') + '&timezone=auto&forecast_days=3').then(function (r) {
+      var h = r && r.hourly, hat = !!h && h.time && felder.some(function (f) { return h[f] && h[f].some(function (v) { return v != null; }); });
+      if (hat && r.latitude != null && r.longitude != null && !w3MeerPunkte[k]) { w3MeerPunkte[k] = [+Number(r.latitude).toFixed(3), +Number(r.longitude).toFixed(3)]; speicher.schreiben('wpc-meerpunkt', w3MeerPunkte); }
+      w3MeerD[k] = { zeit: Date.now(), d: hat ? h : null }; w3ZusatzNeu();
+    }, function () { w3MeerD[k] = { zeit: Date.now() - 2.5 * 3600e3, d: m && m.d }; });
+  }
+  var w3Breite = function (v, pos, neg) { return dez(Math.abs(v), 2) + '° ' + (v >= 0 ? pos : neg); };
+  function w3MeerHtml() {
+    var k = a5PosKey(ort), m = w3MeerD[k]; if (!w3MeerEinst().an || !m || !m.d) return '';
+    var h = m.d, i0 = w3Idx(h.time), wert = function (f, i) { return h[f] && h[f][i] != null ? h[f][i] : null; };
+    var wh = wert('wave_height', i0), wp = wert('wave_period', i0), wr = wert('wave_direction', i0), wt = wert('sea_surface_temperature', i0);
+    var werte = '<dl class="w3-werte"><div><dt>Wellenhöhe</dt><dd>' + (wh == null ? '–' : dez(wh) + ' m') + '</dd></div><div><dt>Wellenperiode</dt><dd>' + (wp == null ? '–' : rund(wp) + ' s') + '</dd></div>' +
+      '<div><dt>Wellen aus</dt><dd>' + (wr == null ? '–' : richtung(wr)) + '</dd></div><div><dt>Wasser</dt><dd>' + (wt == null ? '–' : rund(wt) + ' °C') + '</dd></div></dl>';
+    var tide = '', sl = (h.sea_level_height_msl || []).slice(i0, i0 + 48);
+    if (w3Nur(sl).length > 6) {
+      var lo = w3Min(sl), hi = w3Max(sl), B = 320, H = 90, span = Math.max(.2, hi - lo), n = sl.length;
+      var y = function (v) { return 8 + (hi - v) * (H - 16) / span; }, x = function (i) { return i * B / (n - 1); };
+      var pfad = sl.map(function (v, i) { return v == null ? '' : (i && sl[i - 1] != null ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
+      var g = a5Gezeiten({ time: h.time, sea_level_height_msl: h.sea_level_height_msl }, w3Jetzt());
+      tide = '<svg class="w3-tide" viewBox="0 0 ' + B + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Wasserstand der nächsten 48 Stunden zwischen ' + dez(lo) + ' und ' + dez(hi) + ' Metern">' +
+        (lo < 0 && hi > 0 ? '<line class="w3-null" x1="0" x2="' + B + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '"/>' : '') +
+        '<path class="w3-tide-linie" d="' + pfad + '"/><line class="jetzt" x1="0" x2="0" y1="0" y2="' + H + '"/></svg>' +
+        '<div class="w3-achse zahl" aria-hidden="true"><span>jetzt</span><span>' + teile(h.time[i0 + 24] || h.time[i0]).wt + ' ' + hm(h.time[i0 + 24] || h.time[i0]) + '</span><span>' + teile(h.time[i0 + n - 1]).wt + ' ' + hm(h.time[i0 + n - 1]) + '</span></div>' +
+        '<p class="info">Wasserstand (Tide), ' + dez(lo).replace('-', '−') + ' bis ' + dez(hi).replace('-', '−') + ' m.' + (g.length ? ' Nächste ' + g.map(function (x) { return (x.flut ? 'Flut' : 'Ebbe') + ' gegen ' + hm(x.zeit) + ' Uhr'; }).join(', danach ') + '.' : '') + '</p>';
+    }
+    var pt = w3MeerPunkte[k];
+    return '<section class="kachel w3-meer" id="w3Meer" aria-labelledby="w3MeerT"><h2 class="kachel-titel" id="w3MeerT">' + w3Ikon('wellen') + 'Meer</h2>' + werte + tide +
+      (pt ? '<p class="info">Messpunkt im Meer: ' + w3Breite(pt[0], 'N', 'S') + ', ' + w3Breite(pt[1], 'O', 'W') + '. Quelle: Open-Meteo Marine.</p>' : '') + '</section>';
+  }
+
+  /* Calima- und Meer-Kachel unter „Was heute geht" (oder unter den Stunden) einsetzen; wird auch aufgerufen, wenn Daten nachträglich ankommen */
+  function w3ZusatzNeu() {
+    if (aktiv !== 'wetter' || !daten) return;
+    var s = $('#tab-wetter'); if (!s) return;
+    ['w3Calima', 'w3Meer'].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
+    var anker = $('#a5Tipps', s) || $('.std', s), html = w3CalimaHtml() + w3MeerHtml();
+    if (anker && html) anker.insertAdjacentHTML('afterend', html);
+  }
+
+  /* --- 5. Sonne und Mond lokal rechnen (Formeln nach SunCalc/Meeus, Genauigkeit wenige Minuten) --- */
+  var W3G = Math.PI / 180, W3E = W3G * 23.4397;
+  var w3Ra = function (l, b) { return Math.atan2(Math.sin(l) * Math.cos(W3E) - Math.tan(b) * Math.sin(W3E), Math.cos(l)); };
+  var w3Dek = function (l, b) { return Math.asin(Math.sin(b) * Math.cos(W3E) + Math.cos(b) * Math.sin(W3E) * Math.sin(l)); };
+  function w3SonnePos(d) {
+    var M = W3G * (357.5291 + .98560028 * d), L = M + W3G * (1.9148 * Math.sin(M) + .02 * Math.sin(2 * M) + .0003 * Math.sin(3 * M)) + W3G * 102.9372 + Math.PI;
+    return { dec: w3Dek(L, 0), ra: w3Ra(L, 0), dist: 149598000 };
+  }
+  function w3MondPos(d) {
+    var L = W3G * (218.316 + 13.176396 * d), M = W3G * (134.963 + 13.064993 * d), F = W3G * (93.272 + 13.22935 * d);
+    var l = L + W3G * 6.289 * Math.sin(M), b = W3G * 5.128 * Math.sin(F);
+    return { ra: w3Ra(l, b), dec: w3Dek(l, b), dist: 385001 - 20905 * Math.cos(M) };
+  }
+  var w3Tage = function (ms) { return ms / 864e5 + 2440587.5 - 2451545; };
+  function w3Hoehe(c, d, lat, lon) {   // Höhe über dem Horizont in Grad
+    var H = W3G * (280.16 + 360.9856235 * d) + W3G * lon - c.ra, phi = W3G * lat;
+    return Math.asin(Math.sin(phi) * Math.sin(c.dec) + Math.cos(phi) * Math.cos(c.dec) * Math.cos(H)) / W3G;
+  }
+  // Mondphase 0 (Neumond) … 0,5 (Vollmond) … 1; beleuchteter Anteil 0 … 1
+  function w3MondPhase(ms) {
+    var d = w3Tage(ms), s = w3SonnePos(d), m = w3MondPos(d);
+    var phi = Math.acos(Math.sin(s.dec) * Math.sin(m.dec) + Math.cos(s.dec) * Math.cos(m.dec) * Math.cos(s.ra - m.ra));
+    var inc = Math.atan2(s.dist * Math.sin(phi), m.dist - s.dist * Math.cos(phi));
+    var winkel = Math.atan2(Math.cos(s.dec) * Math.sin(s.ra - m.ra), Math.sin(s.dec) * Math.cos(m.dec) - Math.cos(s.dec) * Math.sin(m.dec) * Math.cos(s.ra - m.ra));
+    return { phase: .5 + .5 * inc * (winkel < 0 ? -1 : 1) / Math.PI, anteil: (1 + Math.cos(inc)) / 2 };
+  }
+  var W3_PHASEN = ['Neumond', 'Zunehmende Sichel', 'Erstes Viertel', 'Zunehmender Mond', 'Vollmond', 'Abnehmender Mond', 'Letztes Viertel', 'Abnehmende Sichel'];
+  var w3PhaseName = function (p) { return W3_PHASEN[Math.round(p * 8) % 8]; };
+  function w3Versatz() {
+    if (daten && isFinite(daten.utc_offset_seconds)) return daten.utc_offset_seconds / 60;
+    var c = a5Ms(w3Jetzt()); return isNaN(c) ? 0 : Math.round((c - Date.now()) / 900000) * 15;
+  }
+  var w3Uhr = function (ms, versatz) { return ms == null ? '–' : new Date(ms + versatz * 60000).toISOString().slice(11, 16); };
+  // Verlauf eines Tages (Ortszeit 0–24 Uhr) in 2-Minuten-Schritten: Höhe von Sonne und Mond
+  function w3Verlauf(datum, versatz, lat, lon) {
+    var p = datum.split('-'), start = Date.UTC(+p[0], +p[1] - 1, +p[2]) - versatz * 60000, ts = [], sonne = [], mond = [];
+    for (var i = 0; i <= 720; i++) {
+      var ms = start + i * 120000, d = w3Tage(ms);
+      ts.push(ms); sonne.push(w3Hoehe(w3SonnePos(d), d, lat, lon)); mond.push(w3Hoehe(w3MondPos(d), d, lat, lon));
+    }
+    return { start: start, ts: ts, sonne: sonne, mond: mond };
+  }
+  // Zeitpunkte, an denen die Kurve die Schwelle nach oben (auf) oder nach unten (ab) kreuzt
+  function w3Quer(ts, v, schwelle) {
+    var auf = [], ab = [];
+    for (var i = 1; i < v.length; i++) {
+      var a = v[i - 1] - schwelle, b = v[i] - schwelle;
+      if (a < 0 && b >= 0) auf.push(ts[i - 1] + (ts[i] - ts[i - 1]) * (-a) / (b - a));
+      else if (a >= 0 && b < 0) ab.push(ts[i - 1] + (ts[i] - ts[i - 1]) * a / (a - b));
+    }
+    return { auf: auf.length ? auf[0] : null, ab: ab.length ? ab[ab.length - 1] : null };
+  }
+  function w3SonneMond(datum) {
+    var lat = ort.lat, lon = ort.lon, versatz = w3Versatz(), v = w3Verlauf(datum, versatz, lat, lon);
+    var noon = v.start + 12 * 3600e3, mp = w3MondPhase(noon);
+    var hoechst = 0; v.sonne.forEach(function (h, i) { if (h > v.sonne[hoechst]) hoechst = i; });
+    var weiter = function (kind) {   // nächster Voll- oder Neumond (Datum) in den nächsten 32 Tagen
+      var vor = mp.phase;
+      for (var n = 1; n <= 32; n++) {
+        var q = w3MondPhase(noon + n * 864e5).phase;
+        if (kind === 'voll' ? (vor < .5 && q >= .5) : q < vor - .5) return a5Plus(datum + 'T12:00', n * 1440).slice(0, 10);
+        vor = q;
+      }
+      return null;
+    };
+    return {
+      versatz: versatz, v: v, phase: mp, name: w3PhaseName(mp.phase), prozent: Math.round(mp.anteil * 100),
+      sonne: w3Quer(v.ts, v.sonne, -.833), gold: { morgens: [w3Quer(v.ts, v.sonne, -4).auf, w3Quer(v.ts, v.sonne, 6).auf], abends: [w3Quer(v.ts, v.sonne, 6).ab, w3Quer(v.ts, v.sonne, -4).ab] },
+      buerger: w3Quer(v.ts, v.sonne, -6), nautisch: w3Quer(v.ts, v.sonne, -12), astro: w3Quer(v.ts, v.sonne, -18),
+      mond: w3Quer(v.ts, v.mond, .133), hoechst: { ms: v.ts[hoechst], grad: v.sonne[hoechst] }, voll: weiter('voll'), neu: weiter('neu')
+    };
+  }
+  // Mondsymbol: beleuchteter Teil als Fläche (zunehmend rechts, abnehmend links)
+  function w3MondSvg(phase) {
+    var r = 18, k = Math.cos(2 * Math.PI * phase), rx = Math.abs(k) * r, zun = phase < .5;
+    var lit = 'M0 ' + (-r) + ' A' + r + ' ' + r + ' 0 0 1 0 ' + r + ' A' + rx.toFixed(2) + ' ' + r + ' 0 0 ' + (k > 0 ? 0 : 1) + ' 0 ' + (-r) + ' Z';
+    return '<svg class="w3-mond-bild" viewBox="-22 -22 44 44" role="img" aria-label="Mondphase"><circle class="w3-mond-dunkel" r="' + r + '"/><path class="w3-mond-hell" d="' + lit + '" transform="' + (zun ? '' : 'scale(-1 1)') + '"/></svg>';
+  }
+  var w3Zeitraum = function (a, b, vers) { return a == null || b == null ? '–' : w3Uhr(a, vers) + ' bis ' + w3Uhr(b, vers) + ' Uhr'; };
+  function w3SonneMondHtml(datum) {
+    var m = w3SonneMond(datum), v = m.v, vers = m.versatz, B = 320, H = 110, hmax = Math.max(20, m.hoechst.grad), jetzt = Date.now();
+    var x = function (ms) { return (ms - v.start) / 864e5 * B; }, y = function (g) { return H - 14 - (g + 5) / (hmax + 5) * (H - 24); };
+    var pfad = v.ts.map(function (ms, i) { return i % 3 ? '' : (i ? 'L' : 'M') + x(ms).toFixed(1) + ' ' + y(v.sonne[i]).toFixed(1); }).join(' ');
+    var jetztHeute = jetzt >= v.start && jetzt < v.start + 864e5, jetztGrad = jetztHeute ? v.sonne[Math.round((jetzt - v.start) / 120000)] : null;
+    var bogen = '<svg class="w3-bogen" viewBox="0 0 ' + B + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sonnenbogen: Aufgang ' + w3Uhr(m.sonne.auf, vers) + ' Uhr, Untergang ' + w3Uhr(m.sonne.ab, vers) + ' Uhr' + (jetztGrad != null ? ', jetzt ' + rund(jetztGrad) + ' Grad über dem Horizont' : '') + '">' +
+      '<line class="w3-horizont" x1="0" x2="' + B + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '"/><path class="w3-sonne-linie" d="' + pfad + '"/>' +
+      (jetztGrad != null ? '<circle class="w3-sonne-jetzt" cx="' + x(jetzt).toFixed(1) + '" cy="' + y(jetztGrad).toFixed(1) + '" r="7"/>' : '') + '</svg>';
+    var zeile = function (t, w) { return '<div><dt>' + t + '</dt><dd>' + w + '</dd></div>'; };
+    var lang = m.sonne.auf != null && m.sonne.ab != null ? Math.round((m.sonne.ab - m.sonne.auf) / 60000) : null;
+    var d2 = function (a) { return a == null ? '–' : (+a.slice(8, 10)) + '.' + (+a.slice(5, 7)) + '.'; };
+    return '<h3 class="w3-h3">Sonne</h3>' + bogen +
+      '<p class="info zahl">' + (jetztGrad != null ? 'Die Sonne steht jetzt ' + (jetztGrad >= 0 ? rund(jetztGrad) + ' Grad über dem Horizont.' : (rund(-jetztGrad) + ' Grad unter dem Horizont.')) : 'Sonnenbogen für ' + teile(datum).wt + ' ' + datumKurz(datum)) + '</p>' +
+      '<dl class="werte w3-liste-werte">' + zeile('Sonnenaufgang', w3Uhr(m.sonne.auf, vers) + ' Uhr') + zeile('Sonnenuntergang', w3Uhr(m.sonne.ab, vers) + ' Uhr') +
+      zeile('Tageslänge', lang == null ? '–' : Math.floor(lang / 60) + ' Std. ' + (lang % 60) + ' Min.') + zeile('Höchster Stand', w3Uhr(m.hoechst.ms, vers) + ' Uhr, ' + rund(m.hoechst.grad) + '°') +
+      zeile('Goldene Stunde morgens', w3Zeitraum(m.gold.morgens[0], m.gold.morgens[1], vers)) + zeile('Goldene Stunde abends', w3Zeitraum(m.gold.abends[0], m.gold.abends[1], vers)) +
+      zeile('Bürgerliche Dämmerung', 'ab ' + w3Uhr(m.buerger.auf, vers) + ' · bis ' + w3Uhr(m.buerger.ab, vers) + ' Uhr') +
+      zeile('Nautische Dämmerung', 'ab ' + w3Uhr(m.nautisch.auf, vers) + ' · bis ' + w3Uhr(m.nautisch.ab, vers) + ' Uhr') +
+      zeile('Astronomische Dämmerung', 'ab ' + w3Uhr(m.astro.auf, vers) + ' · bis ' + w3Uhr(m.astro.ab, vers) + ' Uhr') + '</dl>' +
+      '<p class="info">Goldene Stunde: Die Sonne steht zwischen 6 Grad über und 4 Grad unter dem Horizont, das Licht ist warm und weich. Bei der astronomischen Dämmerung ist der Himmel ganz dunkel; im Sommer wird er in Deutschland nie so dunkel (dann steht „–“).</p>' +
+      '<h3 class="w3-h3">Mond</h3><div class="w3-mond-kopf">' + w3MondSvg(m.phase.phase) + '<p class="regen-satz">' + m.name + '<br><span class="w3-leise">' + m.prozent + ' % beleuchtet</span></p></div>' +
+      '<dl class="werte w3-liste-werte">' + zeile('Mondaufgang', w3Uhr(m.mond.auf, vers) + (m.mond.auf == null ? '' : ' Uhr')) + zeile('Monduntergang', w3Uhr(m.mond.ab, vers) + (m.mond.ab == null ? '' : ' Uhr')) +
+      zeile('Nächster Vollmond', d2(m.voll)) + zeile('Nächster Neumond', d2(m.neu)) + '</dl>' +
+      '<p class="info">Alles wird auf deinem Gerät berechnet, es ist kein Netzdienst nötig. Die Zeiten stimmen auf wenige Minuten. „–“ heißt: An diesem Tag gibt es das Ereignis nicht.</p>';
+  }
+  var w3Fokus = null;
+  function w3Blatt(id, titel) {
+    var d = document.getElementById(id);
+    if (d) return d;
+    d = document.createElement('dialog'); d.id = id; d.className = 'pc-blatt'; d.setAttribute('aria-labelledby', id + 'T');
+    d.innerHTML = '<div class="pc-blatt-kopf"><h2 id="' + id + 'T">' + titel + '</h2><button type="button" class="pc-kopf-knopf tippbar" data-zu="1">Fertig</button></div><div class="pc-blatt-inhalt" id="' + id + 'Inhalt"></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (e) { if (e.target.closest('[data-zu]')) d.close(); });
+    d.addEventListener('close', function () { if (w3Fokus && document.contains(w3Fokus) && !dialogOffen()) { try { w3Fokus.focus({ preventScroll: true }); } catch (x) { } } });
+    return d;
+  }
+  function w3MondBlatt(datum) {
+    var d = w3Blatt('w3Mond', 'Sonne und Mond');
+    if (!d.open) w3Fokus = document.activeElement;
+    $('#w3MondInhalt').innerHTML = w3SonneMondHtml(datum);
+    if (!d.open) d.showModal();
+    $('[data-zu]', d).focus();
+  }
+  function w3MondKachel() {
+    var heute = w3Jetzt().slice(0, 10); if (!heute) return '';
+    var m = w3SonneMond(heute);
+    return '<section class="kachel w3-mond-kachel" aria-labelledby="w3MondKachelT"><h2 class="kachel-titel" id="w3MondKachelT">' + Ikon('moon') + 'Sonne und Mond</h2>' +
+      '<div class="w3-mond-kopf">' + w3MondSvg(m.phase.phase) + '<p class="regen-satz">' + m.name + ', ' + m.prozent + ' %<br><span class="w3-leise zahl">Sonne ↑ ' + w3Uhr(m.sonne.auf, m.versatz) + ' ↓ ' + w3Uhr(m.sonne.ab, m.versatz) + ' · Mond ↑ ' + w3Uhr(m.mond.auf, m.versatz) + ' ↓ ' + w3Uhr(m.mond.ab, m.versatz) + '</span></p></div>' +
+      '<button type="button" class="button leise tippbar mehr-link" data-w3-mond="' + heute + '" aria-haspopup="dialog">Sonne und Mond ausführlich</button></section>';
+  }
+
+  /* --- 6. Tagesdetail: Blatt (am Mac Fenster) mit Nacht davor / Tag / Nacht danach, Stundenwerte, Sonne und Mond --- */
+  var w3Seg = 'tag', w3TagNr = 0;
+  var W3_SEGMENTE = [['n1', 'Nacht davor'], ['tag', 'Tag'], ['n2', 'Nacht danach']];
+  function w3TagIndizes() { var t = daten.daily; return t.time.map(function (z, i) { return t.temperature_2m_max[i] == null ? -1 : i; }).filter(function (i) { return i >= 0; }); }
+  function w3TageMarkieren() {
+    var s = $('#tab-wetter'), idx = w3TagIndizes(), kachel = $('.tage', s); if (!kachel) return;
+    $$('.tag', kachel).forEach(function (el, n) {
+      if (idx[n] == null) return;
+      el.setAttribute('role', 'button'); el.tabIndex = 0; el.dataset.w3Tag = idx[n]; el.setAttribute('aria-haspopup', 'dialog');
+    });
+    if (!$('.w3-tag-hilfe', kachel)) kachel.insertAdjacentHTML('beforeend', '<p class="info w3-tag-hilfe">' + tippe() + ' auf einen Tag für Stundenwerte, Sonne und Mond.</p>');
+  }
+  function w3SegFuer(zeit, auf, unter) {   // zu welchem Abschnitt gehört die Stunde?
+    var s = zeit.slice(0, 13) + ':30';   // eine Stunde zählt zum Tag, wenn ihre Mitte zwischen Aufgang und Untergang liegt
+    if (auf && s < auf) return 'n1';
+    if (unter && s >= unter) return 'n2';
+    return 'tag';
+  }
+  function w3TagFuellen() {
+    var i = w3TagNr, t = daten.daily, h = daten.hourly, datum = t.time[i], auf = t.sunrise && t.sunrise[i], unter = t.sunset && t.sunset[i];
+    var jetzt = w3Jetzt().slice(0, 13), zeilen = [];
+    h.time.forEach(function (z, k) { if (z.slice(0, 10) === datum && w3SegFuer(z, auf, unter) === w3Seg) zeilen.push(k); });
+    var wortTag = i === 0 ? 'Heute' : teile(datum).wt;
+    var summe = zeilen.length ? 'Tief ' + rund(w3Min(zeilen.map(function (k) { return h.temperature_2m[k]; }))) + '°C · Hoch ' + rund(w3Max(zeilen.map(function (k) { return h.temperature_2m[k]; }))) + '°C · Regen ' + dez(zeilen.reduce(function (a, k) { return a + (h.precipitation[k] || 0); }, 0)) + ' mm' +
+      (h.wind_speed_10m ? ' · Wind bis ' + windTxt(w3Max(zeilen.map(function (k) { return h.wind_speed_10m[k]; }))) : '') : 'Für diesen Abschnitt gibt es keine Stundenwerte.';
+    var sm = w3SonneMond(datum);
+    var liste = zeilen.map(function (k) {
+      var vorbei = h.time[k].slice(0, 13) < jetzt;
+      return '<li class="w3-std-zeile' + (vorbei ? ' vorbei' : '') + '"><span class="zahl w3-z">' + hm(h.time[k]) + '</span>' + sym(wArt(h.weather_code[k], h.is_day[k]), 'w3-sym', wText(h.weather_code[k], h.is_day[k])) +
+        '<span class="zahl w3-t">' + rund(h.temperature_2m[k]) + '°C</span><span class="zahl w3-r">' + dez(h.precipitation[k]) + ' mm' + (h.precipitation_probability && h.precipitation_probability[k] != null ? ' · ' + rund(h.precipitation_probability[k]) + ' %' : '') + '</span>' +
+        '<span class="zahl w3-w">' + (h.wind_speed_10m && h.wind_speed_10m[k] != null ? windTxt(h.wind_speed_10m[k]) + ' ' + richtung(h.wind_direction_10m && h.wind_direction_10m[k]) : '–') + '</span></li>';
+    }).join('');
+    $('#w3TagT').textContent = wortTag + ' ' + datumKurz(datum);
+    $('#w3TagInhalt').innerHTML = '<p class="regen-satz">' + esc(wText(t.weather_code[i], 1)) + ', ' + rund(t.temperature_2m_min[i]) + ' bis ' + rund(t.temperature_2m_max[i]) + '°C</p>' +
+      seg('w3tag', w3Seg, W3_SEGMENTE, 'Abschnitt des Tages') + '<p class="info zahl w3-summe" aria-live="polite">' + summe + '</p>' +
+      '<ul class="w3-std-liste" aria-label="Stundenwerte">' + liste + '</ul>' +
+      '<h3 class="w3-h3">Sonne und Mond</h3><dl class="werte w3-liste-werte"><div><dt>Sonne</dt><dd class="zahl">↑ ' + (auf ? hm(auf) : '–') + ' ↓ ' + (unter ? hm(unter) : '–') + '</dd></div><div><dt>Mond</dt><dd>' + sm.name + ', ' + sm.prozent + ' %</dd></div>' +
+      '<div><dt>Mond auf und unter</dt><dd class="zahl">↑ ' + w3Uhr(sm.mond.auf, sm.versatz) + ' ↓ ' + w3Uhr(sm.mond.ab, sm.versatz) + '</dd></div></dl>' +
+      '<button type="button" class="button leise tippbar mehr-link" data-w3-mond="' + datum + '" aria-haspopup="dialog">Sonne und Mond ausführlich</button>';
+  }
+  function w3TagBlatt(i) {
+    if (!daten) return;
+    var d = w3Blatt('w3Tag', 'Tag');
+    if (!d.dataset.gebunden) {
+      d.dataset.gebunden = '1';
+      d.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-seg="w3tag"] [data-v]');
+        if (b) { w3Seg = b.dataset.v; w3TagFuellen(); var n = $('[data-seg="w3tag"] [aria-checked="true"]', d); if (n) n.focus(); return; }
+        var m = e.target.closest('[data-w3-mond]'); if (m) w3MondBlatt(m.dataset.w3Mond);
+      });
+    }
+    w3Fokus = document.activeElement; w3TagNr = i;
+    // Standard: bei „heute" der Abschnitt, in dem jetzt ist; sonst der Tag
+    var t = daten.daily; w3Seg = i === 0 ? w3SegFuer(w3Jetzt(), t.sunrise && t.sunrise[0], t.sunset && t.sunset[0]) : 'tag';
+    w3TagFuellen(); d.showModal(); $('[data-zu]', d).focus();
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-w3-tag]'); if (t && daten) return w3TagBlatt(+t.dataset.w3Tag);
+    var m = e.target.closest('#tab-wetter [data-w3-mond]'); if (m) { w3Fokus = m; w3MondBlatt(m.dataset.w3Mond); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.tag[data-w3-tag]')) { e.preventDefault(); e.target.click(); }
+  });
+
+  /* --- Wetter-Tab: Tage antippbar, Calima/Meer unter „Was heute geht", Kachel „Sonne und Mond" ganz unten --- */
+  renderWetter = (function (alt) {
+    return function () {
+      alt();
+      var s = $('#tab-wetter'); if (!s || !daten) return;
+      try {
+        w3TageMarkieren();
+        var tage = $('.tage', s); if (tage && !$('.w3-mond-kachel', s)) tage.insertAdjacentHTML('afterend', w3MondKachel());
+        w3StaubHolen(ort); w3MeerHolen(ort); w3ZusatzNeu();
+      } catch (e) { console.error('Welle 3 Wetter', e); }
+    };
+  })(renderWetter);
+
+  /* --- 7. Modellvergleich im Tab „Graphs" (Kurve): 2–3 Modelle, Linien mit Farbe und Strichart --- */
+  var w3VglCache = {}, w3VglNr = 0;
+  var W3_LINIEN = [['var(--akzent)', '', 'durchgezogen'], ['var(--w3-linie-2)', '9 5', 'gestrichelt'], ['var(--w3-linie-3)', '2 5', 'gepunktet']];
+  function w3VglHole(id) {
+    var k = a5PosKey(ort) + '|' + id, c = w3VglCache[k];
+    if (c && Date.now() - c.zeit < 30 * 60000) return Promise.resolve(c.d);
+    return holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + ort.lat + '&longitude=' + ort.lon + '&hourly=temperature_2m,precipitation&forecast_days=3&timezone=auto&models=' + id).then(function (r) {
+      var h = r && r.hourly; if (!h || !h.time || !h.temperature_2m) throw new Error('keine Werte');
+      w3VglCache[k] = { zeit: Date.now(), d: h }; return h;
+    });
+  }
+  function w3Kurven(serien, zeit, B, H, ganzNull, einheit) {
+    var l = 34, r = 10, o = 10, u = 26, n = zeit.length, alle = [];
+    serien.forEach(function (s) { s.werte.forEach(function (v) { if (v != null) alle.push(v); }); });
+    var lo = Math.floor(Math.min.apply(null, alle) - (ganzNull ? 0 : 1)), hi = Math.ceil(Math.max.apply(null, alle) + (ganzNull ? 0 : 1));
+    if (ganzNull) { lo = 0; hi = Math.max(2, hi); }
+    var x = function (i) { return l + i * (B - l - r) / (n - 1); }, y = function (v) { return o + (hi - v) * (H - o - u) / (hi - lo); };
+    var schritt = Math.max(1, Math.round((hi - lo) / 4)), gitter = '';
+    for (var t = Math.ceil(lo); t <= hi; t += schritt) gitter += '<line class="gitter" x1="' + l + '" x2="' + (B - r) + '" y1="' + y(t) + '" y2="' + y(t) + '"/><text x="' + (l - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + einheit + '</text>';
+    var takt = B < 520 ? 12 : 6, achse = zeit.map(function (z, i) { return i % takt === 0 ? '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + hm(z) + '</text>' : ''; }).join('');
+    var linien = serien.map(function (s, si0) {
+      var si = s.stil != null ? s.stil : si0;
+      var pfad = s.werte.map(function (v, i) { return v == null ? '' : (i && s.werte[i - 1] != null ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
+      return '<path class="w3-linie" d="' + pfad + '" style="stroke:' + W3_LINIEN[si][0] + '" stroke-dasharray="' + W3_LINIEN[si][1] + '"/>';
+    }).join('');
+    return { svg: gitter + linien + '<line class="jetzt" x1="' + x(0) + '" x2="' + x(0) + '" y1="' + o + '" y2="' + (H - u) + '"/>' + achse };
+  }
+  function w3VglHtml() {
+    var v = w3Vgl(), spar = w3Spar();
+    var kopf = '<label class="tippbar w3-schalter"><span class="modell-text"><span id="w3VglT">Modelle vergleichen</span><small class="leise">' + (spar ? 'Im Datensparmodus aus. Du kannst ihn unter „Mehr“ ausschalten.' : 'Zeigt 2 bis 3 Wettermodelle als eigene Linien, für Temperatur und Regen') + '</small></span>' +
+      '<input type="checkbox" role="switch" id="w3VglAn"' + (v.an && !spar ? ' checked' : '') + (spar ? ' disabled' : '') + ' aria-labelledby="w3VglT"></label>';
+    if (!v.an || spar) return '<section class="kachel w3-vgl" id="w3Vgl">' + kopf + '</section>';
+    var chips = MODELLE.map(function (m) {
+      var pos = v.modelle.indexOf(m[0]);
+      return '<button type="button" class="chip tippbar w3-chip" data-w3-modell="' + m[0] + '" aria-pressed="' + (pos >= 0) + '">' + (pos >= 0 ? '<svg class="w3-chip-linie" viewBox="0 0 28 10" aria-hidden="true"><line x1="2" x2="26" y1="5" y2="5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="' + W3_LINIEN[pos][1] + '"/></svg>' : '') + esc(m[1]) + '</button>';
+    }).join('');
+    return '<section class="kachel w3-vgl" id="w3Vgl">' + kopf + '<div class="chips w3-chips" role="group" aria-label="Modelle zum Vergleichen">' + chips + '</div>' +
+      '<p class="info">Wähle 2 bis 3 Modelle. Die Reihenfolge der Wahl bestimmt Farbe und Strichart.</p><div id="w3VglBild" aria-live="polite"><p class="info">Lade Modelle …</p></div></section>';
+  }
+  function w3VglEinsetzen() {
+    var seite = $('#tab-graphs'), karte = $('.kachel.graph', seite); if (!karte) return;
+    var alt = $('#w3Vgl', seite); if (alt) alt.remove();
+    karte.insertAdjacentHTML('afterend', w3VglHtml());
+    var v = w3Vgl(); if (!v.an || w3Spar()) return;
+    var nr = ++w3VglNr, ziel = $('#w3VglBild', seite);
+    Promise.all(v.modelle.map(function (id) { return w3VglHole(id).then(function (h) { return { id: id, h: h }; }, function (e) { return { id: id, fehler: e }; }); })).then(function (erg) {
+      if (nr !== w3VglNr || !document.contains(ziel)) return;
+      var start = daten.hourly.time[stundenIndex()], ok = [], fehler = [];
+      erg.forEach(function (x) {
+        var name = (MODELLE.filter(function (m) { return m[0] === x.id; })[0] || [x.id, x.id])[1];
+        if (x.fehler) return fehler.push(name);
+        var i0 = x.h.time.indexOf(start); if (i0 < 0) i0 = w3Idx(x.h.time);
+        var temp = x.h.temperature_2m.slice(i0, i0 + 48), regen = x.h.precipitation.slice(i0, i0 + 48), zeit = x.h.time.slice(i0, i0 + 48), sum = 0;
+        var n = temp.indexOf(null); if (n > 1) { temp = temp.slice(0, n); regen = regen.slice(0, n); zeit = zeit.slice(0, n); }
+        var kum = regen.map(function (r) { sum += r || 0; return Math.round(sum * 10) / 10; });
+        ok.push({ id: x.id, name: name, temp: temp, kum: kum, zeit: zeit, stil: v.modelle.indexOf(x.id) });
+      });
+      if (!ok.length) { ziel.innerHTML = '<p class="info">Die Modelle sind gerade nicht erreichbar. Bitte später noch einmal versuchen.</p>'; return; }
+      var n = Math.min.apply(null, ok.map(function (o) { return o.temp.length; })), B = Math.max(280, Math.round(($('#w3Vgl', seite).clientWidth || 358) - 32)), H = Math.round(Math.min(grafHoeheMax(), Math.max(190, B * .55)));
+      var zeit = ok[0].zeit.slice(0, n);
+      // die Strichart folgt der Reihenfolge der Wahl, auch wenn ein Modell ausfällt
+      var kT = w3Kurven(ok.map(function (o) { return { werte: o.temp.slice(0, n), stil: o.stil }; }), zeit, B, H, false, '°'), kR = w3Kurven(ok.map(function (o) { return { werte: o.kum.slice(0, n), stil: o.stil }; }), zeit, B, H, true, '');
+      var legende = '<ul class="w3-legende" aria-label="Legende">' + ok.map(function (o) {
+        return '<li><svg viewBox="0 0 30 10" width="30" height="10" aria-hidden="true"><line x1="2" x2="28" y1="5" y2="5" style="stroke:' + W3_LINIEN[o.stil][0] + '" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="' + W3_LINIEN[o.stil][1] + '"/></svg><span>' + esc(o.name) + ' <small>(' + W3_LINIEN[o.stil][2] + ')</small></span></li>';
+      }).join('') + '</ul>';
+      var tabelle = '<table class="w3-tabelle"><caption>Die nächsten ' + n + ' Stunden</caption><thead><tr><th scope="col">Modell</th><th scope="col">Tief</th><th scope="col">Hoch</th><th scope="col">Regen</th></tr></thead><tbody>' + ok.map(function (o) {
+        return '<tr><th scope="row">' + esc(o.name) + '</th><td class="zahl">' + rund(w3Min(o.temp.slice(0, n))) + '°C</td><td class="zahl">' + rund(w3Max(o.temp.slice(0, n))) + '°C</td><td class="zahl">' + dez(o.kum[n - 1]) + ' mm</td></tr>';
+      }).join('') + '</tbody></table>';
+      ziel.innerHTML = '<h2 class="kachel-titel w3-titel">' + Ikon('chart') + 'Temperatur im Vergleich</h2><div class="graph w3-graph"><svg viewBox="0 0 ' + B + ' ' + H + '" role="img" aria-label="Temperatur der Modelle im Vergleich, ' + ok.map(function (o) { return o.name + ' ' + rund(w3Min(o.temp.slice(0, n))) + ' bis ' + rund(w3Max(o.temp.slice(0, n))) + ' Grad'; }).join('; ') + '">' + kT.svg + '</svg></div>' +
+        '<h2 class="kachel-titel w3-titel">' + Ikon('tropfen') + 'Regen im Vergleich (aufsummiert, mm)</h2><div class="graph w3-graph"><svg viewBox="0 0 ' + B + ' ' + H + '" role="img" aria-label="Regensumme der Modelle im Vergleich, ' + ok.map(function (o) { return o.name + ' ' + dez(o.kum[n - 1]) + ' Millimeter'; }).join('; ') + '">' + kR.svg + '</svg></div>' +
+        legende + tabelle + (fehler.length ? '<p class="info">Gerade nicht erreichbar: ' + esc(fehler.join(', ')) + '.</p>' : '') +
+        '<p class="info">Modelle rechnen unterschiedlich. Liegen die Linien nah beieinander, ist die Vorhersage sicher; gehen sie auseinander, ist sie unsicher.</p>';
+    });
+  }
+  renderGraphs = (function (alt) { return function () { alt(); if (daten && graphsModus() === 'kurve') { try { w3VglEinsetzen(); } catch (e) { console.error('Welle 3 Modellvergleich', e); } } }; })(renderGraphs);
+  $('#tab-graphs').addEventListener('change', function (e) {
+    if (e.target.id !== 'w3VglAn') return;
+    var v = w3Vgl(); speicher.schreiben('wpc-vergleich', { an: e.target.checked, modelle: v.modelle });
+    renderGraphs(); var n = $('#w3VglAn'); if (n) n.focus();
+  });
+  $('#tab-graphs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-w3-modell]'); if (!b) return;
+    var v = w3Vgl(), id = b.dataset.w3Modell, m = v.modelle.slice(), i = m.indexOf(id);
+    if (i >= 0) { if (m.length <= 2) return hinweisKurz('Mindestens 2 Modelle bleiben zum Vergleichen.'); m.splice(i, 1); }
+    else { if (m.length >= 3) m.shift(); m.push(id); }
+    speicher.schreiben('wpc-vergleich', { an: true, modelle: m });
+    renderGraphs(); var n = $('[data-w3-modell="' + id + '"]'); if (n) n.focus();
+  });
+
+  /* --- 8. Kartensteuerung (Rad/Sat und Karte): Ebenen-Chips mit Pfeiltasten, Zoom-Knöpfe 44 px, Zeitleiste, Film-Tempo --- */
+  function w3ZoomSteuerung() {
+    var C = L.Control.extend({
+      options: { position: 'topright' },
+      onAdd: function (karte) {
+        var div = L.DomUtil.create('div', 'w3-zoom'); div.setAttribute('role', 'group'); div.setAttribute('aria-label', 'Zoom der Karte');
+        div.innerHTML = '<button type="button" class="w3-zoom-knopf tippbar" data-z="1" aria-label="Karte vergrößern">' + w3Ikon('plus') + '</button><button type="button" class="w3-zoom-knopf tippbar" data-z="-1" aria-label="Karte verkleinern">' + w3Ikon('minus') + '</button>';
+        L.DomEvent.disableClickPropagation(div); L.DomEvent.disableScrollPropagation(div);
+        var plus = $('[data-z="1"]', div), minus = $('[data-z="-1"]', div);
+        var stand = function () { plus.disabled = karte.getZoom() >= karte.getMaxZoom(); minus.disabled = karte.getZoom() <= karte.getMinZoom(); };
+        div.addEventListener('click', function (e) { var b = e.target.closest('[data-z]'); if (!b || b.disabled) return; if (b.dataset.z === '1') karte.zoomIn(); else karte.zoomOut(); });
+        karte.on('zoomend zoomlevelschange', stand); stand();
+        return div;
+      }
+    });
+    return new C();
+  }
+  grundKarte = (function (alt) {
+    return function (el, zoom) {
+      var k = alt(el, zoom);
+      if (el && el.id === 'radarKarte') {
+        if (k.zoomControl) k.zoomControl.remove();
+        if (w3Spar()) k.setMaxZoom(9);   // Datensparmodus: weniger Zoomstufen, weniger Kartenkacheln
+        w3ZoomSteuerung().addTo(k);
+      }
+      return k;
+    };
+  })(grundKarte);
+  function w3SteuerStand() {
+    var st = $('#w3Steuer'); if (!st) return;
+    var spar = w3Spar(), film = ebene === 'radar' ? radar.frames : ebene === 'karte' ? [] : satFilm.frames, z = $('#w3Zeit'), n = film.length;
+    st.hidden = ebene === 'karte' || spar;
+    var hinweis = $('#w3SparHinweis'); if (hinweis) hinweis.hidden = !spar || ebene === 'karte';
+    var p = $('#radarPlay'); if (p && (spar || ebene === 'karte')) p.hidden = true;   // Standbild statt Film
+    z.max = Math.max(0, n - 1); z.disabled = n < 2; z.value = ebene === 'radar' ? radar.i : satFilm.i;
+    var zeit = $('#radarZeit'); z.setAttribute('aria-valuetext', zeit && zeit.textContent ? zeit.textContent : 'Bild ' + (+z.value + 1) + ' von ' + n);
+    $('#w3ZeitHilfe').textContent = ebene === 'radar' ? (n > 1 ? 'Ziehe den Regler oder nutze die Pfeiltasten, um Bild für Bild durch die letzten 2 Stunden zu gehen.' : 'Das Radar lädt noch.') :
+      (n > 1 ? 'Ziehe den Regler, um Bild für Bild durch die letzten 2 Stunden zu gehen.' : '„Abspielen“ lädt zuerst die Bilder der letzten 2 Stunden, danach kannst du hier Bild für Bild schauen.');
+  }
+  function w3SteuerBauen() {
+    var s = $('#tab-radsat'); if (!s) return;
+    if (!$('#w3Steuer', s)) {
+      var fuss = $('.karte-fuss', s); if (!fuss) return;
+      fuss.insertAdjacentHTML('afterend', '<div class="w3-steuer" id="w3Steuer"><div class="w3-zeile"><span class="w3-label" id="w3ZeitL">Zeit</span><input type="range" id="w3Zeit" min="0" max="0" value="0" step="1" disabled aria-labelledby="w3ZeitL" aria-describedby="w3ZeitHilfe"></div>' +
+        '<div class="w3-zeile"><span class="w3-label" id="w3TempoL">Tempo</span>' + seg('w3tempo', w3Tempo(), [['0.5', '0,5×'], ['1', '1×'], ['2', '2×']], 'Tempo des Films') + '</div><p class="info" id="w3ZeitHilfe"></p></div>' +
+        '<p class="info w3-spar-hinweis" id="w3SparHinweis" hidden>Datensparmodus: Radar und Satellit zeigen nur das neueste Bild. Du kannst ihn unter „Mehr“ ausschalten.</p>');
+      $('#w3Zeit').addEventListener('input', function (e) {
+        var wert = +e.target.value, spielt = $('#radarPlay').getAttribute('aria-pressed') === 'true';
+        if (spielt) radarAbspielen();   // Ziehen hält den Film an
+        if (ebene === 'radar') { radar.i = wert; radarZeigen(); } else if (satFilm.frames.length) { satFilm.i = wert; satFrameZeigen(); }
+        w3SteuerStand();
+      });
+      $('[data-seg="w3tempo"]').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-v]'); if (!b) return;
+        speicher.schreiben('wpc-tempo', b.dataset.v);
+        $$('[data-seg="w3tempo"] [data-v]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); });
+        if ($('#radarPlay').getAttribute('aria-pressed') === 'true') { radarAbspielen(); radarAbspielen(); }   // Film mit neuem Tempo neu starten
+      });
+      $('#ebenenWahl').addEventListener('keydown', function (e) {   // Pfeiltasten wechseln die Ebene
+        var pfeil = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]; if (!pfeil) return;
+        var chips = $$('#ebenenWahl [data-ebene]'), i = chips.findIndex(function (c) { return c === document.activeElement; });
+        if (i < 0) i = chips.findIndex(function (c) { return c.dataset.ebene === ebene; });
+        var n = chips[(i + pfeil + chips.length) % chips.length]; e.preventDefault(); n.click(); n.focus();
+      });
+    }
+    w3SteuerStand();
+  }
+  renderRadsat = (function (alt) { return function () { alt(); w3SteuerBauen(); }; })(renderRadsat);
+  ebeneZeigen = (function (alt) { return function () { alt(); w3SteuerStand(); }; })(ebeneZeigen);
+  radarZeigen = (function (alt) { return function () { alt(); w3SteuerStand(); }; })(radarZeigen);
+  satFrameZeigen = (function (alt) { return function () { alt(); w3SteuerStand(); }; })(satFrameZeigen);
+
+  /* --- 9. Tab „Mehr": Abschnitt „Wetter und Karte" mit Datensparmodus, Meer und Calima; Quelle und Datenschutz --- */
+  renderMehr = (function (alt) { return function () { alt(); w3Mehr(); }; })(renderMehr);
+  quellenHtml = (function (alt) {
+    return function () {
+      return alt() + '<a class="tippbar" href="https://open-meteo.com/en/docs/air-quality-api" target="_blank" rel="noopener"><span class="modell-text"><span>Saharastaub: Open-Meteo Luftqualität</span><small class="leise">Staub in der Luft (CAMS), CC BY 4.0</small></span><span aria-hidden="true">↗</span></a>';
+    };
+  })(quellenHtml);
+  function w3Mehr() {
+    var s = $('#tab-mehr'), c = w3Calima(), m = w3MeerEinst();
+    var schalter = function (k, titel, text, an) { return '<label class="tippbar"><span class="modell-text"><span>' + titel + '</span><small class="leise">' + text + '</small></span><input type="checkbox" role="switch" data-w3="' + k + '"' + (an ? ' checked' : '') + '></label>'; };
+    var html = '<h2 class="abschnitt-titel" id="w3Titel">Wetter und Karte</h2><div class="liste a5-liste" id="w3Liste">' +
+      schalter('spar', 'Datensparmodus', 'Weniger und kleinere Abrufe: keine Satellitenfilme, Radar nur als Standbild, kein Modellvergleich, weniger Kartenkacheln', w3Spar()) +
+      schalter('meer', 'Meer-Kachel', 'Wellen, Wassertemperatur und Gezeiten auf der Startseite, nur an Küstenorten', m.an) +
+      schalter('calima', 'Saharastaub-Hinweis (Calima)', 'Eine Kachel auf der Startseite, wenn in den nächsten 48 Stunden viel Staub erwartet wird', c.an) + '</div>' +
+      '<div class="kachel a5-groesse" id="w3Schwelle"' + (c.an ? '' : ' hidden') + '><p class="a5-groesse-titel">Schwelle für den Staub-Hinweis in µg/m³</p>' +
+      seg('w3schwelle', c.schwelle, [['25', '25 früh'], ['50', '50 Standard'], ['100', '100 stark']], 'Schwelle für den Staub-Hinweis') +
+      '<p class="info">Vorschlag 50: Das ist der EU-Grenzwert für Feinstaub (PM10) im Tagesmittel, ab hier ist der Himmel meist merklich milchig. 25 meldet früher, 100 nur bei deutlicher Calima.</p></div>';
+    var vor = $('#a5StartTitel', s) || $$('h2.abschnitt-titel', s).filter(function (h) { return /^Aktuell-Kachel/.test(h.textContent.trim()); })[0];
+    if (vor) vor.insertAdjacentHTML('beforebegin', html); else s.insertAdjacentHTML('beforeend', html);
+    var ds = $('#datenschutz', s); if (ds && !$('.w3-datenschutz', ds)) ds.insertAdjacentHTML('beforeend', '<p class="w3-datenschutz">Meer-, Staub- und Modellvergleichsdaten holt die App ebenfalls bei Open-Meteo (Marine, Luftqualität, Vorhersage); Open-Meteo sieht dabei deine IP-Adresse und die Koordinaten des Orts. Sonne und Mond rechnet die App auf deinem Gerät aus.</p>');
+    $('#w3Liste').addEventListener('change', function (e) {
+      var k = e.target.dataset.w3; if (!k) return;
+      if (k === 'spar') w3SparSetzen(e.target.checked);
+      if (k === 'meer') speicher.schreiben('wpc-meer', { an: e.target.checked });
+      if (k === 'calima') { speicher.schreiben('wpc-calima', { an: e.target.checked, schwelle: w3Calima().schwelle }); $('#w3Schwelle').hidden = !e.target.checked; }
+    });
+    $('[data-seg="w3schwelle"]').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-v]'); if (!b) return;
+      speicher.schreiben('wpc-calima', { an: w3Calima().an, schwelle: +b.dataset.v });
+      $$('[data-seg="w3schwelle"] [data-v]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); });
+    });
+  }
+  w3SparVorschlag();
 
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');

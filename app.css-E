@@ -1,0 +1,740 @@
+/* app.css – WetterProCamera. Nur Variablen aus tokens.css und base.css, keine festen Farben oder Größen (DESIGN.md Regel 36). */
+
+[hidden] { display: none !important; }
+body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
+.ikon { width: var(--ikon-groesse); height: var(--ikon-groesse); stroke-width: var(--strich); flex: none; }
+.zahl { font-variant-numeric: tabular-nums; }
+.leise { color: var(--label-2); }
+.wsym { display: block; }
+
+/* ---------- Kopfzeile (Leiste über die ganze Breite, Glas) ---------- */
+.titelzeile { background: color-mix(in srgb, var(--bg) 90%, transparent); }   /* deckender als --glas-bg, damit gescrollter Text nicht durchscheint (A6) */
+.titelzeile { min-height: calc(var(--safe-top) + var(--kopf-hoehe)); padding-top: var(--safe-top); padding-bottom: 0; gap: var(--s1); border-width: 0 0 1px; border-radius: 0; box-shadow: none; }
+.ikonknopf { width: var(--tap); height: var(--tap); display: grid; place-items: center; border-radius: var(--r-button); color: var(--akzent); flex: none; }
+.ort-block { flex: 1; min-width: 0; text-align: center; }
+.ort { font-size: var(--fs-title2); font-weight: 700; margin: 0; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.modell { font-size: var(--fs-footnote); color: var(--label-2); line-height: 1.2; }
+
+/* Hinweisband für Offline und Fehler */
+.hinweis { margin: var(--s3) var(--rand) 0; padding: var(--s3) var(--s4); border-radius: var(--r-button); background: var(--fuellung); font-size: var(--fs-subhead); display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
+.hinweis .button { min-height: var(--tap); }
+.hinweis-text { flex: 1; min-width: 0; }
+/* Leer/Fehler: ruhiger Zustand mit Symbol, einem Satz und einer Aktion (A4) */
+.leer-zustand { display: grid; justify-items: center; text-align: center; gap: var(--s3); padding: var(--s8) var(--s4); }
+.leer-zustand .ikon { width: 48px; height: 48px; color: var(--label-2); }
+.leer-zustand p { margin: 0; max-width: 65ch; color: var(--label-2); }
+.leer-zustand p b { color: var(--label); }
+
+/* ---------- Inhalt ---------- */
+.inhalt { padding-top: var(--kachel-abstand); padding-bottom: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s8) + var(--s4)); max-width: 720px; margin: 0 auto; }
+/* minmax(0, 1fr): kein Inhalt darf die Spalte über den rechten Rand drücken (UX-Prüfung A1) */
+.tab-seite { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); }
+.tab-seite[hidden] { display: none; }
+.kachel { padding: var(--s3) var(--s4); }
+.kachel-titel { font-size: var(--fs-footnote); font-weight: 600; color: var(--label-2); margin: 0 0 var(--s2); display: flex; align-items: center; gap: var(--s2); }
+.kachel-titel .ikon { width: 17px; height: 17px; }
+.tippbar { transition: opacity var(--dauer) var(--ease), transform var(--dauer) var(--ease); }
+.tippbar:active { opacity: .6; transform: scale(.97); }
+
+/* (1) Aktuell-Kachel, zweispaltig mit Trennlinie */
+/* Beide Hälften gleich breit, Inhalt bleibt innerhalb der Innenabstände (UX-Prüfung A2) */
+.akt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0; }
+.akt-l, .akt-r { padding: var(--s3) var(--s4); min-width: 0; }
+.akt-l { display: grid; grid-template-rows: auto 1fr auto; border-right: 1px solid var(--trenner); }
+.akt-kopf { font-size: var(--fs-footnote); }
+.akt-kopf b { font-weight: 600; }
+.akt-sym { width: 112px; height: 112px; justify-self: center; align-self: center; margin: var(--s1) 0; }
+.akt-fuss { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.akt-temp { font-size: var(--fs-large-title); font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+.akt-regen { font-size: var(--fs-footnote); color: var(--label-2); white-space: nowrap; }
+.akt-lage { text-align: center; font-weight: 600; font-size: var(--fs-subhead); margin-bottom: var(--s3); }
+.werte { display: grid; gap: var(--s1); font-size: var(--fs-subhead); }
+.werte > div { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: var(--s2); }
+.werte > div > dd { margin-left: auto; }   /* bei großer Schrift rutscht der Wert unter die Bezeichnung, bleibt rechtsbündig */
+.werte dt { color: var(--label-2); }
+.werte dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.windzeile { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s3); }
+.windrose { width: 30px; height: 30px; flex: none; color: var(--label-2); }
+.wind-wert { line-height: 1.05; }
+.wind-wert b { font-size: var(--fs-title3); font-variant-numeric: tabular-nums; }
+.wind-wert small { display: block; font-size: var(--fs-caption); color: var(--label-2); }
+.boeen { margin-left: auto; text-align: right; font-size: var(--fs-caption); color: var(--label-2); }
+
+/* Rechte Hälfte der Aktuell-Kachel: Werte, Radar oder Webcam */
+.akt-l[role="button"] { cursor: pointer; }
+.akt-r { position: relative; }
+.akt-r.medien { padding: 0; overflow: hidden; border-radius: 0 var(--r-kachel) var(--r-kachel) 0; min-height: 230px; background: var(--fuellung); }
+.mk-grund { filter: grayscale(1) brightness(.5) contrast(1.15); }   /* dunkle Grundkarte, damit der Regen leuchtet */
+.mini-karte, .mk-bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mk-zeit, .mk-label { position: absolute; z-index: 500; font-size: var(--fs-footnote); font-weight: 600; color: #fff; background: rgba(0,0,0,.55); padding: 2px var(--s2); }
+.mk-zeit { top: 0; right: 0; border-bottom-left-radius: var(--s2); }
+.mk-label { bottom: 0; right: 0; border-top-left-radius: var(--s2); text-decoration: none; }
+.mk-leer { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: var(--s4); color: var(--label-2); font-size: var(--fs-footnote); }
+.mk-leer .ikon { width: 32px; height: 32px; margin: 0 auto var(--s2); }
+.mk-leer p { margin: 0; }
+.akt-punkte { position: absolute; z-index: 500; left: var(--s3); bottom: var(--s2); display: flex; gap: var(--s2); }
+.akt-r:not(.medien) .akt-punkte { position: static; margin-top: var(--s3); }
+.akt-punkte i { width: var(--s2); height: var(--s2); border-radius: 50%; background: var(--label-2); }   /* 8 px (A5); label-2 für mindestens 3:1 (Analyse 15.10.) */
+.akt-punkte i.an { background: var(--label); }
+.medien .akt-punkte i { background: rgba(255,255,255,.6); } .medien .akt-punkte i.an { background: #fff; }
+#ansichtListe label { justify-content: space-between; }
+#ansichtListe label.aus > .modell-text > span { color: var(--label-2); }
+#ansichtListe input { width: 22px; height: 22px; accent-color: var(--akzent); }
+
+/* (2) Drei Stundenspalten */
+.std { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0; }
+.std > div { padding: var(--s3) var(--s3); display: grid; gap: var(--s1); min-width: 0; }
+.std > div + div { border-left: 1px solid var(--trenner); }
+.std-zeit { font-size: var(--fs-footnote); color: var(--label-2); }
+.std-sym { width: 60px; height: 60px; justify-self: center; }
+.std-fuss { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s1); }
+.std-regen { font-size: var(--fs-caption); color: var(--label-2); white-space: nowrap; }
+.std-temp { font-size: var(--fs-title3); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Regen in den nächsten 2 Stunden */
+.regen-satz { font-size: var(--fs-body); font-weight: 600; margin: 0 0 var(--s3); }
+.regen-balken { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--s1); align-items: end; height: 56px; }
+.regen-balken i { display: block; border-radius: 4px 4px 0 0; background: var(--akzent); min-height: 3px; opacity: .85; }
+.regen-balken i.trocken { background: var(--fuellung); opacity: 1; }
+.regen-achse { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--label-2); margin-top: var(--s1); }
+.mehr-link { margin-top: var(--s3); }
+/* Text auf Akzentfläche: hell weiß, dunkel schwarz (DESIGN.md Regel 9) */
+.button:not(.leise):not(.rand) { color: var(--auf-akzent); }
+
+/* (3) Tagesliste: gemeinsames Raster, Zeilen leicht getönt (zwei Töne wechselnd) */
+.tage { padding: 0; overflow: hidden; display: grid; grid-template-columns: repeat(5, auto); justify-content: space-between; column-gap: var(--s2); }
+.tag { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; padding: var(--s2) var(--s4); min-height: var(--tap); }
+.tage > .tag:nth-child(odd) { background: var(--tag-a); }
+.tage > .tag:nth-child(even) { background: var(--tag-b); }
+.tage > .tag + .tag { border-top: 1px solid var(--trenner); }
+/* Austariert wie bei WeatherPro: erste Spalte links, letzte rechts, dazwischen mittig */
+.tag > * { justify-self: center; }
+.tag > :first-child { justify-self: start; }
+.tag > :last-child { justify-self: end; }
+.tag-name { line-height: 1.15; }
+.tag-name b { font-weight: 600; display: block; }
+.tag-name small { font-size: var(--fs-caption); color: var(--label-2); }
+.tag-sym { width: 40px; height: 40px; }
+.tag-temp { text-align: right; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tag-temp .min { color: var(--label-2); font-size: var(--fs-subhead); display: block; }
+.tag-temp .max { font-weight: 600; }
+.tag-zusatz { font-size: var(--fs-caption); color: var(--label-2); line-height: 1.3; font-variant-numeric: tabular-nums; white-space: nowrap; display: grid; }
+.tag-zusatz span { display: flex; align-items: center; gap: 3px; }
+.tag-zusatz .ikon { width: 11px; height: 11px; }
+.tag-wind { display: flex; align-items: center; gap: var(--s1); font-variant-numeric: tabular-nums; line-height: 1.05; }
+.tag-wind .windrose { width: 24px; height: 24px; }
+.tag-wind b { font-weight: 600; }
+.tag-wind small { display: block; font-size: var(--fs-caption); color: var(--label-2); }
+
+/* Skeleton beim Laden in Form der echten Inhalte */
+.sk { min-height: 180px; }
+.sk.klein { min-height: 120px; }
+
+/* ---------- Graphs ---------- */
+.graph svg { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; cursor: crosshair; }
+.graph .linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.graph .flaeche { fill: var(--akzent-fuellung); }
+.graph .regen { fill: var(--akzent); opacity: .45; }
+.graph .gitter { stroke: var(--trenner); stroke-width: 1; }
+.graph text { fill: var(--label-2); font-size: var(--fs-caption); font-family: var(--font); font-variant-numeric: tabular-nums; }
+.graph .wahl-linie { stroke: var(--label-2); stroke-width: 1; }
+.graph .wahl-punkt { fill: var(--akzent); stroke: var(--bg-2); stroke-width: 2; }
+.graph-wert { margin: var(--s2) 0 0; font-size: var(--fs-subhead); color: var(--label-2); min-height: 1.4em; }
+.graph-wert.an { color: var(--label); font-weight: 600; }
+.graph .jetzt { stroke: var(--label-3); stroke-dasharray: 3 3; }
+.graph-legende { display: flex; gap: var(--s4); flex-wrap: wrap; font-size: var(--fs-footnote); color: var(--label-2); margin-top: var(--s2); }
+.graph-legende span::before { content: ""; display: inline-block; width: 12px; height: 4px; border-radius: 2px; background: var(--akzent); margin-right: var(--s2); vertical-align: middle; }
+.graph-legende span.r::before { height: 10px; opacity: .45; }
+
+/* ---------- Karten und Radar ---------- */
+.karte { height: min(62dvh, 560px); border-radius: var(--r-kachel); overflow: hidden; background: var(--bg-2); }
+.karte-fuss { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; font-size: var(--fs-footnote); color: var(--label-2); }
+.chips { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.chip { min-height: var(--tap); height: auto; }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--akzent); color: var(--auf-akzent); }
+.ebenen { margin: 0 0 calc(-1 * var(--s2)); }
+.ebenen .chip { padding: 0 var(--s4); }
+.temp-marke { background: var(--bg-2); color: var(--label); border-radius: var(--r-chip); padding: 2px var(--s2); font-weight: 600; font-size: var(--fs-footnote); box-shadow: var(--glas-schatten); white-space: nowrap; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 2px; }
+.temp-marke .wsym { width: 22px; height: 22px; }
+.grund-ruhig { filter: saturate(.35); }   /* ruhigere Grundkarte, damit Radar und Satellit hervortreten (A9) */
+.radar-satz { font-size: var(--fs-subhead); margin: 0; }
+#ebeneQuelle { display: grid; gap: var(--s2); }
+#ebeneQuelle .info { margin: 0; }
+.leaflet-container { font-family: var(--font); background: var(--bg-2); }
+.leaflet-control-attribution { font-size: 11px !important; }
+
+/* ---------- Mehr ---------- */
+.suche { display: flex; gap: var(--s2); }
+.suche input { flex: 1; min-width: 0; min-height: var(--tap); border-radius: var(--r-button); border: 1px solid var(--trenner); background: var(--bg-2); padding: 0 var(--s3); font-size: var(--fs-body); }
+.liste > button { width: 100%; text-align: left; justify-content: space-between; }
+.liste > button[aria-current="true"] { color: var(--akzent); font-weight: 600; }
+.liste .leise { font-size: var(--fs-footnote); }
+.abschnitt-titel { font-size: var(--fs-footnote); color: var(--label-2); margin: var(--s2) var(--s4) calc(-1 * var(--s2)); font-weight: 600; }
+.info { font-size: var(--fs-footnote); color: var(--label-2); line-height: 1.45; max-width: 65ch; }
+.info a { color: var(--akzent); }
+
+/* ---------- Tab-Leiste: schwebende Pille, Glas, Beschriftung immer, aktiver Tab mit Fläche ---------- */
+.tabbar.pille { left: var(--rand); right: var(--rand); bottom: calc(var(--safe-bottom) + var(--s2)); border-radius: var(--r-chip); padding: var(--s1); gap: 2px; max-width: 520px; margin: 0 auto; }
+.tabbar.pille button { min-height: var(--leiste-hoehe); border-radius: var(--r-chip); justify-content: center; font-size: var(--fs-caption); }
+.tabbar.pille button[aria-selected="true"] { background: var(--fuellung); color: var(--akzent); }
+.tabbar.pille button[aria-selected="true"] .ikon { fill: currentColor; fill-opacity: .28; }
+@media (min-width: 768px) {
+  .tabbar.pille { position: fixed; top: auto; bottom: calc(var(--safe-bottom) + var(--s3)); }
+  .tabbar.pille button { flex-direction: column; font-size: var(--fs-caption); }
+  .inhalt { padding-bottom: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s8) + var(--s4)); }
+}
+
+/* ---------- Teilen-Bildschirm: immer schwarz ---------- */
+dialog.teilen { inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: calc(var(--safe-top) + var(--s2)) var(--rand) calc(var(--safe-bottom) + var(--s4)); background: #000; color: #fff; }
+/* Der Teilen-Bildschirm ist immer dunkel: eigene Werte aus den dunklen Apple-Systemfarben (wie tokens.css dunkel) */
+dialog.teilen { --t-flaeche: #1C1C1E; --t-fuellung: rgba(120,120,128,.36); --t-leise: rgba(235,235,245,.6); --t-trenner: rgba(84,84,88,.6); --t-akzent: #0A84FF; overflow: hidden; }
+dialog.teilen[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: var(--s3); }
+dialog.teilen::backdrop { background: #000; }
+.teilen-kopf { display: flex; justify-content: space-between; align-items: center; }
+.teilen-text { color: #fff; font-size: var(--fs-body); min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); }
+#tInfosAuf, #tInfosZu { color: var(--t-akzent); font-weight: 600; }
+.teilen-bild { min-height: 0; display: grid; place-items: center; overflow: hidden; position: relative; }
+#tBild:focus { outline: none; }   /* nur Vorschau, keine Tippfläche */
+.teilen-beispiel { position: absolute; top: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s1) var(--s3); border-radius: var(--r-chip); background: rgba(0,0,0,.7); color: #fff; font-size: var(--fs-footnote); font-weight: 600; white-space: nowrap; max-width: calc(100% - var(--s4)); overflow: hidden; text-overflow: ellipsis; }
+.teilen-bild canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: var(--s2); }
+/* Format-Chips über den Vorlagen; zu viele für die Breite: waagrecht wischen */
+.teilen-formate { display: flex; gap: var(--s2); overflow-x: auto; justify-content: safe center; scrollbar-width: none; padding: 2px; }
+.teilen-formate::-webkit-scrollbar, .teilen-stile::-webkit-scrollbar { display: none; }
+.t-chip { flex: none; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s4); border-radius: var(--r-chip); background: var(--t-fuellung); color: #fff; font-size: var(--fs-subhead); font-weight: 600; font-variant-numeric: tabular-nums; }
+.t-chip[aria-checked="true"] { background: #fff; color: #000; }
+.teilen-stile { display: flex; gap: var(--s3); justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 4px; }
+.teilen-stile button { flex: none; }
+.teilen-stile button { display: grid; gap: var(--s1); justify-items: center; color: #fff; font-size: var(--fs-caption); min-height: var(--tap); }
+.teilen-stile canvas { width: 54px; height: 72px; border-radius: 6px; outline: 2px solid transparent; outline-offset: 2px; }
+.teilen-stile button[aria-checked="true"] canvas { outline-color: #fff; }
+.teilen-knoepfe { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; justify-items: center; }
+.teilen-rund { display: grid; justify-items: center; gap: var(--s1); color: #fff; font-size: var(--fs-caption); cursor: pointer; }
+.teilen-rund.klein > span:first-of-type { width: var(--tap); height: var(--tap); border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; }
+.teilen-rund.gross { width: 76px; height: 76px; border-radius: 50%; background: #fff; color: #000; display: grid; place-items: center; box-shadow: 0 0 0 4px #000, 0 0 0 7px #fff; }
+.teilen-rund.gross .ikon { width: 30px; height: 30px; }
+
+/* Blatt „Infos" im Teilen-Bildschirm (deckend, kein Glas auf Glas) */
+.teilen-blatt { position: absolute; left: 0; right: 0; bottom: 0; max-height: 78dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--t-flaeche); border-radius: var(--r-kachel) var(--r-kachel) 0 0; z-index: 2; color: #fff; }
+.blatt-kopf { display: flex; justify-content: space-between; align-items: center; padding: var(--s2) var(--rand) var(--s2) var(--s4); border-bottom: 1px solid var(--t-trenner); }
+.blatt-kopf h2 { font-size: var(--fs-body); margin: 0; }
+.blatt-inhalt { overflow-y: auto; padding: var(--s3) var(--rand) calc(var(--safe-bottom) + var(--s6)); overscroll-behavior: contain; }
+.blatt-inhalt h3 { font-size: var(--fs-footnote); font-weight: 600; color: var(--t-leise); margin: var(--s5) 0 var(--s2); }
+.blatt-hilfe { font-size: var(--fs-footnote); color: var(--t-leise); margin: var(--s2) 0; max-width: 65ch; }
+.blatt-liste { list-style: none; margin: 0; padding: 0; border-radius: var(--r-button); background: var(--t-fuellung); overflow: hidden; }
+.blatt-liste li { display: flex; align-items: center; }
+.blatt-liste li + li { border-top: 1px solid var(--t-trenner); }
+.blatt-liste label { flex: 1; min-height: var(--tap); display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); font-size: var(--fs-body); }
+.blatt-liste input, .blatt-aus input { width: 22px; height: 22px; accent-color: var(--t-akzent); flex: none; }
+.pfeil { width: var(--tap); height: var(--tap); color: #fff; font-size: var(--fs-title3); flex: none; }
+.pfeil:disabled { color: var(--t-trenner); }
+.blatt-feld { width: 100%; min-height: var(--tap); border-radius: var(--r-button); border: 1px solid var(--t-trenner); background: var(--t-fuellung); color: #fff; padding: 0 var(--s3); font-size: var(--fs-body); }
+.blatt-feld::placeholder { color: var(--t-leise); }
+.blatt-aus { display: flex; gap: var(--s3); align-items: center; min-height: var(--tap); margin-top: var(--s3); color: var(--t-leise); }
+.blatt-aus small { display: block; font-size: var(--fs-footnote); }
+.teilen .seg { background: var(--t-fuellung); }
+.teilen .seg button { color: #fff; }
+.teilen .seg button[aria-checked="true"] { background: #fff; color: #000; }
+
+/* Segment-Wahl (Wind-Einheit, Blatt-Einstellungen) */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 2px; border-radius: var(--r-button); background: var(--fuellung); }
+.seg button { min-height: var(--tap); border-radius: calc(var(--r-button) - 2px); font-size: var(--fs-subhead); font-weight: 500; padding: 0 var(--s1); }
+.seg button[aria-checked="true"] { background: var(--bg-2); color: var(--akzent); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+/* Mehr: Orte mit Favoriten-Stern, Modelle, Webcam-Liste, Quellen */
+.liste > .ort-zeile { padding: 0; gap: 0; }
+.ort-wahl { flex: 1; min-height: var(--tap); display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding: var(--s3) var(--s2) var(--s3) var(--s4); text-align: left; }
+.ort-wahl[aria-current="true"] { color: var(--akzent); font-weight: 600; }
+.stern { width: var(--tap); height: var(--tap); margin-right: var(--s1); display: grid; place-items: center; color: var(--label-2); flex: none; }
+.stern[aria-pressed="true"] { color: var(--akzent); }
+.stern[aria-pressed="true"] .ikon { fill: currentColor; }
+.modell-text { display: grid; gap: 2px; }
+.modell-text small { font-size: var(--fs-footnote); }
+#modellListe label { justify-content: space-between; }
+#modellListe input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.liste > a { color: var(--label); text-decoration: none; justify-content: space-between; }
+.liste > a > span[aria-hidden] { color: var(--akzent); }
+.quellen { margin: 0; padding-left: var(--s5); display: grid; gap: var(--s1); }
+.info.hilfe { margin: calc(-1 * var(--s2)) var(--s4) 0; }
+
+/* Tab-Leiste: Kamera als mittlerer Tab mit Auslöser */
+.tab-kamera .ausloeser { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--akzent); color: var(--auf-akzent); box-shadow: 0 0 0 2px var(--bg-2), 0 0 0 3.5px var(--akzent); }
+.tab-kamera .ausloeser svg { width: 18px; height: 18px; }
+.tabbar.pille .tab-kamera { color: var(--label); }
+@media (min-width: 768px) { .tab-kamera .ausloeser { width: 28px; height: 28px; } }
+
+/* Zugänglichkeit */
+@media (prefers-reduced-transparency: reduce) { .glas { background: var(--bg-2); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+@media (prefers-contrast: more) { :root { --label-2: var(--label); --trenner: var(--label-3); } .glas { background: var(--bg-2); } }
+@media (prefers-reduced-motion: reduce) { .tippbar:active { transform: none; } }
+
+/* === Paket B: App-Technik (15.10.2026) === */
+/* Datenquelle (wie die Liste der Wettermodelle) */
+#quelleListe label { justify-content: space-between; }
+#quelleListe input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+/* Kurzbefehl „Wetterfoto": Anleitung als Fließtext (17 px), Link umbrechbar, damit nichts seitlich herausragt */
+.kurzbefehl { font-size: var(--fs-body); line-height: var(--lh); }
+.kurzbefehl > p { margin: 0 0 var(--s3); max-width: 65ch; }
+.kb-schritte { margin: 0 0 var(--s3); padding-left: var(--s6); display: grid; gap: var(--s2); max-width: 65ch; }
+.kb-schritte li::marker { font-weight: 600; color: var(--label-2); }
+.kb-link { display: block; margin-top: var(--s1); padding: var(--s2) var(--s3); border-radius: var(--r-button); background: var(--fuellung); font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: var(--fs-footnote); overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
+.kb-fuss { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+.kb-fuss .button { min-height: var(--tap); }
+.kb-fuss .leise { font-size: var(--fs-subhead); }
+/* Hinweis im Teilen-Bildschirm nach dem Direktlink ?kamera=1 */
+.teilen-tipp { position: absolute; bottom: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s2) var(--s4); border-radius: var(--r-chip); background: var(--t-flaeche); color: #fff; font-size: var(--fs-subhead); font-weight: 600; text-align: center; width: max-content; max-width: calc(100% - var(--s4)); }
+/* Plus/Minus der Karte (Leaflet, jetzt lokal): Tippfläche 44 px statt 30 px */
+.leaflet-touch .leaflet-control-zoom.leaflet-bar a, .leaflet-control-zoom.leaflet-bar a { width: var(--tap); height: var(--tap); line-height: var(--tap); }
+/* === Paket A: App-Grundlagen (15.10.2026) === */
+
+/* „Letztes Update" oben im Tab Wetter, daneben der Knopf für Mac und iPad */
+.update-zeile { display: flex; align-items: center; justify-content: space-between; gap: var(--s2) var(--s3); flex-wrap: wrap; margin: calc(-1 * var(--s2)) 0 calc(-1 * var(--s1)); }
+.update-text { font-size: var(--fs-footnote); color: var(--label-2); font-variant-numeric: tabular-nums; min-width: 0; }
+.update-knopf { min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s4); font-size: var(--fs-subhead); }
+
+/* Zieh-Anzeige: schwebt unter der Kopfzeile (Glas erlaubt, schwebende Fläche) */
+.zug-anzeige { position: fixed; z-index: 15; top: calc(var(--safe-top) + var(--kopf-hoehe) + var(--s2)); left: 50%; transform: translate(-50%, 0); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); border-radius: var(--r-chip); font-size: var(--fs-footnote); font-weight: 600; color: var(--label); white-space: nowrap; max-width: calc(100vw - 2 * var(--rand)); }
+.zug-anzeige:not(.sichtbar) { visibility: hidden; }
+.zug-anzeige.laedt { transition: transform var(--dauer) var(--ease), opacity var(--dauer) var(--ease); }
+.zug-pfeil { display: grid; color: var(--akzent); transition: transform var(--dauer) var(--ease); }
+.zug-pfeil .ikon { width: 17px; height: 17px; }
+.zug-anzeige.bereit .zug-pfeil { transform: rotate(180deg); }
+.zug-dreh { display: none; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--fuellung); border-top-color: var(--akzent); }
+.zug-anzeige.laedt .zug-pfeil { display: none; }
+.zug-anzeige.laedt .zug-dreh { display: block; animation: zug-dreh .8s linear infinite; }
+@keyframes zug-dreh { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .zug-anzeige, .zug-anzeige.laedt, .zug-pfeil { transition: none; }
+  .zug-anzeige.laedt .zug-dreh { animation: none; border-color: var(--akzent); }   /* ohne Drehen: ruhiger Ring, Text sagt „Aktualisiere …" */
+}
+
+/* Kurzer Hinweis nach dem Teilen („Geteilt ✓"), schwebt über der Tab-Leiste */
+.toast { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s8)); padding: var(--s3) var(--s5); border-radius: var(--r-chip);
+  font-size: var(--fs-body); font-weight: 600; color: var(--label); max-width: calc(100vw - 2 * var(--rand)); text-align: center; }
+
+/* Pilot: Wochen-Rückmeldung und Datenschutz im Tab „Mehr" */
+.pilot { display: grid; gap: var(--s2); justify-items: start; }
+.pilot p { margin: 0; }
+.pilot-satz { font-size: var(--fs-body); font-weight: 600; font-variant-numeric: tabular-nums; }
+.datenschutz p { margin: 0; font-size: var(--fs-body); max-width: 65ch; }
+.datenschutz p + p { margin-top: var(--s2); }
+
+/* Blatt „Rückmeldung" (deckend, kein Glas) */
+dialog.rm-blatt { width: min(560px, calc(100% - 2 * var(--rand))); max-width: none; max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 2 * var(--s4)); padding: 0; border: 0; border-radius: var(--r-kachel); background: var(--bg); color: var(--label); overflow: hidden; }
+dialog.rm-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+dialog.rm-blatt::backdrop { background: rgba(0,0,0,.45); }
+.rm-kopf { display: grid; grid-template-columns: auto minmax(0, 1fr) var(--tap); align-items: center; padding: var(--s1) var(--s2); border-bottom: 1px solid var(--trenner); background: var(--bg-2); }
+.rm-kopf h2 { margin: 0; padding: 0 var(--s2); font-size: var(--fs-body); font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rm-text { justify-self: start; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); color: var(--akzent); font-size: var(--fs-body); }
+.rm-inhalt { overflow-y: auto; overscroll-behavior: contain; padding: var(--s3) var(--s4) var(--s5); display: grid; gap: var(--s2); }
+.rm-woche { margin: 0 0 var(--s2); font-size: var(--fs-body); font-weight: 600; }
+.rm-feld { font-size: var(--fs-subhead); font-weight: 600; margin-top: var(--s2); }
+.rm-inhalt textarea, .rm-inhalt input { width: 100%; min-height: var(--tap); border-radius: var(--r-button); border: 1px solid var(--trenner); background: var(--bg-2); color: var(--label); padding: var(--s2) var(--s3); font: inherit; font-size: max(16px, var(--fs-body)); resize: vertical; }
+.rm-inhalt .info { margin: var(--s2) 0 0; }
+.rm-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2); }
+.rm-status { margin: 0; min-height: 1.3em; font-size: var(--fs-subhead); color: var(--label-2); }
+.rm-ersatz { min-height: 160px; font-size: var(--fs-subhead); }
+
+/* Große Schrift (Dynamic Type): auf iPhone und iPad folgt die Grundgröße der Systemeinstellung.
+   Die Stufen aus tokens.css sind auf 16 px gerechnet; -apple-system-body ist 17 px. Deshalb hier dieselben Stufen
+   geteilt durch 17, damit bei Standardgröße alles gleich groß bleibt (tokens.css bleibt unverändert). */
+@supports (font: -apple-system-body) and (-webkit-touch-callout: none) {
+  html { font: -apple-system-body; }
+  :root { --fs-large-title: 2rem; --fs-title1: 1.647rem; --fs-title2: 1.294rem; --fs-title3: 1.176rem; --fs-body: 1rem; --fs-subhead: .882rem; --fs-footnote: .765rem; --fs-caption: .706rem; --fs-hero: 5.941rem; }
+}
+/* Umbruch bei großer Schrift: nichts ragt über den Rand, Werte dürfen zweizeilig werden */
+.tag-name, .tag-temp, .tag-wind, .tag-zusatz { min-width: 0; }
+.std { container-type: inline-size; }
+@container (max-width: 17em) { .std-fuss { flex-wrap: wrap; } }   /* Regen und Temperatur untereinander, erst bei großer Schrift */
+.akt-fuss { flex-wrap: wrap; }
+.boeen { min-width: 0; }
+.windzeile { flex-wrap: wrap; }
+.hinweis-text { flex: 1 1 14em; overflow-wrap: break-word; }   /* wird es eng, rutscht der Knopf unter den Text */
+.tabbar.pille button > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Tagesliste: Wird die Schrift im Verhältnis zur Breite zu groß (ab etwa 140 % auf dem iPhone), rücken
+   Sonne, Regenrisiko und Regenmenge in eine zweite Zeile unter die Werte. em in der Abfrage = Schriftgröße der Liste. */
+.tage { container-type: inline-size; }
+@container (max-width: 15em) {
+  .tag { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "name sym temp wind" "zusatz zusatz zusatz zusatz"; column-gap: var(--s3); row-gap: var(--s1); }
+  .tag > .tag-name { grid-area: name; } .tag > .tag-sym { grid-area: sym; } .tag > .tag-temp { grid-area: temp; justify-self: end; } .tag > .tag-wind { grid-area: wind; justify-self: end; }
+  .tag > .tag-zusatz { grid-area: zusatz; justify-self: start; display: flex; flex-wrap: wrap; column-gap: var(--s4); }
+}
+
+/* Querformat (iPhone liegend, z. B. 844 × 390) */
+@media (orientation: landscape) and (max-height: 500px) {
+  /* Kopfzeile niedriger: Ort und Modell in einer Zeile; Safe Areas links und rechts (Notch) */
+  .titelzeile { padding-left: max(var(--rand), var(--safe-left)); padding-right: max(var(--rand), var(--safe-right)); }
+  .ort-block { display: flex; align-items: baseline; justify-content: center; gap: var(--s2); }
+  .ort { font-size: var(--fs-title3); min-width: 0; }
+  .modell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
+  .hinweis { margin-left: max(var(--rand), var(--safe-left)); margin-right: max(var(--rand), var(--safe-right)); }
+  /* Inhalt volle Breite (Graphs, Rad/Sat), Platz für die schmalere Tab-Leiste */
+  .inhalt { max-width: none; padding-left: max(var(--rand), var(--safe-left)); padding-right: max(var(--rand), var(--safe-right)); padding-top: var(--s3);
+    padding-bottom: calc(var(--tap) + var(--safe-bottom) + var(--s8)); }
+  /* Tab-Leiste bleibt unten, aber schmaler: Symbol und Beschriftung nebeneinander */
+  .tabbar.pille { max-width: 600px; bottom: calc(var(--safe-bottom) + var(--s1)); padding: 2px; }
+  .tabbar.pille button { flex-direction: row; gap: var(--s1); min-height: var(--tap); min-width: 0; padding: 0 var(--s2); }
+  .tabbar.pille button > span { min-width: 0; }
+  .tabbar.pille button .ikon { width: 20px; height: 20px; }
+  .tab-kamera .ausloeser { width: 28px; height: 28px; }
+  .toast { bottom: calc(var(--tap) + var(--safe-bottom) + var(--s5)); }
+  .zug-anzeige { top: calc(var(--kopf-hoehe) + var(--s2)); }
+  /* Tab Wetter zweispaltig: Aktuell-Kachel links (bleibt stehen), Stunden und Tage rechts */
+  #tab-wetter:has(> .akt) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  #tab-wetter:has(> .akt) > .update-zeile { grid-column: 1 / -1; }
+  #tab-wetter:has(> .akt) > .akt { grid-column: 1; grid-row: 2 / span 3; position: sticky; top: calc(var(--kopf-hoehe) + var(--s3)); }
+  #tab-wetter:has(> .akt) > :not(.akt):not(.update-zeile) { grid-column: 2; }
+  .karte { height: calc(100dvh - var(--kopf-hoehe) - var(--tap) - 140px); min-height: 200px; }
+  /* Teilen-Bildschirm: Bild links, Formate, Vorlagen und Knöpfe rechts */
+  dialog.teilen { padding: var(--s2) max(var(--rand), var(--safe-right)) calc(var(--safe-bottom) + var(--s2)) max(var(--rand), var(--safe-left)); }
+  dialog.teilen[open] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr); column-gap: var(--s5); row-gap: var(--s2); }
+  .teilen-kopf { grid-column: 1 / -1; grid-row: 1; }
+  .teilen-bild { grid-column: 1; grid-row: 2 / -1; }
+  .teilen-bild canvas { max-height: calc(100dvh - var(--tap) - var(--safe-bottom) - 3 * var(--s2)); }   /* ganze Höhe neben den Knöpfen, nichts abgeschnitten */
+  .teilen-formate { grid-column: 2; grid-row: 3; justify-content: flex-start; }
+  .teilen-stile { grid-column: 2; grid-row: 4; justify-content: flex-start; }
+  .teilen-knoepfe { grid-column: 2; grid-row: 5; }
+  .teilen-rund.gross { width: 64px; height: 64px; }
+  .teilen-blatt { left: auto; top: 0; width: min(440px, 56%); max-height: none; border-radius: var(--r-kachel) 0 0 var(--r-kachel); }
+  .blatt-inhalt { padding-right: max(var(--rand), var(--safe-right)); padding-bottom: calc(var(--safe-bottom) + var(--s5)); }
+  dialog.rm-blatt { max-height: calc(100dvh - 2 * var(--s2)); }
+}
+/* === Paket C: App-Funktionen (15.10.2026) === */
+/* Kurze Meldung in Dialogen, Rückfrage im eigenen Dialog */
+.pc-meldung { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + var(--s8) * 3); transform: translateX(-50%); z-index: 50; max-width: min(90vw, 480px); padding: var(--s2) var(--s4); border-radius: var(--r-chip); background: var(--label); color: var(--bg-2); font-size: var(--fs-subhead); font-weight: 600; text-align: center; }
+dialog.teilen .pc-meldung { background: #fff; color: #000; }   /* Teilen-Bildschirm ist immer schwarz */
+dialog.pc-frage { border: 0; border-radius: var(--r-kachel); background: var(--bg-2); color: var(--label); padding: var(--s5) var(--s4) var(--s4); width: min(340px, calc(100vw - 2 * var(--rand))); }
+dialog.pc-frage::backdrop, dialog.pc-blatt::backdrop { background: rgba(0,0,0,.45); }
+.pc-frage p { margin: 0 0 var(--s4); font-size: var(--fs-body); text-align: center; }
+.pc-frage-knoepfe { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.pc-frage-knoepfe .button { min-height: var(--tap); }
+:root { --pc-auf-rot: #000; }   /* Schwarz auf Apple-Rot: hell 5,9:1, dunkel 6,3:1 (Weiß hätte nur 3,6:1) */
+.pc-frage .button.pc-gefahr { background: var(--rot); color: var(--pc-auf-rot); }
+
+/* (1) Eigenes Logo im Blatt „Infos" */
+.pc-logo { display: grid; gap: var(--s2); margin-top: var(--s3); }
+.pc-logo-bild { max-height: 64px; max-width: 60%; object-fit: contain; justify-self: start; padding: var(--s2); border-radius: var(--r-button); background: var(--t-fuellung); }
+.pc-logo-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.pc-datei { display: inline-flex; align-items: center; cursor: pointer; }
+.pc-schalter { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); border-radius: var(--r-button); background: var(--t-fuellung); font-size: var(--fs-body); }
+.pc-schalter small { display: block; font-size: var(--fs-footnote); color: var(--t-leise); }
+.pc-schalter input { width: 22px; height: 22px; accent-color: var(--t-akzent); flex: none; }
+.teilen-kopf #tGalerie { color: var(--t-akzent); }
+
+/* (3) Galerie „Meine Wetterfotos": Vollbild-Dialog im Erscheinungsbild der App */
+dialog.pc-voll { inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 0; background: var(--bg); color: var(--label); }
+dialog.pc-voll[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.pc-voll-kopf, .pc-blatt-kopf { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s2); padding: calc(var(--safe-top) + var(--s1)) var(--rand) var(--s1); border-bottom: 1px solid var(--trenner); background: var(--bg-2); }
+.pc-blatt-kopf { grid-template-columns: 1fr auto; padding-top: var(--s2); }
+.pc-voll-kopf h2, .pc-blatt-kopf h2 { margin: 0; font-size: var(--fs-body); font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pc-blatt-kopf h2 { text-align: left; }
+.pc-kopf-knopf { white-space: nowrap; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s1); color: var(--akzent); font-size: var(--fs-body); justify-self: start; }
+.pc-voll-kopf .pc-kopf-knopf:last-child, .pc-blatt-kopf .pc-kopf-knopf { justify-self: end; font-weight: 600; }
+.pc-voll-inhalt { overflow-y: auto; overscroll-behavior: contain; padding: var(--s4) var(--rand) calc(var(--safe-bottom) + var(--s8)); display: grid; gap: var(--kachel-abstand); align-content: start; max-width: 720px; width: 100%; margin: 0 auto; }
+.pc-kal-kopf { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); }
+.pc-kal-kopf h3 { margin: 0; font-size: var(--fs-title3); font-weight: 600; }
+.pc-rund { width: var(--tap); height: var(--tap); border-radius: 50%; color: var(--akzent); font-size: var(--fs-title2); display: grid; place-items: center; background: var(--fuellung); }
+.pc-kal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s1); }
+.pc-wt { text-align: center; font-size: var(--fs-caption); color: var(--label-2); font-weight: 600; padding-bottom: var(--s1); }
+.pc-kal-tag { position: relative; min-height: var(--tap); aspect-ratio: 1; display: grid; place-items: center; border-radius: var(--r-button); font-size: var(--fs-subhead); color: var(--label-2); overflow: hidden; }
+.pc-kal-tag.heute { color: var(--akzent); font-weight: 700; }
+.pc-kal-tag.hat { color: #fff; font-weight: 700; padding: 0; }
+.pc-kal-tag.hat img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pc-kal-tag.hat span { position: relative; text-shadow: 0 1px 3px rgba(0,0,0,.85); }
+.pc-kal-tag.hat::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.28); }
+.pc-kal-tag.hat span { z-index: 1; }
+.pc-kal-tag[aria-pressed="true"] { outline: 3px solid var(--akzent); outline-offset: 1px; }
+.pc-tag-titel { margin: var(--s2) var(--s4) calc(-1 * var(--s2)); font-size: var(--fs-subhead); color: var(--label); }
+.pc-foto { padding: 0; overflow: hidden; display: grid; }
+.pc-foto img { width: 100%; height: auto; display: block; }
+.pc-foto-text { padding: var(--s3) var(--s4) 0; }
+.pc-foto-werte { display: flex; gap: var(--s2); align-items: center; margin: var(--s1) 0 0; font-size: var(--fs-subhead); color: var(--label-2); }
+.pc-foto-sym { width: var(--sym-groesse); height: var(--sym-groesse); flex: none; }
+.pc-foto-knoepfe { display: flex; gap: var(--s2); padding: var(--s3) var(--s4) var(--s4); }
+.pc-foto-knoepfe .button { min-height: var(--tap); display: inline-flex; align-items: center; gap: var(--s2); }
+.pc-foto-knoepfe .ikon { width: 20px; height: 20px; }
+.pc-gal-hilfe { margin: 0 var(--s4); }
+.pc-zeile-text { display: inline-flex; align-items: center; gap: var(--s2); }
+
+/* (4) Graphs: Wahl „Kurve | Meteogramm", Knopf „Zeilen" und Blatt „Zeilen" */
+.pc-graphs-kopf { display: flex; gap: var(--s2); align-items: center; }
+.pc-graphs-kopf .seg { flex: 1; }
+.pc-zeilen-knopf { min-height: var(--tap); display: inline-flex; align-items: center; gap: var(--s1); flex: none; }
+.pc-zeilen-knopf .ikon { width: 20px; height: 20px; }
+dialog.pc-blatt { margin: auto auto 0; width: 100%; max-width: 560px; max-height: 82dvh; border: 0; padding: 0; border-radius: var(--r-kachel) var(--r-kachel) 0 0; background: var(--bg); color: var(--label); }
+dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.pc-blatt-inhalt { overflow-y: auto; overscroll-behavior: contain; padding: var(--s3) var(--rand) calc(var(--safe-bottom) + var(--s6)); }
+.pc-blatt-inhalt .info { margin: 0 0 var(--s3); }
+.pc-liste { list-style: none; margin: 0; padding: 0; border-radius: var(--r-kachel); background: var(--bg-2); overflow: hidden; }
+.pc-liste li { display: flex; align-items: center; }
+.pc-liste li + li { border-top: 1px solid var(--trenner); }
+.pc-liste label { flex: 1; min-height: var(--tap); display: flex; align-items: center; gap: var(--s3); padding: var(--s1) var(--s3); font-size: var(--fs-body); }
+.pc-liste label small { display: block; font-size: var(--fs-footnote); color: var(--label-2); }
+.pc-liste input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.pc-liste .pfeil { color: var(--akzent); }
+.pc-liste .pfeil:disabled { color: var(--label-3); }
+
+/* Meteogramm-Baustein (meteogramm.css unverändert) in den Farben und Maßen aus tokens.css, wie in WetterPro Glas */
+.pc-mg {
+  --surface: var(--bg-2);
+  --surface-2: color-mix(in srgb, var(--label) 6%, var(--bg-2));
+  --border: var(--trenner); --ink: var(--label); --ink-dim: var(--label-2);
+  --teal: var(--akzent); --shadow: none;
+  --mg-serif: var(--font); --mg-mono: var(--font);
+  --mg-r: var(--r-button);
+  --mg-haft-unten: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s4));   /* Knopfleiste bleibt über der Tab-Leiste */
+  font-variant-numeric: tabular-nums; min-width: 0;
+}
+.pc-mg.mg { border: 0; border-radius: var(--r-kachel); box-shadow: none; background: var(--bg-2); margin: 0; }
+.pc-mg .mg-top { display: none; }                                             /* nur ein Ort, nur ein Modell: steht schon in der Kopfzeile */
+.pc-mg .mg-cam, .pc-mg .mg-ansichten, .pc-mg .mg-camwahl { display: none !important; }
+.pc-mg .mg-zeilenwahl, .pc-mg .mg-farbwahl { display: none !important; }      /* Zeilen wählt das Blatt „Zeilen" der App, Farben kommen aus tokens.css */
+.pc-mg .mg-lage-i { display: none; }                                          /* Emoji-Wettersymbol: die App nutzt nur symbole.js */
+.pc-mg .mg-readout { border-radius: var(--r-kachel) var(--r-kachel) var(--r-button) var(--r-button); box-shadow: 0 10px 14px -10px rgba(0,0,0,.18); }
+.pc-mg .mg-zeit { border-radius: var(--r-button); font-size: var(--fs-body); }
+.pc-mg .mg-wrap { border-color: var(--trenner); }
+.pc-mg .mg-knoepfe { background: var(--bg-2); border-top: 1px solid var(--trenner); border-bottom: 0; padding: var(--s2) var(--s3); border-radius: 0 0 var(--r-kachel) var(--r-kachel); }
+.pc-mg .mg-btn { min-height: var(--tap); min-width: var(--tap); border: 0; border-radius: var(--r-button); background: var(--fuellung); color: var(--akzent); font: 600 var(--fs-subhead)/1 var(--font); transition: opacity var(--dauer) var(--ease), transform var(--dauer) var(--ease); }
+.pc-mg .mg-btn:active { opacity: .6; transform: scale(.97); }
+.pc-mg .mg-btn .mg-i { width: 20px; height: 20px; }
+.pc-mg .mg-gruppe { border: 0; border-radius: var(--r-button); background: var(--fuellung); }
+.pc-mg .mg-gruppe .mg-btn { background: transparent; }
+.pc-mg .mg-gruppe > * + * { border-left: 1px solid var(--trenner); }
+.pc-mg .mg-jrel { color: var(--label-2); }
+.pc-mg .mg-ecke { border-color: var(--trenner); border-radius: var(--r-button); background: var(--bg-2); }
+.pc-mg .mg-ecke .mg-btn, .pc-mg .mg-ecke-lupe { color: var(--label); min-height: var(--tap); min-width: var(--tap); }
+.pc-mg .mg-randpfeil { border-color: var(--trenner); background: var(--bg-2); border-radius: var(--r-button); color: var(--akzent); min-height: var(--tap); min-width: var(--tap); }
+.pc-mg .mg-zoomhinweis { border-radius: var(--r-button); }
+.pc-mg .mg-achse { background: var(--bg-2); border-right: 1px solid var(--trenner); }
+.pc-mg .mg-ax-titel, .pc-mg .mg-ax-datum { border-radius: 0 var(--s2) var(--s2) 0; }
+.pc-mg .mg-svg .mg-nacht { fill: var(--fuellung); }
+.pc-mg .mg-wl, .pc-mg .mg-wz, .pc-mg .mg-wv small, .pc-mg small { font-size: 11px; }        /* nichts unter 11 px */
+.pc-mg .mg-svg .mg-mark, .pc-mg .mg-svg .mg-sonne, .pc-mg .mg-svg .mg-tagesinfo { font-size: 11px; }
+.pc-mg .mg-foot { padding-bottom: var(--s4); font-size: var(--fs-caption); color: var(--label-2); }
+/* Vollbild des Meteogramms: Kopfzeile und Tab-Leiste der App ausblenden */
+.pc-mg-voll .titelzeile, .pc-mg-voll .tabbar, .pc-mg-voll .pc-graphs-kopf { display: none; }
+@media (prefers-reduced-motion: reduce) { .pc-mg .mg-btn:active { transform: none; } }
+
+/* === Paket A4: Meteogramm-Hilfetext nie unter die schwebende Tab-Leiste (15.10.2026) === */
+.pc-mg, .pc-mg.mg { margin-bottom: var(--s6); }   /* zusätzlich zum Platz in .inhalt (Tab-Leiste plus Safe-Area): Hilfetext bleibt sicher darüber */
+.pc-mg-voll .pc-mg, .pc-mg-voll .pc-mg.mg { margin-bottom: 0; }   /* im Vollbild gibt es keine Tab-Leiste */
+
+/* === Paket A6: Mac-Layout (15.10.2026) === */
+/* Ab 1024 px Breite mit Maus oder Trackpad: Seitenleiste links statt Tab-Leiste unten, Inhalt zweispaltig,
+   dichte Schriftstufen wie auf dem Mac. Eigene Variablen (--mac-*), tokens.css bleibt unverändert.
+   Auf iPhone und iPad (ohne Maus) gilt nichts davon. */
+.mac-leiste { display: none; }
+.mac-spalte { display: contents; }   /* Spalten-Hüllen gibt es nur auf dem Mac; sicherheitshalber ohne eigene Box */
+
+@media (min-width: 1024px) and (hover: hover) {
+  :root {
+    /* Dichte Stufen (Mac): Text 13 px, Zweittext 12 px (11 px bleibt verboten), Überschrift 20 px */
+    --mac-text: 0.8125rem;          /* 13 px */
+    --mac-zweit: 0.75rem;           /* 12 px */
+    --mac-ueberschrift: 1.25rem;    /* 20 px */
+    --mac-zwischen: 0.9375rem;      /* 15 px, Zwischenstufe für Werte */
+    --mac-titel: 1.375rem;          /* 22 px */
+    --mac-gross: 1.625rem;          /* 26 px, große Zahl */
+    --mac-klick: 28px;              /* Klickfläche mit Maus */
+    --mac-leiste-b: 248px;          /* Breite der Seitenleiste */
+    --mac-inhalt-max: 1240px;
+    --fs-large-title: var(--mac-gross); --fs-title1: var(--mac-titel); --fs-title2: var(--mac-ueberschrift); --fs-title3: var(--mac-zwischen);
+    --fs-body: var(--mac-text); --fs-subhead: var(--mac-zweit); --fs-footnote: var(--mac-zweit); --fs-caption: var(--mac-zweit);
+    --tap: var(--mac-klick);
+  }
+  body { padding-left: var(--mac-leiste-b); }
+
+  /* Seitenleiste: App-Name, Bereiche, Orte, Teilen, Kürzel (deckend, kein Glas) */
+  .mac-leiste { display: flex; flex-direction: column; gap: var(--s5); position: fixed; z-index: 25; top: 0; bottom: 0; left: 0; width: var(--mac-leiste-b);
+    overflow-y: auto; overscroll-behavior: contain; padding: var(--s4) var(--s3); background: var(--bg-2); border-right: 1px solid var(--trenner); }
+  .ml-name { font-size: var(--fs-title3); font-weight: 700; padding: var(--s1) var(--s2) 0; }
+  .ml-titel { font-size: var(--fs-caption); font-weight: 600; color: var(--label-2); margin: 0 0 var(--s1); padding: 0 var(--s2); }
+  .ml-liste { display: grid; gap: 2px; }
+  .ml-knopf { display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: var(--tap); padding: var(--s1) var(--s2); border-radius: var(--r-button); color: var(--label); text-align: left; font-size: var(--fs-body); }
+  .ml-knopf .ikon { width: 17px; height: 17px; color: var(--akzent); }
+  .ml-knopf .ml-stern { fill: currentColor; }
+  .ml-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ml-kbd { font: inherit; font-size: var(--fs-caption); color: var(--label-2); font-variant-numeric: tabular-nums; }
+  .ml-knopf[aria-current] { background: var(--fuellung); color: var(--akzent); font-weight: 600; }
+  .ml-knopf[aria-current="page"] .ikon { fill: currentColor; fill-opacity: .28; }
+  .ml-knopf:hover { background: var(--fuellung); }
+  .ml-knopf:focus-visible, .ml-teilen:focus-visible { outline-offset: -2px; }   /* Fokusring bleibt in der Leiste sichtbar */
+  .ml-leise { color: var(--label-2); margin-top: var(--s1); }
+  .ml-fuss { margin-top: auto; display: grid; gap: var(--s3); }
+  .ml-teilen { gap: var(--s2); width: 100%; min-height: var(--tap); padding: var(--s1) var(--s3); }
+  .ml-teilen .ikon { width: 17px; height: 17px; }
+  .ml-kuerzel { margin: 0; padding: 0 var(--s2); font-size: var(--fs-caption); color: var(--label-2); line-height: 1.45; }
+  .ml-kuerzel b { color: var(--label); font-weight: 600; }
+
+  /* Keine Tab-Leiste unten; Orte-Knopf oben entfällt (Orte stehen in der Leiste), Ort linksbündig wie eine Mac-Fensterleiste */
+  .tabbar, .tabbar.pille { display: none; }
+  #btnMenue { display: none; }
+  .titelzeile { padding-left: var(--s6); padding-right: var(--s4); }
+  .ort-block { text-align: left; display: flex; align-items: baseline; gap: var(--s3); }
+  .ort { flex: 0 1 auto; min-width: 0; }
+  .modell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .hinweis { margin: var(--s3) var(--s6) 0; }
+  .inhalt { max-width: var(--mac-inhalt-max); padding: var(--s5) var(--s6) var(--s8); }
+  .toast, .zug-anzeige { left: calc(50% + var(--mac-leiste-b) / 2); }
+  .toast { bottom: var(--s8); }
+
+  /* Wetter zweispaltig: links Aktuell und Stunden (bleiben stehen), rechts Tagesliste, Regenradar und alle weiteren Kacheln */
+  #tab-wetter.mac-zwei { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s5); align-items: start; }
+  #tab-wetter.mac-zwei > .update-zeile { grid-column: 1 / -1; margin: 0; }
+  .mac-spalte { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); align-content: start; min-width: 0; }
+  .akt-sym { width: 96px; height: 96px; }
+  .std-sym { width: 52px; height: 52px; }
+  .tag { min-height: 40px; padding-top: var(--s1); padding-bottom: var(--s1); }
+  .tag-sym { width: 34px; height: 34px; }
+
+  /* Graphs und Rad/Sat volle Breite mit mehr Höhe (Graph-Höhe rechnet app.js) */
+  .karte { height: max(360px, calc(100dvh - var(--kopf-hoehe) - 220px)); }
+  .pc-mg { --mg-haft-unten: var(--s4); }
+  .leaflet-control-attribution { font-size: var(--mac-zweit) !important; }
+
+  /* Mehr zweispaltig: je Überschrift eine Gruppe, Gruppen werden nie zerteilt */
+  #tab-mehr.mac-gruppiert { display: block; column-count: 2; column-gap: var(--s6); }
+  #tab-mehr.mac-gruppiert > .mac-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); margin-bottom: var(--s6); break-inside: avoid; -webkit-column-break-inside: avoid; }
+
+  /* Teilen als Fenster mittig (nicht Vollbild): Bild links, Formate, Vorlagen und Knöpfe rechts */
+  dialog.teilen { --mac-teilen-h: min(760px, calc(100dvh - 2 * var(--s8)));
+    inset: 0; margin: auto; width: min(1040px, calc(100vw - 2 * var(--s8))); height: var(--mac-teilen-h); border-radius: var(--r-kachel); padding: var(--s3) var(--s5) var(--s4); box-shadow: var(--glas-schatten); }
+  dialog.teilen::backdrop { background: rgba(0,0,0,.55); }
+  dialog.teilen[open] { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr); column-gap: var(--s6); row-gap: var(--s3); }
+  .teilen-kopf { grid-column: 1 / -1; grid-row: 1; }
+  .teilen-bild { grid-column: 1; grid-row: 2 / -1; }
+  .teilen-bild canvas { max-height: calc(var(--mac-teilen-h) - var(--tap) - var(--s3) - var(--s3) - var(--s4)); }
+  .teilen-formate { grid-column: 2; grid-row: 3; justify-content: flex-start; flex-wrap: wrap; overflow: visible; }
+  .teilen-stile { grid-column: 2; grid-row: 4; justify-content: flex-start; flex-wrap: wrap; overflow: visible; }
+  .teilen-knoepfe { grid-column: 2; grid-row: 5; }
+  .teilen-rund.gross { width: 64px; height: 64px; }
+  .teilen-blatt { left: auto; top: 0; width: min(420px, 46%); max-height: none; border-radius: 0 var(--r-kachel) var(--r-kachel) 0; }
+  .blatt-inhalt { padding-bottom: var(--s5); }
+  /* Blätter und Galerie ebenfalls als Fenster mittig */
+  dialog.pc-blatt { margin: auto; border-radius: var(--r-kachel); max-height: min(720px, calc(100dvh - 2 * var(--s8))); }
+  dialog.pc-voll { margin: auto; width: min(860px, calc(100vw - 2 * var(--s8))); height: min(820px, calc(100dvh - 2 * var(--s8))); border-radius: var(--r-kachel); overflow: hidden; }
+  dialog.pc-voll::backdrop { background: rgba(0,0,0,.45); }
+  .pc-voll-kopf { padding-top: var(--s1); }
+}
+/* Aktuell und Stunden bleiben beim Scrollen stehen, wenn das Fenster hoch genug ist */
+@media (min-width: 1024px) and (hover: hover) and (min-height: 700px) {
+  .mac-links { position: sticky; top: calc(var(--kopf-hoehe) + var(--s4)); }
+}
+/* === Paket A5: Corralejo mit DWD, Meteogramm auf der Startseite, „Was heute geht" (15.10.2026) === */
+/* Aktuell aus der Vorhersage (keine Messstation in der Nähe) */
+.a5-vorhersage { color: var(--label-2); font-size: var(--fs-caption); white-space: nowrap; }
+/* Kachel „Was heute geht": Symbol links, ein Satz rechts */
+.a5-tipp-liste { list-style: none; margin: 0; padding: 0; display: grid; }
+.a5-tipp-liste li { display: grid; grid-template-columns: var(--sym-groesse) minmax(0, 1fr); align-items: center; gap: var(--s3); min-height: var(--tap); padding: var(--s1) 0; }
+.a5-tipp-liste li + li { border-top: 1px solid var(--trenner); }
+.a5-tipp-sym { display: grid; place-items: center; width: var(--sym-groesse); height: var(--sym-groesse); color: var(--label); }
+.a5-tipp-sym .wsym { width: var(--sym-groesse); height: var(--sym-groesse); }
+.a5-tipp-sym .ikon { width: var(--ikon-groesse); height: var(--ikon-groesse); }
+.a5-tipp-satz { font-size: var(--fs-body); line-height: var(--lh); max-width: 65ch; }
+.a5-leer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); }
+.a5-leer p { margin: 0; font-size: var(--fs-body); color: var(--label-2); }
+/* Meteogramm-Kachel auf der Startseite: Baustein ohne eigene Fläche, ohne Knopfleiste und Hilfetext (dafür „Ganz ansehen") */
+.a5-mg-kachel { padding-bottom: var(--s2); }
+.a5-mg-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.a5-mg-kopf .kachel-titel { margin: 0; }
+.a5-mg-kachel .pc-mg.mg, .a5-mg-kachel .pc-mg { margin: var(--s2) 0 0; background: transparent; border-radius: 0; }
+.a5-mg-kachel .pc-mg .mg-knoepfe, .a5-mg-kachel .pc-mg .mg-foot, .a5-mg-kachel .pc-mg .mg-haft-fuss { display: none; }
+/* Tab „Mehr", Abschnitt „Startseite" */
+.a5-liste label { justify-content: space-between; }
+.a5-liste input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.a5-groesse { display: grid; gap: var(--s2); }
+.a5-groesse-titel { margin: 0; font-size: var(--fs-subhead); font-weight: 600; }
+.a5-groesse .info { margin: 0; }
+.a5-mg-kachel .pc-mg .mg-ecke { display: none; }   /* Zoomen geht mit zwei Fingern; Knöpfe nur im Tab „Graphs" */
+
+<<<<<<< HEAD
+/* === Welle 3 Gruppe 3: Webcams (nur sichtbar, wenn WEBCAMS_FREIGABE an ist) === */
+.wc .chips, .wc .seg, .wc .info { margin-top: var(--s3); }
+.wc .chip { max-width: 100%; }
+.wc-buehne { position: relative; margin-top: var(--s3); border-radius: var(--r-button); overflow: hidden; background: var(--fuellung); aspect-ratio: 4 / 3; display: grid; place-items: center; }
+.wc-bild { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wc-lade { margin: 0; color: var(--label-2); font-size: var(--fs-footnote); }
+.wc-fehler { display: grid; justify-items: center; gap: var(--s2); padding: var(--s4); text-align: center; color: var(--label-2); font-size: var(--fs-footnote); }
+.wc-fehler .ikon { width: 32px; height: 32px; }
+.wc-fehler p { margin: 0; }
+.wc-zeit { margin: var(--s2) 0 0; font-size: var(--fs-footnote); color: var(--label-2); }
+.wc-quelle { margin: var(--s1) 0 0; font-size: var(--fs-footnote); color: var(--label-2); }
+.wc-quelle a { color: var(--akzent); display: inline-flex; align-items: center; min-height: var(--tap); }
+.wc-film { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); }
+.wc-film input[type="range"] { flex: 1; min-width: 0; min-height: var(--tap); accent-color: var(--akzent); }
+#wcSteuerung .seg { margin-top: var(--s3); }
+.wc-streifen { display: flex; gap: var(--s2); overflow-x: auto; margin-top: var(--s3); padding-bottom: var(--s1); scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
+.wc-zelle { flex: 0 0 auto; width: 88px; min-height: var(--tap); display: grid; gap: 2px; justify-items: center; padding: var(--s1); border-radius: var(--r-button); background: var(--fuellung); scroll-snap-align: start; font-size: var(--fs-footnote); color: var(--label); }
+.wc-zelle img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: calc(var(--r-button) - 4px); }
+.wc-zelle.leer { align-content: center; color: var(--label-2); min-height: 72px; }
+@media (min-width: 1024px) and (hover: hover) { .wc-zelle { min-height: 28px; } }
+=======
+/* === Welle 3 Wetter und Karte (16.10.2026) === */
+:root { --w3-linie-2: color-mix(in srgb, var(--orange) 62%, var(--label)); --w3-linie-3: color-mix(in srgb, var(--gruen) 55%, var(--label)); }
+/* Tage antippbar */
+.tag[data-w3-tag] { cursor: pointer; }
+.tag[data-w3-tag]:focus-visible { outline-offset: -2px; }
+.w3-tag-hilfe { grid-column: 1 / -1; margin: 0; padding: var(--s2) var(--s4) var(--s3); }
+/* Blätter: Tagesdetail, Sonne und Mond */
+.w3-h3 { font-size: var(--fs-subhead); font-weight: 600; margin: var(--s4) 0 var(--s2); }
+.w3-summe { margin: var(--s2) 0; }
+.w3-std-liste { list-style: none; margin: 0; padding: 0; display: grid; }
+.w3-std-zeile { display: grid; grid-template-columns: 3.2em var(--sym-groesse) 3.4em minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--s2); min-height: var(--tap); border-top: 1px solid var(--trenner); font-size: var(--fs-subhead); }
+.w3-std-zeile .w3-sym { width: var(--sym-groesse); height: var(--sym-groesse); }
+.w3-std-zeile.vorbei { color: var(--label-2); }
+.w3-std-zeile .w3-r, .w3-std-zeile .w3-w { font-size: var(--fs-footnote); text-align: right; }
+.w3-liste-werte { margin: 0 0 var(--s2); }
+.w3-mond-kopf { display: flex; align-items: center; gap: var(--s4); }
+.w3-mond-kopf .regen-satz { margin: 0; }
+.w3-mond-bild { width: 56px; height: 56px; flex: none; }
+.w3-mond-dunkel { fill: var(--fuellung); stroke: var(--trenner); stroke-width: .8; }
+.w3-mond-hell { fill: var(--gelb); }
+.w3-leise { font-weight: 400; font-size: var(--fs-subhead); color: var(--label-2); }
+.w3-bogen { width: 100%; height: auto; display: block; }
+.w3-horizont { stroke: var(--trenner); stroke-width: 1; }
+.w3-sonne-linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; }
+.w3-sonne-jetzt { fill: var(--orange); stroke: var(--bg-2); stroke-width: 2; }
+/* Meer */
+.w3-werte { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2) var(--s4); margin: 0 0 var(--s3); font-size: var(--fs-subhead); }
+.w3-werte > div { display: flex; flex-direction: column; }
+.w3-werte dt { font-size: var(--fs-footnote); color: var(--label-2); }
+.w3-werte dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.w3-tide { width: 100%; height: 90px; display: block; }
+.w3-tide-linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.w3-null, .w3-tide .jetzt { stroke: var(--label-3); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.w3-achse { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--label-2); margin-top: var(--s1); }
+.w3-meer .info, .w3-calima .info { margin: var(--s2) 0 0; }
+/* Modellvergleich */
+.w3-vgl { display: grid; gap: var(--s3); }
+.w3-schalter { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); }
+.w3-schalter input { width: 22px; height: 22px; accent-color: var(--akzent); flex: none; }
+.w3-vgl .info { margin: 0; }
+.w3-chip { display: inline-flex; align-items: center; }
+.w3-chip-linie { width: 28px; height: 10px; margin-right: var(--s2); flex: none; }
+.w3-titel { margin: var(--s2) 0 0; }
+.w3-graph svg { width: 100%; height: auto; display: block; overflow: visible; cursor: default; }
+.w3-linie { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.w3-legende { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); font-size: var(--fs-footnote); color: var(--label-2); }
+.w3-legende li { display: flex; align-items: center; gap: var(--s2); }
+.w3-legende small { font-size: var(--fs-caption); }
+.w3-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-subhead); }
+.w3-tabelle caption { text-align: left; font-size: var(--fs-footnote); color: var(--label-2); padding-bottom: var(--s1); }
+.w3-tabelle th, .w3-tabelle td { padding: var(--s2) var(--s1); border-top: 1px solid var(--trenner); text-align: right; font-weight: 400; }
+.w3-tabelle th[scope="row"], .w3-tabelle thead th:first-child { text-align: left; font-weight: 600; }
+.w3-tabelle thead th { font-size: var(--fs-footnote); color: var(--label-2); border-top: 0; }
+/* Kartensteuerung */
+.w3-zoom-knopf { width: var(--tap); height: var(--tap); display: grid; place-items: center; border-radius: var(--r-button); background: var(--bg-2); color: var(--label); border: 1px solid var(--trenner); box-shadow: var(--glas-schatten); margin-bottom: var(--s2); }
+.w3-zoom-knopf:disabled { opacity: .4; }
+.w3-zoom-knopf .ikon { width: var(--ikon-groesse); height: var(--ikon-groesse); }
+.w3-steuer { display: grid; gap: var(--s3); }
+.w3-steuer[hidden], .w3-spar-hinweis[hidden] { display: none; }
+.w3-zeile { display: flex; align-items: center; gap: var(--s3); }
+.w3-zeile .seg { flex: 1; max-width: 320px; }
+.w3-label { font-size: var(--fs-subhead); color: var(--label-2); min-width: 3.5em; }
+#w3Zeit { flex: 1; min-width: 0; min-height: var(--tap); accent-color: var(--akzent); }
+.w3-steuer .info, .w3-spar-hinweis { margin: 0; }
+/* Datensparmodus: Vorschlag */
+.w3-spar-vorschlag { display: grid; gap: var(--s3); margin-bottom: var(--kachel-abstand); }
+.w3-spar-vorschlag p { margin: 0; font-size: var(--fs-body); }
+.w3-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); }
+>>>>>>> w3-g2-wetter
