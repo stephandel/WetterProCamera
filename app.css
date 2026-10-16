@@ -646,3 +646,24 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .a5-groesse-titel { margin: 0; font-size: var(--fs-subhead); font-weight: 600; }
 .a5-groesse .info { margin: 0; }
 .a5-mg-kachel .pc-mg .mg-ecke { display: none; }   /* Zoomen geht mit zwei Fingern; Knöpfe nur im Tab „Graphs" */
+
+/* === Welle 3 Gruppe 3: Webcams (nur sichtbar, wenn WEBCAMS_FREIGABE an ist) === */
+.wc .chips, .wc .seg, .wc .info { margin-top: var(--s3); }
+.wc .chip { max-width: 100%; }
+.wc-buehne { position: relative; margin-top: var(--s3); border-radius: var(--r-button); overflow: hidden; background: var(--fuellung); aspect-ratio: 4 / 3; display: grid; place-items: center; }
+.wc-bild { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wc-lade { margin: 0; color: var(--label-2); font-size: var(--fs-footnote); }
+.wc-fehler { display: grid; justify-items: center; gap: var(--s2); padding: var(--s4); text-align: center; color: var(--label-2); font-size: var(--fs-footnote); }
+.wc-fehler .ikon { width: 32px; height: 32px; }
+.wc-fehler p { margin: 0; }
+.wc-zeit { margin: var(--s2) 0 0; font-size: var(--fs-footnote); color: var(--label-2); }
+.wc-quelle { margin: var(--s1) 0 0; font-size: var(--fs-footnote); color: var(--label-2); }
+.wc-quelle a { color: var(--akzent); display: inline-flex; align-items: center; min-height: var(--tap); }
+.wc-film { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s3); }
+.wc-film input[type="range"] { flex: 1; min-width: 0; min-height: var(--tap); accent-color: var(--akzent); }
+#wcSteuerung .seg { margin-top: var(--s3); }
+.wc-streifen { display: flex; gap: var(--s2); overflow-x: auto; margin-top: var(--s3); padding-bottom: var(--s1); scroll-snap-type: x proximity; overscroll-behavior-x: contain; }
+.wc-zelle { flex: 0 0 auto; width: 88px; min-height: var(--tap); display: grid; gap: 2px; justify-items: center; padding: var(--s1); border-radius: var(--r-button); background: var(--fuellung); scroll-snap-align: start; font-size: var(--fs-footnote); color: var(--label); }
+.wc-zelle img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: calc(var(--r-button) - 4px); }
+.wc-zelle.leer { align-content: center; color: var(--label-2); min-height: 72px; }
+@media (min-width: 1024px) and (hover: hover) { .wc-zelle { min-height: 28px; } }
