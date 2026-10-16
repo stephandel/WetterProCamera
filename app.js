@@ -131,6 +131,8 @@
     $('[data-neu]', ziel).addEventListener('click', function () { if (aktiv === 'wetter') renderSkeleton(); neuVersuchen(); });
   }
 
+  // Hilfetexte: bei Maus oder Trackpad „Klicke“, sonst „Tippe“
+  function tippe() { return window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches ? 'Klicke' : 'Tippe'; }
   function hinweisKurz(t) { var h = $('#hinweis'); if (!h.hidden && h.querySelector('button')) return; h.textContent = t; h.hidden = false; clearTimeout(hinweisKurz.t); hinweisKurz.t = setTimeout(function () { if (h.textContent === t) h.hidden = true; }, 3000); }
 
   /* ---------- Wetter-Reiter ---------- */
@@ -241,7 +243,7 @@
     $('#tab-wetter').innerHTML = updateZeile() + akt + std + regen + tage;
     bindUmschalter(ansicht);
     // Einmaliger Hinweis, dass die linke Hälfte umschaltet (UX-Prüfung A5)
-    if (ansichten().length > 1 && !speicher.lesen('wpc-tipp-akt', false)) { speicher.schreiben('wpc-tipp-akt', true); hinweisKurz('Tipp: Tippe links auf „Aktuell", dann zeigt die rechte Hälfte ' + ansichten().map(function (x) { return ANSICHT_NAMEN[x]; }).join(' oder ') + '.'); }
+    if (ansichten().length > 1 && !speicher.lesen('wpc-tipp-akt', false)) { speicher.schreiben('wpc-tipp-akt', true); hinweisKurz('Tipp: ' + tippe() + ' links auf „Aktuell", dann zeigt die rechte Hälfte ' + ansichten().map(function (x) { return ANSICHT_NAMEN[x]; }).join(' oder ') + '.'); }
   }
 
   /* ---------- Graphs: Temperatur und Regen, 48 Stunden ---------- */
@@ -270,7 +272,7 @@
       gitter + balken + '<path class="flaeche" d="' + flaeche + '"/><path class="linie" d="' + pfad + '"/>' +
       '<line class="jetzt" x1="' + x(0) + '" x2="' + x(0) + '" y1="' + o + '" y2="' + (H - u) + '"/>' + achse +
       '<g id="gWahl" hidden><line class="wahl-linie" y1="' + o + '" y2="' + (H - u) + '"/><circle class="wahl-punkt" r="5"/></g></svg>' +
-      '<p class="graph-wert zahl" id="gWert" aria-live="polite">Tippe auf die Kurve, um einen Wert zu sehen.</p>' +
+      '<p class="graph-wert zahl" id="gWert" aria-live="polite">' + tippe() + ' auf die Kurve, um einen Wert zu sehen.</p>' +
       '<div class="graph-legende"><span>Temperatur</span><span class="r">Regen pro Stunde</span></div></section>' +
       '<section class="kachel"><p class="regen-satz">Höchstwert ' + rund(temp[tMaxI]) + '°C um ' + hm(zeit[tMaxI]) + ' Uhr, Tiefstwert ' + rund(temp[tMinI]) + '°C um ' + hm(zeit[tMinI]) + ' Uhr.</p>' +
       '<p class="info">' + (summe < 0.2 ? 'In den nächsten zwei Tagen fällt kaum Regen.' : 'In den nächsten zwei Tagen fallen etwa ' + dez(summe) + ' mm Regen.') + '</p></section>';
@@ -1559,7 +1561,7 @@
           : '<span class="pc-kal-tag zahl' + kl + '">' + t + '</span>';
       }
       var tagFotos = nachTag[gal.tag] || [], td = gal.tag ? new Date(gal.tag + 'T12:00:00') : null;
-      var tagHtml = !gal.tag || gal.tag.slice(0, 7) !== j + '-' + String(m + 1).padStart(2, '0') ? '<p class="info pc-gal-hilfe">Tippe auf einen Tag mit Bild, um seine Fotos zu sehen.</p>' :
+      var tagHtml = !gal.tag || gal.tag.slice(0, 7) !== j + '-' + String(m + 1).padStart(2, '0') ? '<p class="info pc-gal-hilfe">' + tippe() + ' auf einen Tag mit Bild, um seine Fotos zu sehen.</p>' :
         '<h3 class="abschnitt-titel pc-tag-titel" id="pcTagTitel" tabindex="-1">' + WT_LANG[td.getDay()] + ', ' + td.getDate() + '. ' + MONATE[td.getMonth()] + '</h3>' +
         (tagFotos.length ? tagFotos.map(function (f) {
           var z = new Date(f.zeit), uhr = z.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
