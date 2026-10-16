@@ -108,3 +108,13 @@ Repository auf GitHub anlegen, Dateien hochladen, dann unter *Settings → Pages
 ## Hinweis zum Namen
 
 „WetterPro" ähnelt der Marke „WeatherPro". Für diesen privaten Test in Ordnung, vor einer öffentlichen Veröffentlichung den Namen ändern.
+
+### Welle 3 Webcams (16.10.2026, Gruppe 3)
+
+- **Abgeschaltet bis die Betreiber zusagen:** Alles hängt an der Datei-Konstante `WEBCAMS_FREIGABE = false` (Block „Welle 3 Gruppe 3" am Ende von `app.js`). Solange sie `false` ist, sieht die App aus wie bisher (Hinweisliste „Folgt nach Erlaubnis" im Tab „Mehr") und lädt **keine** Bilder und fragt keinen Webcam-Server an.
+- **Einschalten:** Kameras ohne Zusage aus `WEBCAM_LISTE` streichen, `WEBCAM_WORKER` mit der Adresse des Zwischenspeichers (`worker/mannheim-webcams.js`) füllen, `WEBCAMS_FREIGABE = true` setzen, Datenschutz-Satz prüfen. Je Kamera gilt `cacheBuster: false`, bis der Betreiber das Anhängen eines Zeitstempels erlaubt.
+- **Wenn an:** Kachel „Webcam" auf der Startseite (vor der Tagesliste) mit Kamera-Chips, Ansichten Aktuell, Film der letzten Stunde (Abspielen/Pause, Regler, Tempo 0,5×/1×/2×), Tagesübersicht (30-Minuten-Raster als Streifen, leere Felder bei Lücken) und Rückblick 2/6/12/24 h. Immer mit Zeitstempel, Quelle und Link zum Betreiber und dem Zustand „Bild nicht verfügbar" mit „Erneut versuchen". Film, Tag und Rückblick brauchen den Zwischenspeicher (`WEBCAM_WORKER`), ohne ihn gibt es nur das aktuelle Bild direkt vom Betreiber.
+- **Datensparmodus:** Ist `wpc-datensparen` an (den Schalter baut Gruppe 2, hier wird er nur gelesen), zeigt die Kachel nur das Standbild, ohne Archiv und Film.
+- **Nie im Service Worker:** Webcam-Bilder werden nicht zwischengespeichert (`sw.js` kennt sie nicht). Einstellungen der Kachel: `wpc-webcam` (Kamera, Ansicht, Stunden, Tempo).
+- **Teilen mit Webcam-Hintergrund (B3) bleibt aus.** Voraussetzung: Bilder mit CORS-Freigabe oder über den Zwischenspeicher (der sie mit CORS ausliefert), dazu die Erlaubnis des Betreibers.
+- Test: `PORT=8873 node tests/w3-g3.test.js` (schreibt `app.js` im Test um, die Datei bleibt unverändert).
