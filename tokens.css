@@ -94,8 +94,9 @@
   --akzent-2: #FFD633;        /* Zweitfarbe für hervorgehobene Werte */
   --schatten: none;
   --gruen: #30D158; --orange: #FF9F0A; --rot: #FF453A;
-  --tag-a: #29261E;
-  --tag-b: #212923;
+  /* Tagesliste im Blau der Kacheln statt braun-schwarz (Stephan, 20.10.2026): A = Kachel, B etwas dunkler; Gelb 4,9:1 bzw. 5,6:1. */
+  --tag-a: #1158AD;
+  --tag-b: #0C50A1;
 }
 
 @media (min-width: 768px) { :root { --rand: 20px; } }

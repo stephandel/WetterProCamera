@@ -28,6 +28,7 @@ const rgba = n => { const m = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec
   pruefe('Hintergrund und Kachel sind das Blau aus dem Link (#03428A, #1158AD)', tok('bg').toUpperCase() === '#03428A' && tok('bg-2').toUpperCase() === '#1158AD', [tok('bg'), tok('bg-2')]);
   pruefe('Text auf gelber Fläche ist dunkel (--auf-akzent)', lum(farbe('auf-akzent')) < .05, tok('auf-akzent'));
   const bg = farbe('bg'), bg2 = farbe('bg-2'), gelb = farbe('akzent'), tagA = farbe('tag-a'), tagB = farbe('tag-b');
+  pruefe('Tagesliste im Blau der Kacheln (#1158AD und #0C50A1 wechselnd, nicht mehr braun-schwarz)', tok('tag-a').toUpperCase() === '#1158AD' && tok('tag-b').toUpperCase() === '#0C50A1', [tok('tag-a'), tok('tag-b')]);
   const glas = rgba('glas-bg'), glasAufBg = ueber(glas.rgb, glas.a, bg), glasAufBg2 = ueber(glas.rgb, glas.a, bg2);
   const paare = [
     ['--auf-akzent auf Gelb', kontrast(farbe('auf-akzent'), gelb), 4.5],
