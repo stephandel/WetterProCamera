@@ -92,6 +92,15 @@ const rgba = n => { const m = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec
     await s.p.click('#tb-mehr'); await s.p.waitForTimeout(200);
     pruefe('Mehr: 6 Orte aus dem Link (Mannheim, Mengerschied, Corralejo, El Cotillo, Costa Calma, Morro Jable)', (await s.p.$$('#orteListe .ort-wahl')).length === 6);
     await s.ctx.close();
+    // Mac: Graphs beginnt mit dem Meteogramm; auch dort gilt die Mac-Stufe „Zweittext 12 px" (app.test.js prüft nur die Kurve)
+    s = await H.neueSeite(b, { viewport: { width: 1280, height: 800 } });
+    await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+    await s.p.click('#macLeiste [data-ml-tab="graphs"]'); await s.p.waitForSelector('#tab-graphs .mg-svg text', { timeout: 15000 }); await s.p.waitForTimeout(300);
+    const mg = await s.p.evaluate(H.MESSEN, 27.5);
+    pruefe('Mac 1280: Graphs mit Meteogramm, kleinste Schrift ≥ 12 px', mg.kleinsteSchrift >= 12, mg.kleinsteSchrift);
+    pruefe('Mac 1280: Graphs mit Meteogramm ohne seitliches Scrollen', mg.seitlich <= 0, mg.seitlich + ' px');
+    await H.foto(s.p, 'mac-1280-graphs-meteogramm');
+    await s.ctx.close();
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');

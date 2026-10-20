@@ -590,6 +590,9 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
   /* Graphs und Rad/Sat volle Breite mit mehr Höhe (Graph-Höhe rechnet app.js) */
   .karte { height: max(360px, calc(100dvh - var(--kopf-hoehe) - 220px)); }
   .pc-mg { --mg-haft-unten: var(--s4); }
+  /* Meteogramm: auch hier Zweittext 12 px statt der 11 px des Bausteins */
+  .pc-mg .mg-wl, .pc-mg .mg-wz, .pc-mg .mg-wv small, .pc-mg small, .pc-mg .mg-ax-titel, .pc-mg .mg-ax-tick, .pc-mg .mg-ax-wert,
+  .pc-mg .mg-svg text, .pc-mg .mg-svg .mg-mark, .pc-mg .mg-svg .mg-sonne, .pc-mg .mg-svg .mg-tagesinfo, .pc-mg .mg-svg .mg-tagesinfo-stark { font-size: var(--mac-zweit); }
   .leaflet-control-attribution { font-size: var(--mac-zweit) !important; }
 
   /* Mehr zweispaltig: je Überschrift eine Gruppe, Gruppen werden nie zerteilt */
