@@ -104,7 +104,7 @@
     "iconGroesse": 65,
     "iconGlanz": false,
     "appTyp": "pwa",
-    "ordner": "~/KI Projekte/Wetter Apps/WetterProCamera",
+    "ordner": "~/KI Projekte/Wetter Apps/WetterPro Camera App",
     "hosting": "github",
     "zielGeraete": "iphone",
     "notizen": {},
@@ -268,7 +268,7 @@
     "namenEigene": [
       "WetterProCamera"
     ],
-    "repo": "wetterprocamera",
+    "repo": "WetterProCamera",
     "ghKonto": "stephandel",
     "appVersion": "0.1.0",
     "designVersion": 1,
@@ -872,9 +872,9 @@
   "projekt": {
     "name": "WetterProCamera",
     "kurzname": "WetterProCamera",
-    "ordner": "~/KI Projekte/Wetter Apps/WetterProCamera",
-    "repo": "wetterprocamera",
-    "seite": "https://stephandel.github.io/wetterprocamera/",
+    "ordner": "~/KI Projekte/Wetter Apps/WetterPro Camera App",
+    "repo": "WetterProCamera",
+    "seite": "https://stephandel.github.io/WetterProCamera/",
     "version": "0.1.0",
     "designVersion": 1
   },
