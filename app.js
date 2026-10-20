@@ -1856,7 +1856,7 @@
     zeigeTab('mehr');
     setTimeout(function () { var f = $('#sucheFeld'); if (f) { f.focus(); f.select(); } }, 50);
   }
-  function dialogOffen() { return $$('dialog').some(function (d) { return d.open; }); }
+  function dialogOffen() { var st = $('#studio'); return (st && !st.hidden) || $$('dialog').some(function (d) { return d.open; }); }   // das Studio ist kein <dialog>
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') return;   // Fenster (<dialog>) schließt der Browser selbst mit Esc, siehe „cancel" unten
     if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;

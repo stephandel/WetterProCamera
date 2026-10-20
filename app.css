@@ -820,3 +820,8 @@ dialog.w3-live::backdrop { background: #000; }
 .studio-laedt { padding: var(--s6) var(--rand); text-align: center; color: var(--label-2); }
 .studio-laedt .button { margin-top: var(--s4); }
 .studio .ks.ks[data-ks-theme] { --ks-akzent: var(--akzent); --ks-akzent-flaeche: var(--akzent); --ks-auf-akzent: var(--auf-akzent); --ks-fuellung-an: var(--akzent-fuellung); --ks-toast-link: var(--akzent); }
+
+/* Hover auf blauer Fläche abdunkeln statt aufhellen: gelbe Schrift (gewählter Ort, Pfeile) bleibt so über 4,5:1 */
+@media (hover: hover) and (pointer: fine) {
+  .liste > *:hover, .kachel.tippbar:hover { background: color-mix(in srgb, var(--bg-2) 90%, #000); }
+}

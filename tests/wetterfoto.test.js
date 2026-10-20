@@ -66,6 +66,8 @@ const knopf = '#tabbar #tb-kamera';
       pruefe('Teilen-Knopf oben öffnet das Studio (ohne Kamera)', await studioDa(p));
       pruefe('Der alte Teilen-Bildschirm bleibt zu', await p.evaluate(() => !document.getElementById('teilen').open));
       await H.foto(p, 'wetterfoto-390-studio');
+      await p.keyboard.press('Meta+2'); await p.waitForTimeout(150);
+      pruefe('Tastenkürzel ⌘2 wechselt bei offenem Studio nicht den Tab im Hintergrund', await p.evaluate(() => document.getElementById('tab-graphs').hidden));
       await p.keyboard.press('Escape'); await p.waitForTimeout(200);
       pruefe('Esc schließt das Studio', !(await studioDa(p)));
       pruefe('Keine Fehler in der Konsole', konsole.length === 0, konsole);
