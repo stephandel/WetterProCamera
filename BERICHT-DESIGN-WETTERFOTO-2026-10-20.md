@@ -48,3 +48,16 @@ Zweig `design-gelb-wetterfoto` (Arbeitskopie `Wetter Apps/.arbeitskopien/wpcamer
 - `kamera-studio-holen.js --pruefen` ohne `--quelle` meldet „weicht ab“, weil der Hauptordner des Kamera-Konfigurators noch den alten Stand ohne `speicher` hat.
 - Zweite Meinung durch ein anderes Modell: **nicht eingeholt** (nichts veröffentlicht). Vor dem Hochladen nachholen.
 - Das Studio ist ein Stand aus einer Arbeitskopie, die noch nicht im Hauptordner liegt. Ändert sich dort etwas, neu holen und `node tools/version.js` laufen lassen.
+
+## Nachtrag: zweite Meinung (Fable, 20.10.2026)
+- Bestätigt: keine neue Abhängigkeit, Tests grün, neue Tests waren vorher rot, Offline-Speicher vollständig, alle Einstiege öffnen das Studio.
+- Widerlegt und behoben:
+  - Die gemerkte Vorlage im Studio (`ks-vorlage`) war noch zwischen den Apps geteilt. Jetzt heißt sie hier `wpcamera-ks-vorlage` (Studio-Stand 69884b4).
+  - Im Studio stand beim gedrückten „Original“-Knopf weiße Schrift auf Gelb (1,4:1). Jetzt ist sie schwarz.
+  - Auf Mac und iPad mit Maus fiel der Kontrast beim Darüberfahren über einer Liste auf 4,3:1. Jetzt liegt er bei 5,7:1.
+  - Die Tastenkürzel ⌘1–5 wirkten bei offenem Studio im Hintergrund weiter. Das ist behoben, ein Test prüft es (war vorher rot).
+  - Wechselte der Speichername, während Safari die Galerie noch öffnete, konnte ein Foto verloren gehen. In der App kommt das nicht vor, behoben ist es trotzdem.
+- Bleibt offen:
+  - Die braun-schwarze Tagesliste kommt so aus dem Design-Konfigurator: Die Tönung richtet sich nach dem Gelb, nicht nach der blauen Fläche. Ob sie bleibt, entscheidet Stephan.
+  - ⌘1–5 folgen der festen Tab-Reihenfolge, nicht dem Platz des Wetterfoto-Knopfs.
+- Nach dem Nachtrag: `npm test` 188 + 37 + 72 grün, ux-check 11 grün. Studio-Tests: Engine 460, Seite 674, Studio 2871 grün.
