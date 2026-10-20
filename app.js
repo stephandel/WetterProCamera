@@ -193,7 +193,7 @@
       var el = $('#miniKarte'); if (!el) return;
       miniKarte = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false, tap: false }).setView([ort.lat, ort.lon], 7);
       L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 10, className: 'mk-grund' }).addTo(miniKarte);   // CARTO verlangt inzwischen einen Schlüssel
-      L.circleMarker([ort.lat, ort.lon], { radius: 7, color: '#fff', weight: 2, fillColor: '#0A84FF', fillOpacity: 1 }).addTo(miniKarte);
+      L.circleMarker([ort.lat, ort.lon], { radius: 7, color: '#fff', weight: 2, fillColor: (getComputedStyle(document.documentElement).getPropertyValue('--akzent') || '').trim() || '#FFD633', fillOpacity: 1 }).addTo(miniKarte);
       holeJson('https://api.rainviewer.com/public/weather-maps.json').then(function (m) {
         var f = m.radar && m.radar.past && m.radar.past[m.radar.past.length - 1]; if (!f || !miniKarte) return;
         L.tileLayer(m.host + f.path + '/256/{z}/{x}/{y}/2/1_1.png', { opacity: .8, maxNativeZoom: 7, maxZoom: 10 }).addTo(miniKarte);
@@ -1625,7 +1625,7 @@
      Wahl „Kurve | Meteogramm" in wpc-graphs, Zeilen in wpc-meteo (Reihenfolge = Reihenfolge im Meteogramm). */
   var METEO_STANDARD = ['sonne', 'temp', 'wind', 'regen'];
   var mg = { instanz: null, schluessel: '' };
-  var graphsModus = function () { return speicher.lesen('wpc-graphs', 'kurve') === 'meteo' ? 'meteo' : 'kurve'; };
+  var graphsModus = function () { return speicher.lesen('wpc-graphs', 'meteo') === 'kurve' ? 'kurve' : 'meteo'; };   // Link vom 20.10.2026: Tab Graphs beginnt mit dem Meteogramm
   var meteoKatalog = function () { return (window.Meteogramm && window.Meteogramm.zeilen) || {}; };
   function meteoZeilen() {
     var k = meteoKatalog(), z = speicher.lesen('wpc-meteo', METEO_STANDARD);
@@ -1918,7 +1918,7 @@
   var A5_GROESSEN = ['klein', 'mittel', 'gross'];
   function startLesen() {
     var s = speicher.lesen('wpc-startseite', {}) || {}, ids = A5_ARTEN.map(function (a) { return a[0]; });
-    return { tipps: s.tipps !== false, meteo: s.meteo === true, groesse: A5_GROESSEN.indexOf(s.groesse) >= 0 ? s.groesse : 'mittel',
+    return { tipps: s.tipps !== false, meteo: s.meteo === true, radar: s.radar === true, groesse: A5_GROESSEN.indexOf(s.groesse) >= 0 ? s.groesse : 'mittel',
       arten: Array.isArray(s.arten) ? s.arten.filter(function (a) { return ids.indexOf(a) >= 0; }) : ids };
   }
   function startSchreiben(s) { speicher.schreiben('wpc-startseite', s); }
@@ -2081,7 +2081,8 @@
     var schalter = function (k, titel, text, an) { return '<label class="tippbar"><span class="modell-text"><span>' + titel + '</span><small class="leise">' + text + '</small></span><input type="checkbox" role="switch" data-a5="' + k + '"' + (an ? ' checked' : '') + '></label>'; };
     var html = '<h2 class="abschnitt-titel" id="a5StartTitel">Startseite</h2><div class="liste a5-liste" id="a5Start">' +
       schalter('tipps', 'Was heute geht', 'Bis zu 3 Tipps für heute, nach festen Regeln', st.tipps) +
-      schalter('meteo', 'Meteogramm auf der Startseite', 'Unter dem Regenradar, Zeilen wie im Tab „Graphs“', st.meteo) + '</div>' +
+      schalter('radar', 'Regenradar-Kachel', 'Regen der nächsten 2 Stunden auf der Startseite, im Link vom 20.10.2026 aus', st.radar) +
+      schalter('meteo', 'Meteogramm auf der Startseite', 'Zeilen wie im Tab „Graphs“, ganz unten auf der Startseite', st.meteo) + '</div>' +
       '<div class="kachel a5-groesse" id="a5Groesse"' + (st.meteo ? '' : ' hidden') + '><p class="a5-groesse-titel" id="a5GroesseTitel">Größe des Meteogramms</p>' +
       seg('a5groesse', st.groesse, [['klein', 'Klein'], ['mittel', 'Mittel'], ['gross', 'Groß']], 'Größe des Meteogramms') +
       '<p class="info">Klein zeigt 1 Zeile, Mittel 2 Zeilen, Groß alle Zeilen, die du im Tab „Graphs“ unter „Zeilen“ gewählt hast.</p></div>' +
@@ -2427,7 +2428,7 @@
     if (aktiv !== 'wetter' || !daten) return;
     var s = $('#tab-wetter'); if (!s) return;
     ['w3Calima', 'w3Meer'].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
-    var anker = $('#a5Tipps', s) || $('.std', s), html = w3CalimaHtml() + w3MeerHtml();
+    var anker = $('#a5Tipps', s) || $('.w3-mond-kachel', s) || $('.tage', s) || $('.std', s), html = w3CalimaHtml() + w3MeerHtml();
     if (anker && html) anker.insertAdjacentHTML('afterend', html);
   }
 
@@ -3334,6 +3335,17 @@
     ['#tFotos', '#tKamera'].forEach(function (id) { $(id).addEventListener('change', function (e) { var f = e.target.files && e.target.files[0]; if (f) w3DateiLesen(f); }); });
     $('#teilen').addEventListener('close', function () { if ($('#w3Live') && $('#w3Live').open) $('#w3Live').close(); });
   })();
+
+  /* === Startseite nach dem Design-Link vom 20.10.2026 ===
+     Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond"), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
+     Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Luftqualität und Warnung sind im Link an, in der App aber noch nicht gebaut (Wunschliste). */
+  var STARTSEITE_REIHE = ['.akt', '.std', '#regenTitel', '.tage', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
+  function startseiteOrdnen() {
+    var s = $('#tab-wetter'); if (!s || !s.querySelector('.akt')) return;
+    var regen = $('#regenTitel', s); if (regen && !startLesen().radar) regen.closest('section').remove();
+    STARTSEITE_REIHE.forEach(function (sel) { var e = $(sel, s); if (e && sel === '#regenTitel') e = e.closest('section'); if (e && e.parentNode === s) s.appendChild(e); });
+  }
+  renderWetter = (function (alt) { return function () { alt(); startseiteOrdnen(); }; })(renderWetter);
 
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');

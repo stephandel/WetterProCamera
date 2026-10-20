@@ -82,6 +82,8 @@ const MESSEN = (minKlick) => {
 async function neueSeite(b, opt, modus) {
   const ctx = await b.newContext(Object.assign({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'de-DE', timezoneId: 'Europe/Berlin' }, opt));
   const p = await ctx.newPage();
+  // Seit dem Design-Link vom 20.10.2026 ist die Regenradar-Kachel auf der Startseite standardmäßig aus; und der Tab Graphs beginnt mit dem Meteogramm; die älteren Tests prüfen Radar-Kachel und Kurve, also vorher einstellen (Standard prüft design-gelb.test.js)
+  await ctx.addInitScript(() => { try { if (!localStorage.getItem('wpc-startseite')) localStorage.setItem('wpc-startseite', JSON.stringify({ radar: true })); if (!localStorage.getItem('wpc-graphs')) localStorage.setItem('wpc-graphs', JSON.stringify('kurve')); } catch (e) { } });
   const konsole = [];
   p.on('pageerror', e => konsole.push('Seitenfehler: ' + e.message));
   p.on('console', m => { if (m.type() === 'error') konsole.push(m.text()); });

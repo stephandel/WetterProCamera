@@ -81,6 +81,8 @@ const MESSEN = (minKlick) => {
 
 async function neueSeite(b, opt, modus) {
   const ctx = await b.newContext(Object.assign({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'de-DE', timezoneId: 'Europe/Berlin' }, opt));
+  // Seit dem Design-Link vom 20.10.2026 ist die Regenradar-Kachel auf der Startseite standardmäßig aus; und der Tab Graphs beginnt mit dem Meteogramm; die älteren Tests prüfen Radar-Kachel und Kurve, also vorher einstellen (Standard prüft design-gelb.test.js)
+  await ctx.addInitScript(() => { try { if (!localStorage.getItem('wpc-startseite')) localStorage.setItem('wpc-startseite', JSON.stringify({ radar: true })); if (!localStorage.getItem('wpc-graphs')) localStorage.setItem('wpc-graphs', JSON.stringify('kurve')); } catch (e) { } });
   const p = await ctx.newPage();
   const konsole = [];
   p.on('pageerror', e => konsole.push('Seitenfehler: ' + e.message));
@@ -342,14 +344,14 @@ async function tabsPruefen(p, name, bilder) {
     await s.p.goto(BASIS); await s.p.waitForSelector('#a5Tipps');
     await s.p.waitForFunction(() => /"49\.49,8\.47":false/.test(localStorage.getItem('wpc-kueste') || ''), null, { timeout: 8000 }).catch(() => { });
     let t = await tipps(s.p);
-    pruefe('Mannheim: Kachel „Was heute geht" steht unter den Stunden', await s.p.evaluate(() => document.getElementById('a5Tipps').previousElementSibling.classList.contains('std')));
+    pruefe('Mannheim: Kachel „Was heute geht" steht unter „Sonne und Mond" (Reihenfolge laut Link vom 20.10.)', await s.p.evaluate(() => document.getElementById('a5Tipps').previousElementSibling.classList.contains('w3-mond-kachel')));
     pruefe('Mannheim: nur „Goldene Stunde ab 17:50 Uhr"', t && t.arten.join() === 'gold' && /Goldene Stunde ab 17:50 Uhr/.test(t.saetze[0]), t);
     pruefe('Mannheim: Marine-API ohne Werte → kein Küstenort (gemerkt in wpc-kueste)', await s.p.evaluate(() => JSON.parse(localStorage.getItem('wpc-kueste'))['49.49,8.47'] === false));
     pruefe('Mannheim: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     // Mehr → Startseite: Schalter, Haken und Quelle Marine-API
     await s.p.click('#tb-mehr');
     const mehr = await s.p.evaluate(() => ({ schalter: document.querySelectorAll('#a5Start input[role="switch"]').length, arten: document.querySelectorAll('#a5Arten input').length, groesseVersteckt: document.getElementById('a5Groesse').hidden, quelle: /Meer: Open-Meteo Marine/.test(document.getElementById('quellen').textContent) }));
-    pruefe('Mehr: Abschnitt „Startseite" mit 2 Schaltern, 9 Tipp-Haken, Größe erst bei Meteogramm an', mehr.schalter === 2 && mehr.arten === 9 && mehr.groesseVersteckt, mehr);
+    pruefe('Mehr: Abschnitt „Startseite" mit 3 Schaltern (Tipps, Regenradar, Meteogramm), 9 Tipp-Haken, Größe erst bei Meteogramm an', mehr.schalter === 3 && mehr.arten === 9 && mehr.groesseVersteckt, mehr);
     pruefe('Quellen nennen Open-Meteo Marine', mehr.quelle);
     // Leerzustand: goldene Stunde und Sterne abwählen
     await s.p.uncheck('#a5Arten input[value="gold"]'); await s.p.uncheck('#a5Arten input[value="sterne"]');
@@ -365,8 +367,8 @@ async function tabsPruefen(p, name, bilder) {
     pruefe('Meteogramm an: Wahl der Größe erscheint', await s.p.evaluate(() => !document.getElementById('a5Groesse').hidden));
     await s.p.click('[data-seg="a5groesse"] [data-v="klein"]');
     await s.p.click('#tb-wetter'); await s.p.waitForSelector('#a5Mg .mg-ax-titel', { timeout: 8000 }).catch(() => { });
-    let mgs = await s.p.evaluate(() => { const k = document.querySelector('.a5-mg-kachel'); return k && { zeilen: k.querySelectorAll('.mg-ax-titel').length, unterRegen: !!(k.previousElementSibling && k.previousElementSibling.querySelector('#regenTitel')) }; });
-    pruefe('Meteogramm „Klein": 1 Zeile, direkt unter dem Regenradar', mgs && mgs.zeilen === 1 && mgs.unterRegen, mgs);
+    let mgs = await s.p.evaluate(() => { const k = document.querySelector('.a5-mg-kachel'); return k && { zeilen: k.querySelectorAll('.mg-ax-titel').length, unterRegen: k === k.parentNode.lastElementChild }; });
+    pruefe('Meteogramm „Klein": 1 Zeile, ganz unten auf der Startseite', mgs && mgs.zeilen === 1 && mgs.unterRegen, mgs);
     let m5 = await s.p.evaluate(MESSEN);
     pruefe('Wetter mit Meteogramm 390 px: kein seitliches Scrollen, Tippflächen ≥ 44 px, Schrift ≥ 11 px', m5.seitlich <= 0 && m5.klein.length === 0 && m5.kleinsteSchrift >= 11, m5);
     await s.p.$eval('.a5-mg-kachel', e => e.scrollIntoView({ block: 'center' })); await foto(s.p, 'hell-390-a5-meteogramm');
