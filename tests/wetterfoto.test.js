@@ -17,6 +17,7 @@ async function neueSeite(b, o) {
   const modus = o.modus || {};
   const s = await H.neueSeite(b, { viewport: { width: o.breite || 390, height: o.hoehe || 844 }, colorScheme: o.farbe || 'light', serviceWorkers: 'allow' }, modus);
   if (o.engineSperren) await s.ctx.route('**/lib/kamera-studio/ks-engine.js', r => r.abort());
+  if (o.fremderSpeicher) await s.ctx.addInitScript(() => { if (window.caches) caches.open('fremde-app-v1'); });   // Speicher einer anderen App unter derselben Adresse
   if (o.speicher) await s.ctx.addInitScript(sp => { Object.keys(sp).forEach(k => localStorage.setItem(k, sp[k])); }, o.speicher);
   await s.p.goto(BASIS + (o.adresse || ''));
   await s.p.waitForSelector(o.ohneDaten ? '#tabbar button' : '.tag', { timeout: 10000 });
@@ -201,11 +202,12 @@ const knopf = '#tabbar #tb-kamera';
     {
       const swText = fs.readFileSync(path.join(WURZEL, 'sw.js'), 'utf8');
       pruefe('Alle 4 Studio-Dateien stehen in der Hülle von sw.js', ['ks-symbole.js', 'ks-engine.js', 'ks-studio.js', 'ks-studio.css'].every(d => swText.includes("'lib/kamera-studio/" + d + "'")));
-      const s = await neueSeite(b);
+      const s = await neueSeite(b, { fremderSpeicher: true });
       const { ctx, p, konsole } = s;
       await p.evaluate(() => navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready));
       await p.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 10000 }).catch(async () => { await p.reload(); await p.waitForSelector('.tag'); });
-      const imSpeicher = await p.evaluate(async () => { const ks = await caches.keys(); const c = await caches.open(ks[0]); return (await c.keys()).map(r => new URL(r.url).pathname).filter(x => /kamera-studio/.test(x)).length; });
+      pruefe('Service Worker löscht nur eigene Speicher (andere Apps unter derselben Adresse bleiben)', await p.evaluate(() => caches.has('fremde-app-v1')));
+      const imSpeicher = await p.evaluate(async () => { const ks = await caches.keys(); const c = await caches.open(ks.find(k => k.startsWith('wpc-'))); return (await c.keys()).map(r => new URL(r.url).pathname).filter(x => /kamera-studio/.test(x)).length; });
       pruefe('Alle 4 Studio-Dateien im Offline-Speicher', imSpeicher === 4, imSpeicher);
       s.modus.offline = true; await ctx.setOffline(true);
       await p.reload(); await p.waitForSelector('#tabbar #tb-kamera', { timeout: 10000 });
