@@ -1,11 +1,11 @@
 # WetterProCamera
 
-## Gestaltung (vom Design-Konfigurator, 15.10.2026)
+## Gestaltung (vom Design-Konfigurator, 15.10.2026; Farben und Erscheinung 20.10.2026)
 
 - Lies vor jeder Arbeit an der Oberfläche `DESIGN.md` und halte jede Regel ein.
 - Nutze ausschließlich die Variablen aus `tokens.css` (nach `apple-ui/base.css` einbinden). Keine Farben, Größen oder Abstände hart in den Code schreiben.
 - Wettersymbole nur über `symbole.js` (`WetterSymbol('regen')`), Satz „Klassisch".
-- Harte Grenzen, die nie verletzt werden: Fließtext mindestens 16 px, kein Text unter 11 px, Tippflächen mindestens 44 × 44 px, Kontrast Text mindestens 4,5:1 in hell und dunkel, Zeilenlänge höchstens 75 Zeichen, Safe Areas beachten, `prefers-reduced-motion` und `prefers-reduced-transparency` respektieren.
+- Harte Grenzen, die nie verletzt werden: Fließtext mindestens 16 px, kein Text unter 11 px, Tippflächen mindestens 44 × 44 px, Kontrast Text mindestens 4,5:1 (die App ist seit 20.10.2026 immer dunkel, Akzent Gelb: gelbe Schrift nur auf dunklem Grund, Text auf gelber Fläche immer dunkel), Zeilenlänge höchstens 75 Zeichen, Safe Areas beachten, `prefers-reduced-motion` und `prefers-reduced-transparency` respektieren.
 - Glas nur auf schwebenden Flächen, nie Glas auf Glas.
 - Funktion „Wetter mit Foto teilen" genau wie in `DESIGN.md` beschrieben: Bild mit `<canvas>` zeichnen, teilen mit `navigator.share({ files })`, sonst herunterladen.
 - Vor Abschluss prüfen: 390 px Breite, Dunkelmodus, 130 % Schriftgröße, Offline-Zustand.

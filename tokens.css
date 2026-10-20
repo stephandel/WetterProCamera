@@ -1,9 +1,11 @@
-/* tokens.css – erzeugt vom Design-Konfigurator am 15.10.2026
+/* tokens.css – erzeugt vom Design-Konfigurator am 20.10.2026
    Ersetzt die Variablenwerte aus apple-ui/base.css. Nach base.css einbinden.
    Vorrang: Die Werte hier gelten vor den Standardwerten aus base.css, auch bei der Schriftskala.
-   Stimmung: ausgewogen, normal, mit Apple-Bewegung */
+   Stimmung: ausgewogen, normal, mit Apple-Bewegung
+   Die App ist immer dunkel (Link vom 20.10.2026): color-scheme dunkel, kein Hellmodus, auch nicht bei hellem iPhone. */
 
 :root {
+  color-scheme: dark;
   /* Schrift */
   --font: -apple-system, "SF Pro Text", system-ui, sans-serif;
   --font-display: -apple-system, "SF Pro Text", system-ui, sans-serif;
@@ -28,6 +30,13 @@
   --sym-groesse: 30px;   /* Wettersymbol in Listen; Aktuell 112 px, Stunden 60 px */
   --ikon-groesse: 24px;   /* Bedien-Symbole */
   --r-kachel: 16px; --r-button: 12px; --r-chip: 999px;
+
+  /* Stimmung (ausgewogen (50 von 100 zwischen seriös und verspielt), Farbton neutral, Farbigkeit normal (100 % Farbkraft), Schatten mittel) */
+  --stimmung: 50;             /* 0 seriös … 100 verspielt */
+  --farbton-verschiebung: 0deg;   /* schon in alle Farben eingerechnet; minus = wärmer */
+  --farbigkeit: 1.00;        /* Faktor für die Chroma (OKLCH), schon eingerechnet */
+  --schatten-staerke: 1.00;  /* 0 = keine, 1 = normal, 2 = doppelt */
+  --schatten-knopf: none;
 
   /* Bewegung */
   --dauer: 280ms;
@@ -65,57 +74,28 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  /* Hell */
-  --akzent: #086ADC;            /* oklch(54.3% 0.192 257) */
-  --akzent-hover: #0357B8;
-  --akzent-tint: #E0ECFE;      /* zarte Fläche, z. B. ausgewählte Zeile */
+  /* Dunkel (fest) */
+  --akzent: #FFD633;            /* oklch(88.6% 0.170 94) */
+  --akzent-hover: #FFEDB1;
+  --akzent-tint: #322803;      /* zarte Fläche, z. B. ausgewählte Zeile */
   --akzent-fuellung: color-mix(in srgb, var(--akzent) 20%, transparent);
-  --auf-akzent: #FFFFFF;       /* Text auf Akzentfläche, 5,1:1 */
-  --bg: #F2F2F7;
-  --bg-2: #FFFFFF;
-  --label: #000000;
-  /* Zweittext hell dunkler (UX-Prüfung A3, 15.10.2026): Apples 60 % ergab nur 3,4:1 auf Weiß.
-     78 % ergibt 5,6:1 auf --bg-2 #FFF, 5,3:1 auf --bg #F2F2F7, 5,4:1 auf den Tagestönungen, 4,6:1 auf --fuellung.
-     Dunkel bleibt Apples Wert (6,0:1 auf --bg-2 #1C1C1E). */
-  --label-2: rgba(60,60,67,.78);
-  --label-3: rgba(60,60,67,.3);
-  --trenner: rgba(60,60,67,.29);
-  --fuellung: rgba(120,120,128,.2);
-  --glas-bg: rgba(255,255,255,0.7);
-  --glas-rand: rgba(255,255,255,.4);
-  --glas-schatten: 0 8px 32px rgba(0,0,0,.12);
-  --akzent-2: var(--label);   /* keine Zweitfarbe: Werte in Textfarbe */
+  --auf-akzent: #000000;       /* Text auf Akzentfläche, 14,9:1 */
+  --bg: #03428A;
+  --bg-2: #1158AD;
+  --label: #FFFFFF;
+  /* Zweittext 80 % statt 72 % aus dem Link (20.10.2026): 72 % ergab auf der Kachel #1158AD nur 4,4:1, 80 % ergibt 5,1:1 (auf --bg 6,2:1). */
+  --label-2: rgba(255,255,255,.80);
+  --label-3: rgba(255,255,255,.45);
+  --trenner: rgba(255,255,255,.22);
+  --fuellung: rgba(255,255,255,.16);
+  --glas-bg: rgba(28,28,30,0.6);
+  --glas-rand: rgba(255,255,255,.15);
+  --glas-schatten: 0 8px 32px rgba(0,0,0,.35);
+  --akzent-2: #FFD633;        /* Zweitfarbe für hervorgehobene Werte */
   --schatten: none;
-  --gruen: #34C759; --orange: #FF9500; --rot: #FF3B30;
-  --tag-a: #F2F7FF;
-  --tag-b: #FCF3FF;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --akzent: #0A84FF;            /* oklch(62.4% 0.206 255) */
-    --akzent-hover: #509BF9;
-    --akzent-tint: #08284F;      /* zarte Fläche, z. B. ausgewählte Zeile */
-    --akzent-fuellung: color-mix(in srgb, var(--akzent) 20%, transparent);
-    --auf-akzent: #000000;       /* Text auf Akzentfläche, 5,8:1 */
-    --bg: #000000;
-    --bg-2: #1C1C1E;
-    --label: #FFFFFF;
-    --label-2: rgba(235,235,245,.6);
-    --label-3: rgba(235,235,245,.3);
-    --trenner: rgba(84,84,88,.6);
-    --fuellung: rgba(120,120,128,.36);
-    --glas-bg: rgba(28,28,30,0.6);
-    --glas-rand: rgba(255,255,255,.15);
-    --glas-schatten: 0 8px 32px rgba(0,0,0,.5);
-    --akzent-2: var(--label);   /* keine Zweitfarbe: Werte in Textfarbe */
-    --schatten: none;
-    --gruen: #30D158; --orange: #FF9F0A; --rot: #FF453A;
-    /* Tagestönung dunkel abgeschwächt (15.10.2026): Mitte zwischen den bisherigen Tönen #1F2938/#2F2433 und --bg-2 #1C1C1E,
-       Farbstärke etwa halbiert, damit die Zeilen im Dunkeln nicht bunt wirken. Weißer Text bleibt über 14:1. */
-    --tag-a: #1E2329;
-    --tag-b: #26202A;
-  }
+  --gruen: #30D158; --orange: #FF9F0A; --rot: #FF453A;
+  --tag-a: #29261E;
+  --tag-b: #212923;
 }
 
 @media (min-width: 768px) { :root { --rand: 20px; } }
@@ -135,3 +115,7 @@
 /* Nutzung der Tagesfarben in einer Liste */
 .liste > .tag:nth-child(odd)  { background: var(--tag-a); }
 .liste > .tag:nth-child(even) { background: var(--tag-b); }
+
+/* Schatten nur auf Kacheln und Knöpfen */
+.kachel { box-shadow: var(--schatten); }
+.button, .chip { box-shadow: var(--schatten-knopf); }
