@@ -12,6 +12,7 @@ const { webkit } = require('playwright');
 const WURZEL = path.join(__dirname, '..');
 const PORT = +process.env.PORT || 8873;
 const BASIS = 'http://127.0.0.1:' + PORT + '/';
+const START = BASIS + '?teilen=alt';   // seit 20.10.2026 öffnet die App das Kamera-Studio; diese Tests prüfen den alten Teilen-Bildschirm (wetterfoto.test.js prüft das Studio)
 const BILDER = process.env.BILDER || path.join(__dirname, 'bilder');
 const JETZT = new Date('2026-10-15T14:40:00+02:00');   // Zeitpunkt der gespeicherten Antworten
 const fixture = n => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');
@@ -135,7 +136,7 @@ async function oeffne(b, o, seiteOpt) {
   const s = await neueSeite(b, Object.assign({ colorScheme: 'light' }, seiteOpt || {}));
   await webcamRoute(s.p, o); await appJs(s.p, o);
   if (o.init) await s.p.addInitScript(o.init);
-  await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+  await s.p.goto(START); await s.p.waitForSelector('.tag', { timeout: 15000 });
   return s;
 }
 const bildGeladen = p => p.waitForFunction(() => { const i = document.querySelector('#wcBuehne .wc-bild'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 8000 }).then(() => true, () => false);

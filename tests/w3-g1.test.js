@@ -13,6 +13,7 @@ const { webkit } = require('playwright');
 const WURZEL = path.join(__dirname, '..');
 const PORT = +process.env.PORT || 8871;
 const BASIS = 'http://127.0.0.1:' + PORT + '/';
+const START = BASIS + '?teilen=alt';   // seit 20.10.2026 öffnet die App das Kamera-Studio; diese Tests prüfen den alten Teilen-Bildschirm (wetterfoto.test.js prüft das Studio)
 const BILDER = process.env.BILDER || path.join(__dirname, 'bilder');
 const JETZT = new Date('2026-10-15T14:40:00+02:00');
 const fixture = n => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');
@@ -137,7 +138,7 @@ async function neueSeite(b, opt, modus, init) {
 const foto = (p, name) => p.screenshot({ path: path.join(BILDER, 'w3g1-' + name + '.png') });
 const stand = p => p.evaluate(() => document.getElementById('tBild').dataset.stand || '');
 async function teilenAuf(p) {
-  await p.goto(BASIS); await p.waitForSelector('.tag', { timeout: 15000 });
+  await p.goto(START); await p.waitForSelector('.tag', { timeout: 15000 });
   await p.click('#btnTeilen');
   await p.waitForFunction(() => document.getElementById('teilen').open && document.getElementById('tBild').dataset.stand, null, { timeout: 8000 });
 }

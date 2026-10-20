@@ -36,7 +36,7 @@ function server() {
 /* ---------- fremde Dienste auf feste Antworten umleiten ---------- */
 async function umleiten(p, modus) {
   const json = (route, text, status) => route.fulfill({ status: status || 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: text });
-  await p.route(u => !u.href.startsWith(BASIS), route => {
+  await p.route(u => /^https?:$/.test(u.protocol) && !u.href.startsWith(BASIS), route => {   // blob:-Adressen (Foto im Studio) nicht anfassen
     const u = new URL(route.request().url());
     if (modus.offline) return route.abort('internetdisconnected');
     if (u.host === 'api.open-meteo.com') {

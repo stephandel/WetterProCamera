@@ -14,6 +14,7 @@ const { webkit } = require('playwright');
 const WURZEL = path.join(__dirname, '..');
 const PORT = +process.env.PORT || 8872;
 const BASIS = 'http://127.0.0.1:' + PORT + '/';
+const START = BASIS + '?teilen=alt';   // seit 20.10.2026 öffnet die App das Kamera-Studio; diese Tests prüfen den alten Teilen-Bildschirm (wetterfoto.test.js prüft das Studio)
 const BILDER = process.env.BILDER || path.join(__dirname, 'bilder');
 const JETZT = new Date('2026-10-15T14:40:00+02:00');   // Zeitpunkt der gespeicherten Antworten
 const fixture = n => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');
@@ -137,7 +138,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     /* 1. Punkt 6/7: Regen-Balken und Satz, „Was heute geht" nur Resttag, Strand/Kiten nur am Meer, Hilfetexte */
     console.log('Regen, Resttag, Küste, Hilfetexte');
     let s = await neueSeite(b, { colorScheme: 'light' }, { omAendern: d => { d.minutely_15.precipitation = [0, 0, .4, .6, .5, 0, 0, 0]; return d; } });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.regen-balken');
+    await s.p.goto(START); await s.p.waitForSelector('.regen-balken');
     let r = await s.p.evaluate(() => ({ balken: document.querySelectorAll('.regen-balken i').length, satz: document.querySelector('.regen-satz').textContent, achse: document.querySelector('.regen-achse').textContent }));
     pruefe('Regen-Balken: 8 Balken zu je 15 Minuten', r.balken === 8, r);
     pruefe('Satz „Regen ab 15:15 Uhr für 45 Minuten."', r.satz === 'Regen ab 15:15 Uhr für 45 Minuten.', r.satz);
@@ -145,7 +146,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     await s.ctx.close();
     for (const [name, prec, erwartet] of [['trocken', [0, 0, 0, 0, 0, 0, 0, 0], 'Die nächsten 2 Stunden bleibt es trocken.'], ['regnet jetzt', [.5, .5, 0, 0, 0, 0, 0, 0], 'Es regnet jetzt, noch etwa 30 Minuten.'], ['regnet durchgehend', [.5, .5, .5, .5, .5, .5, .5, .5], 'Es regnet die nächsten 2 Stunden.'], ['bis zum Ende', [0, 0, 0, 0, 0, 0, .3, .3], 'Regen ab 16:15 Uhr für mindestens 30 Minuten.'], ['1 Stunde', [0, .2, .2, .2, .2, 0, 0, 0], 'Regen ab 15:00 Uhr für 1 Stunde.']]) {
       s = await neueSeite(b, {}, { omAendern: d => { d.minutely_15.precipitation = prec; return d; } });
-      await s.p.goto(BASIS); await s.p.waitForSelector('.regen-satz');
+      await s.p.goto(START); await s.p.waitForSelector('.regen-satz');
       pruefe('Regensatz ' + name, (await s.p.textContent('.regen-satz')) === erwartet, await s.p.textContent('.regen-satz'));
       await s.ctx.close();
     }
@@ -157,17 +158,17 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     };
     const tippsLesen = p => p.evaluate(() => { const k = document.getElementById('a5Tipps'); return k ? [...k.querySelectorAll('[data-tipp]')].map(x => x.dataset.tipp) : null; });
     s = await neueSeite(b, {}, { omAendern: regenVormittag(90, 5) });
-    await s.p.goto(BASIS); await s.p.waitForSelector('#a5Tipps');
+    await s.p.goto(START); await s.p.waitForSelector('#a5Tipps');
     pruefe('Resttag: Regen nur am Vormittag → kein Schirm-Tipp am Nachmittag', !(await tippsLesen(s.p)).includes('schirm'), await tippsLesen(s.p));
     await s.ctx.close();
     s = await neueSeite(b, {}, { omAendern: regenVormittag(5, 80) });
-    await s.p.goto(BASIS); await s.p.waitForSelector('#a5Tipps');
+    await s.p.goto(START); await s.p.waitForSelector('#a5Tipps');
     pruefe('Resttag: Regen erst am Abend → Schirm-Tipp', (await tippsLesen(s.p)).includes('schirm'), await tippsLesen(s.p));
     await s.ctx.close();
     // Strand und Kiten nur an der Küste: Mannheim (Marine ohne Werte) bekommt weder Strand noch Kiten, trotz 26 °C und 25 km/h Wind
     s = await neueSeite(b, {}, { omAendern: d => { mitWind(25)(d); d.daily.temperature_2m_max[0] = 26; d.daily.precipitation_probability_max[0] = 5; d.hourly.temperature_2m = d.hourly.temperature_2m.map((v, i) => d.hourly.time[i].slice(0, 10) === '2026-10-15' ? 26 : v); return d; } });
     const marine = await zusatz(s.p, []);
-    await s.p.goto(BASIS); await s.p.waitForSelector('#a5Tipps');
+    await s.p.goto(START); await s.p.waitForSelector('#a5Tipps');
     await warte(s.p, () => { try { return !!JSON.parse(localStorage.getItem('wpc-kueste'))['49.49,8.47'] === false && 'wpc-kueste' in localStorage; } catch (e) { return false; } });
     pruefe('Binnenort Mannheim: keine Tipps „Strand" und „Kiten"', (await tippsLesen(s.p)).every(a => a !== 'strand' && a !== 'kiten'), await tippsLesen(s.p));
     pruefe('Mannheim: Küstenprüfung (Marine) ist gelaufen', marine.some(u => u.includes('marine-api')));
@@ -175,16 +176,16 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     // Küstenort Corralejo: Strand und Kiten erscheinen
     s = await neueSeite(b, {}, { omAendern: d => { mitWind(25)(d); d.daily.temperature_2m_max[0] = 26; d.daily.precipitation_probability_max[0] = 5; d.hourly.temperature_2m = d.hourly.temperature_2m.map((v, i) => d.hourly.time[i].slice(0, 10) === '2026-10-15' ? 26 : v); return d; } });
     await ortSetzen(s.p, CORRALEJO);
-    await s.p.goto(BASIS); await warte(s.p, () => !!document.querySelector('#a5Tipps [data-tipp="strand"]'));
+    await s.p.goto(START); await warte(s.p, () => !!document.querySelector('#a5Tipps [data-tipp="strand"]'));
     pruefe('Küstenort Corralejo: Tipps „Strand" und „Kiten"', await s.p.evaluate(() => !!document.querySelector('#a5Tipps [data-tipp="strand"]') && !!document.querySelector('#a5Tipps [data-tipp="kiten"]')), await tippsLesen(s.p));
     await s.ctx.close();
     // Hilfetexte: Maus → „Klicke", Finger → „Tippe"
-    s = await neueSeite(b, {}); await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#gWert');
+    s = await neueSeite(b, {}); await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#gWert');
     const maus = await s.p.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches);
     pruefe('Graphs-Hilfetext passt zum Gerät (Maus: „Klicke auf die Kurve", sonst „Tippe")', (await s.p.textContent('#gWert')).startsWith(maus ? 'Klicke' : 'Tippe'), await s.p.textContent('#gWert'));
     await s.ctx.close();
     s = await neueSeite(b, { hasTouch: true, isMobile: true });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#gWert');
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#gWert');
     pruefe('Mit Finger: „Tippe auf die Kurve"', (await s.p.textContent('#gWert')).startsWith('Tippe'), await s.p.textContent('#gWert'));
     await s.ctx.close();
 
@@ -195,7 +196,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
       const m = u.searchParams.get('models'), plus = { ecmwf_ifs025: 2, icon_seamless: -1.5 }[m];
       if (u.host === 'api.open-meteo.com' && plus != null && !u.searchParams.has('past_days') && u.searchParams.get('hourly') === 'temperature_2m,precipitation') return antwort(route, omJson(d => { d.hourly.temperature_2m = d.hourly.temperature_2m.map(v => v == null ? v : Math.round((v + plus) * 10) / 10); d.hourly.precipitation = d.hourly.precipitation.map((v, i) => i % 5 === 0 ? 0.3 * (plus > 0 ? 1 : 2) : 0); return d; }));
     }]);
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#w3VglAn');
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#w3VglAn');
     pruefe('Modellvergleich ist standardmäßig aus; keine Zusatzabrufe', !(await s.p.isChecked('#w3VglAn')) && !verz.some(u => u.includes('ecmwf_ifs025') || u.includes('icon_seamless')));
     await s.p.check('#w3VglAn'); await s.p.waitForSelector('#w3VglBild svg', { timeout: 8000 });
     let v = await s.p.evaluate(() => ({
@@ -232,14 +233,14 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     // Datensparmodus schaltet den Vergleich ab
     s = await neueSeite(b, {}); await speichern(s.p, 'wpc-datensparen', true); await speichern(s.p, 'wpc-vergleich', { an: true, modelle: ['best_match', 'ecmwf_ifs025'] });
     const v2 = await zusatz(s.p, []);
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#w3VglAn'); await s.p.waitForTimeout(300);
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.click('#tb-graphs'); await s.p.waitForSelector('#w3VglAn'); await s.p.waitForTimeout(300);
     pruefe('Datensparmodus: Vergleich gesperrt, keine Zusatzabrufe', await s.p.isDisabled('#w3VglAn') && !(await s.p.$('#w3VglBild')) && !v2.some(u => u.includes('ecmwf_ifs025')), v2.filter(u => u.includes('models=')));
     await s.ctx.close();
 
     /* 3. Punkt 20 und 21: Tagesdetail und Sonne/Mond */
     console.log('Tagesdetail, Sonne und Mond');
     s = await neueSeite(b, { colorScheme: 'light' }, { omAendern: mitWind(15) });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag[data-w3-tag]');
+    await s.p.goto(START); await s.p.waitForSelector('.tag[data-w3-tag]');
     pruefe('Tagesliste: jede Zeile ist ein Knopf', await s.p.evaluate(() => [...document.querySelectorAll('.tag')].every(t => t.getAttribute('role') === 'button' && t.tabIndex === 0)));
     pruefe('Hilfesatz unter der Tagesliste', /auf einen Tag für Stundenwerte/.test(await s.p.textContent('.w3-tag-hilfe')));
     await s.p.click('.tag[data-w3-tag="1"]'); await s.p.waitForSelector('#w3Tag[open]');
@@ -269,7 +270,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
 
     s = await neueSeite(b, { colorScheme: 'light' }, { omAendern: d => d });
     const mondUrls = await zusatz(s.p, []);
-    await s.p.goto(BASIS); await s.p.waitForSelector('.w3-mond-kachel'); await s.p.waitForTimeout(500); const nachLaden = mondUrls.length;
+    await s.p.goto(START); await s.p.waitForSelector('.w3-mond-kachel'); await s.p.waitForTimeout(500); const nachLaden = mondUrls.length;
     const kachel = await s.p.textContent('.w3-mond-kachel');
     pruefe('Kachel „Sonne und Mond" unter der Tagesliste', await s.p.evaluate(() => document.querySelector('.w3-mond-kachel').previousElementSibling.classList.contains('tage')) && /Sonne ↑ 07:4\d ↓ 18:3\d/.test(kachel), kachel);
     await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]');
@@ -304,7 +305,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     s = await neueSeite(b, { colorScheme: 'light' });
     const mUrls = await zusatz(s.p, [(u, route) => u.host === 'marine-api.open-meteo.com' && +u.searchParams.get('latitude') < 40 ? antwort(route, marineMitWellen()) : null]);
     await ortSetzen(s.p, CORRALEJO);
-    await s.p.goto(BASIS); await warte(s.p, () => !!document.getElementById('w3Meer'));
+    await s.p.goto(START); await warte(s.p, () => !!document.getElementById('w3Meer'));
     const meer = await s.p.evaluate(() => { const k = document.getElementById('w3Meer'); return k && { t: k.innerText.replace(/\s+/g, ' '), tide: !!k.querySelector('.w3-tide-linie'), vor: k.previousElementSibling && (k.previousElementSibling.id || k.previousElementSibling.className) }; });
     pruefe('Meer-Kachel am Küstenort: Wellenhöhe 1,2 m, Periode 8 s, Wellen aus NW, Wasser 21 °C', meer && /Wellenhöhe 1,2 m/.test(meer.t) && /Wellenperiode 8 s/.test(meer.t) && /Wellen aus NW/.test(meer.t) && /Wasser 21 °C/.test(meer.t), meer);
     pruefe('Meer-Kachel: Tide-Kurve und nächste Flut/Ebbe', meer && meer.tide && /Nächste (Flut|Ebbe)/.test(meer.t), meer && meer.t);
@@ -320,7 +321,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     pruefe('Schalter „Meer-Kachel" aus: Kachel weg', !(await s.p.$('#w3Meer')));
     await s.ctx.close();
     s = await neueSeite(b, {}); await zusatz(s.p, [(u, route) => u.host === 'marine-api.open-meteo.com' && +u.searchParams.get('latitude') < 40 ? antwort(route, marineMitWellen()) : null]);
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.waitForTimeout(500);
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.waitForTimeout(500);
     pruefe('Binnenort Mannheim: keine Meer-Kachel (Marine liefert dort keine Werte)', !(await s.p.$('#w3Meer')) || false);
     await s.ctx.close();
 
@@ -329,7 +330,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
       s = await neueSeite(b, { colorScheme: 'light' });
       await zusatz(s.p, [(u, route) => u.host === 'air-quality-api.open-meteo.com' ? antwort(route, staub(max, 40)) : null]);   // Index 40 = 16.10. um 16:00
       if (einst) await speichern(s.p, 'wpc-calima', einst);
-      await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.waitForTimeout(600);
+      await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.waitForTimeout(600);
       const da = await s.p.evaluate(() => { const k = document.getElementById('w3Calima'); return k ? k.textContent.replace(/\s+/g, ' ') : null; });
       pruefe('Calima-Kachel ' + name + (soll ? ' erscheint' : ' bleibt weg'), soll ? !!da : da === null, da);
       if (soll && name.startsWith('80 µg/m³ bei Standard')) {
@@ -339,7 +340,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
       await s.ctx.close();
     }
     s = await neueSeite(b, {});   // Standardantwort der Luftqualität enthält keine Stundenwerte: keine Kachel, kein Fehler
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.waitForTimeout(400);
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.waitForTimeout(400);
     pruefe('Luftqualität ohne Staubwerte: keine Kachel, Konsole ohne Fehler', !(await s.p.$('#w3Calima')) && s.konsole.length === 0, s.konsole);
     await s.ctx.close();
 
@@ -348,7 +349,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     const radarJson = JSON.stringify({ host: 'https://tilecache.rainviewer.com', radar: { past: [0, 1, 2, 3, 4].map(i => ({ time: 1792067400 + i * 600, path: '/v2/radar/' + i })) } });
     s = await neueSeite(b, { colorScheme: 'light' });
     const kUrls = await zusatz(s.p, [(u, route) => u.host === 'api.rainviewer.com' ? antwort(route, radarJson) : null]);
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.click('#tb-radsat'); await s.p.waitForSelector('#w3Zeit');
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.click('#tb-radsat'); await s.p.waitForSelector('#w3Zeit');
     await warte(s.p, () => !document.getElementById('w3Zeit').disabled);
     let k = await s.p.evaluate(() => ({
       zoom: [...document.querySelectorAll('.w3-zoom-knopf')].map(x => { const r = x.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }), altZoom: document.querySelectorAll('.leaflet-control-zoom').length,
@@ -390,7 +391,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     // Datensparmodus
     s = await neueSeite(b, { colorScheme: 'light' });
     const sUrls = await zusatz(s.p, [(u, route) => u.host === 'api.rainviewer.com' ? antwort(route, radarJson) : null]);
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag');
+    await s.p.goto(START); await s.p.waitForSelector('.tag');
     await s.p.click('#tb-mehr'); await s.p.waitForSelector('#w3Liste');
     const mehrW3 = await s.p.evaluate(() => ({ titel: document.getElementById('w3Titel').textContent, schalter: [...document.querySelectorAll('#w3Liste input[role="switch"]')].map(x => x.dataset.w3), hilfe: document.getElementById('w3Liste').textContent, schwelle: [...document.querySelectorAll('[data-seg="w3schwelle"] button')].map(x => x.dataset.v), ds: document.getElementById('datenschutz').textContent, quellen: document.getElementById('quellen').textContent, vorA5: document.getElementById('w3Titel').nextElementSibling.nextElementSibling.nextElementSibling.id }));
     pruefe('Mehr: Abschnitt „Wetter und Karte" mit Sparmodus, Meer, Calima und Schwellen 25/50/100', mehrW3.titel === 'Wetter und Karte' && mehrW3.schalter.join() === 'spar,meer,calima' && mehrW3.schwelle.join() === '25,50,100', mehrW3);
@@ -415,7 +416,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     // Vorschlag bei saveData
     s = await neueSeite(b, { colorScheme: 'light' });
     await s.p.addInitScript(() => Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true }));
-    await s.p.goto(BASIS); await s.p.waitForSelector('#w3SparVorschlag');
+    await s.p.goto(START); await s.p.waitForSelector('#w3SparVorschlag');
     const vs = await s.p.evaluate(() => ({ t: document.getElementById('w3SparVorschlag').textContent, knoepfe: [...document.querySelectorAll('#w3SparVorschlag button')].map(x => Math.round(x.getBoundingClientRect().height)), seitlich: document.documentElement.scrollWidth - innerWidth }));
     pruefe('saveData: Vorschlag erscheint mit zwei Knöpfen (≥ 44 px)', /Dein Gerät spart Daten/.test(vs.t) && vs.knoepfe.length === 2 && vs.knoepfe.every(h => h >= 43.5) && vs.seitlich <= 0, vs);
     pruefe('Vorschlag schaltet nichts von selbst ein', (await lesen(s.p, 'wpc-datensparen')) == null);
@@ -427,10 +428,10 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     await s.ctx.close();
     s = await neueSeite(b, {});
     await s.p.addInitScript(() => Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true }));
-    await s.p.goto(BASIS); await s.p.waitForSelector('#w3SparVorschlag'); await s.p.click('[data-w3-spar="nein"]'); await s.p.reload(); await s.p.waitForSelector('.tag');
+    await s.p.goto(START); await s.p.waitForSelector('#w3SparVorschlag'); await s.p.click('[data-w3-spar="nein"]'); await s.p.reload(); await s.p.waitForSelector('.tag');
     pruefe('„Nein, danke": Sparmodus bleibt aus und die Frage kommt nicht wieder', (await lesen(s.p, 'wpc-datensparen')) == null && !(await s.p.$('#w3SparVorschlag')) && (await lesen(s.p, 'wpc-datensparen-gefragt')) === true);
     await s.ctx.close();
-    s = await neueSeite(b, {}); await s.p.goto(BASIS); await s.p.waitForSelector('.tag');
+    s = await neueSeite(b, {}); await s.p.goto(START); await s.p.waitForSelector('.tag');
     pruefe('Ohne saveData kein Vorschlag', !(await s.p.$('#w3SparVorschlag')));
     await s.ctx.close();
 
@@ -449,7 +450,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
       await zusatz(s.p, [(u, route) => u.host === 'air-quality-api.open-meteo.com' ? antwort(route, staub(200, 40)) : u.host === 'marine-api.open-meteo.com' && +u.searchParams.get('latitude') < 40 ? antwort(route, marineMitWellen()) : u.host === 'api.rainviewer.com' ? antwort(route, radarJson) : null]);
       await speichern(s.p, 'wpc-vergleich', { an: true, modelle: ['best_match', 'ecmwf_ifs025', 'icon_seamless'] });
       await ortSetzen(s.p, CORRALEJO);
-      await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await warte(s.p, () => !!document.getElementById('w3Meer') && !!document.getElementById('w3Calima'));
+      await s.p.goto(START); await s.p.waitForSelector('.tag'); await warte(s.p, () => !!document.getElementById('w3Meer') && !!document.getElementById('w3Calima'));
       pruefe(name + ': Calima- und Meer-Kachel sind da', await s.p.evaluate(() => !!document.getElementById('w3Meer') && !!document.getElementById('w3Calima')));
       if (mac) pruefe(name + ': Mac-Layout bleibt zweispaltig', await s.p.evaluate(() => document.getElementById('tab-wetter').classList.contains('mac-zwei') && !!document.querySelector('.mac-rechts #w3Calima, .mac-links #w3Calima')));
       await foto(s.p, name.replace(' ', '-') + '-w3-wetter');
@@ -470,7 +471,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     // 130 % Schrift: Tagesblatt und Vergleich brechen sauber um
     s = await neueSeite(b, { colorScheme: 'light' }, vollesWetter);
     await speichern(s.p, 'wpc-vergleich', { an: true, modelle: ['best_match', 'ecmwf_ifs025'] });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await s.p.evaluate(() => { document.documentElement.style.fontSize = '130%'; });
+    await s.p.goto(START); await s.p.waitForSelector('.tag'); await s.p.evaluate(() => { document.documentElement.style.fontSize = '130%'; });
     await s.p.click('.tag[data-w3-tag="1"]'); await s.p.waitForSelector('#w3Tag[open]'); await s.p.waitForTimeout(200);
     const gr = await s.p.evaluate(MESSEN); pruefe('130 % Schrift: Tagesblatt ohne seitliches Scrollen', gr.seitlich <= 0, gr);
     await foto(s.p, 'hell-390-w3-schrift130');

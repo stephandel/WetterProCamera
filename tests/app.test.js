@@ -12,6 +12,7 @@ const { webkit } = require('playwright');
 const WURZEL = path.join(__dirname, '..');
 const PORT = +process.env.PORT || 8862;
 const BASIS = 'http://127.0.0.1:' + PORT + '/';
+const START = BASIS + '?teilen=alt';   // seit 20.10.2026 öffnet die App das Kamera-Studio; diese Tests prüfen den alten Teilen-Bildschirm (wetterfoto.test.js prüft das Studio)
 const BILDER = process.env.BILDER || path.join(__dirname, 'bilder');
 const JETZT = new Date('2026-10-15T14:40:00+02:00');   // Zeitpunkt der gespeicherten Antworten
 const fixture = n => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');
@@ -126,7 +127,7 @@ async function tabsPruefen(p, name, bilder) {
     /* 2. iPhone 390 px hell: alle Tabs, Teilen, Blatt „Infos", Offline */
     console.log('iPhone 390 px, hell');
     let s = await neueSeite(b, { colorScheme: 'light' });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+    await s.p.goto(START); await s.p.waitForSelector('.tag', { timeout: 15000 });
     pruefe('Wetter-Tab zeigt die Tagesliste', (await s.p.$$('.tag')).length >= 7);
     pruefe('Kopfzeile zeigt das Modell von Open-Meteo', /Beste Mischung/.test(await s.p.textContent('#ortZeile')));
     const ohneMac = await s.p.evaluate(() => ({ leiste: getComputedStyle(document.getElementById('macLeiste')).display, tabbar: getComputedStyle(document.getElementById('tabbar')).display, huellen: document.querySelectorAll('.mac-spalte, .mac-gruppe').length }));
@@ -163,7 +164,7 @@ async function tabsPruefen(p, name, bilder) {
     /* 3. iPhone 390 px dunkel */
     console.log('iPhone 390 px, dunkel');
     s = await neueSeite(b, { colorScheme: 'dark' });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+    await s.p.goto(START); await s.p.waitForSelector('.tag', { timeout: 15000 });
     await tabsPruefen(s.p, 'dunkel 390', true);
     await s.p.click('#tb-kamera'); await s.p.waitForTimeout(600); await foto(s.p, 'dunkel-390-teilen'); await s.p.click('#tAbbrechen');
     pruefe('dunkel 390: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
@@ -173,7 +174,7 @@ async function tabsPruefen(p, name, bilder) {
     for (const [name, opt] of [['ipad 820', { viewport: { width: 820, height: 1180 }, colorScheme: 'light' }], ['quer 844', { viewport: { width: 844, height: 390 }, colorScheme: 'dark' }]]) {
       console.log(name);
       s = await neueSeite(b, opt);
-      await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+      await s.p.goto(START); await s.p.waitForSelector('.tag', { timeout: 15000 });
       for (const tab of ['wetter', 'graphs', 'radsat', 'mehr']) {
         await s.p.click('#tb-' + tab); await s.p.waitForTimeout(250);
         const mm = await s.p.evaluate(MESSEN);
@@ -187,7 +188,7 @@ async function tabsPruefen(p, name, bilder) {
     /* 5. Datenquelle DWD über Bright Sky */
     console.log('Datenquelle DWD');
     s = await neueSeite(b, { colorScheme: 'light' });
-    await s.p.goto(BASIS); await s.p.waitForSelector('.tag');
+    await s.p.goto(START); await s.p.waitForSelector('.tag');
     await s.p.click('#tb-mehr');
     pruefe('Mehr: Abschnitt „Datenquelle" mit 2 Wahlmöglichkeiten', (await s.p.$$('#quelleListe input[name="quelle"]')).length === 2);
     await s.p.check('#quelleListe input[value="dwd"]');
@@ -240,7 +241,7 @@ async function tabsPruefen(p, name, bilder) {
 
     /* 6. Kurzbefehl „Wetterfoto" */
     console.log('Kurzbefehl');
-    for (const [name, url, schema] of [['?kamera=1', BASIS + '?kamera=1', 'light'], ['#kamera', BASIS + '#kamera', 'dark']]) {
+    for (const [name, url, schema] of [['?kamera=1', BASIS + '?teilen=alt&kamera=1', 'light'], ['#kamera', BASIS + '?teilen=alt#kamera', 'dark']]) {
       s = await neueSeite(b, { colorScheme: schema });
       await s.p.goto(url);
       await s.p.waitForFunction(() => document.getElementById('teilen').open && document.getElementById('tTipp'), null, { timeout: 10000 }).catch(() => { });
@@ -268,7 +269,7 @@ async function tabsPruefen(p, name, bilder) {
       ['mac 1440 hell', { viewport: { width: 1440, height: 900 }, colorScheme: 'light' }], ['mac 1440 dunkel', { viewport: { width: 1440, height: 900 }, colorScheme: 'dark' }]]) {
       console.log(name);
       s = await neueSeite(b, Object.assign({ deviceScaleFactor: 1 }, opt));
-      await s.p.goto(BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+      await s.p.goto(START); await s.p.waitForSelector('.tag', { timeout: 15000 });
       const lay = await s.p.evaluate(() => {
         const r = sel => { const e = document.querySelector(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { x: Math.round(b.left), r: Math.round(b.right), y: Math.round(b.top) }; };
         return { leiste: r('#macLeiste'), leisteSichtbar: getComputedStyle(document.getElementById('macLeiste')).display !== 'none', tabbar: getComputedStyle(document.getElementById('tabbar')).display,
@@ -341,7 +342,7 @@ async function tabsPruefen(p, name, bilder) {
     const warteTipps = (p, art) => p.waitForFunction(a => !!document.querySelector('#a5Tipps [data-tipp="' + a + '"]'), art, { timeout: 8000 }).catch(() => { });
     // a) Mannheim, Open-Meteo, echte Antwort: nur die goldene Stunde (Sonnenuntergang 18:35), kein Meer
     s = await neueSeite(b, { colorScheme: 'light' });
-    await s.p.goto(BASIS); await s.p.waitForSelector('#a5Tipps');
+    await s.p.goto(START); await s.p.waitForSelector('#a5Tipps');
     await s.p.waitForFunction(() => /"49\.49,8\.47":false/.test(localStorage.getItem('wpc-kueste') || ''), null, { timeout: 8000 }).catch(() => { });
     let t = await tipps(s.p);
     pruefe('Mannheim: Kachel „Was heute geht" steht unter „Sonne und Mond" (Reihenfolge laut Link vom 20.10.)', await s.p.evaluate(() => document.getElementById('a5Tipps').previousElementSibling.classList.contains('w3-mond-kachel')));
@@ -386,7 +387,7 @@ async function tabsPruefen(p, name, bilder) {
     await s.ctx.close();
     // b) Mannheim mit Regen und Frost (geänderte Antwort): Schirm mit Uhrzeit, Frost (Welle 3: Tipps gelten nur für den Rest des Tages, darum Frost am Abend und Regenrisiko 60 % ab 16 Uhr)
     s = await neueSeite(b, { colorScheme: 'dark' }, { omAendern: d => { d.daily.precipitation_probability_max[0] = 70; d.daily.temperature_2m_min[0] = -2; d.hourly.time.forEach((z, i) => { if (z >= '2026-10-15T16:00') d.hourly.precipitation_probability[i] = 60; if (z >= '2026-10-15T21:00' && z < '2026-10-16') d.hourly.temperature_2m[i] = -2; }); return d; } });
-    await s.p.goto(BASIS); await warteTipps(s.p, 'schirm'); t = await tipps(s.p);
+    await s.p.goto(START); await warteTipps(s.p, 'schirm'); t = await tipps(s.p);
     pruefe('Mannheim Regen/Frost: Tipps Schirm, Frost (in dieser Reihenfolge)', t && t.arten[0] === 'schirm' && t.arten[1] === 'frost', t);
     pruefe('Schirm-Satz mit Risiko und Uhrzeit', t && /Regenrisiko 60 %, ab etwa 16:00 Uhr/.test(t.saetze[0]), t && t.saetze[0]);
     pruefe('Frost-Satz mit Tiefstwert', t && /Frost bis −2 °C/.test(t.saetze[1]), t && t.saetze[1]);
@@ -399,7 +400,7 @@ async function tabsPruefen(p, name, bilder) {
     for (const [name, modus] of [['Corralejo DWD', {}], ['Corralejo DWD mit mehr Wind', { bsAendern: d => { d.weather.forEach(x => { if (x.wind_speed != null) x.wind_speed = Math.round(x.wind_speed * 1.5 * 10) / 10; }); return d; } }]]) {
       s = await neueSeite(b, { colorScheme: 'light' }, modus);
       await s.p.addInitScript(() => { if (!localStorage.getItem('wpc-quelle')) { localStorage.setItem('wpc-quelle', '"dwd"'); localStorage.setItem('wpgt-ort', JSON.stringify({ name: 'Corralejo', land: 'Spanien', lat: 28.73, lon: -13.867 })); } });
-      await s.p.goto(BASIS); await s.p.waitForSelector('.tag'); await warteTipps(s.p, 'gezeiten');
+      await s.p.goto(START); await s.p.waitForSelector('.tag'); await warteTipps(s.p, 'gezeiten');
       const c = await s.p.evaluate(() => {
         const k = Object.keys(localStorage).filter(x => /-dwd$/.test(x))[0], d = JSON.parse(localStorage.getItem(k)).d;
         return { kopf: document.querySelector('.akt-kopf').textContent.replace(/\s+/g, ' ').trim(), tz: d.timezone, zeit: d.current.time, unter: d.daily.sunset[0], auf: d.daily.sunrise[0], erste: d.hourly.time[0], temp: document.querySelector('.akt-temp').textContent };
@@ -425,7 +426,7 @@ async function tabsPruefen(p, name, bilder) {
     // d) Mannheim mit DWD: Messung der Station, kein Zusatz „(Vorhersage)"
     s = await neueSeite(b, { colorScheme: 'light' });
     await s.p.addInitScript(() => localStorage.setItem('wpc-quelle', '"dwd"'));
-    await s.p.goto(BASIS); await s.p.waitForFunction(() => /DWD MOSMIX/.test(document.getElementById('ortZeile').textContent)); await s.p.waitForSelector('.tag');
+    await s.p.goto(START); await s.p.waitForFunction(() => /DWD MOSMIX/.test(document.getElementById('ortZeile').textContent)); await s.p.waitForSelector('.tag');
     pruefe('Mannheim DWD: Aktuell aus der Station, ohne „(Vorhersage)"', await s.p.evaluate(() => !document.querySelector('.a5-vorhersage') && /^Aktuell 14:\d\d$/.test(document.querySelector('.akt-kopf').textContent.replace(/\s+/g, ' ').trim())), await s.p.textContent('.akt-kopf'));
     await s.ctx.close();
   } catch (e) {
