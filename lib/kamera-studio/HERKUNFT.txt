@@ -1,5 +1,5 @@
 Kamera-Studio, unverändert kopiert mit tools/kamera-studio-holen.js
-Quelle: /Users/stephanhandel/KI Projekte/Wetter Apps/.arbeitskopien/kamera-studio-speicher/src
-Stand der Quelle: 69884b4 2026-10-20 Funde der zweiten Meinung: Vorlage auch je App getrennt, Namenswechsel bei hängendem Öffnen verliert keine Fotos, Original-Knopf mit Akzent-Schriftfarbe
+Quelle: Wetter Apps/Kamera Konfigurator/src/ (privat: GitHub kamera-konfigurator-quelle)
+Stand der Quelle: 8208436 2026-10-20 Nach-Foto-Knöpfe nicht mehr halb abgeschnitten („Weiter mit diesem Design“)
 Dateien: ks-symbole.js, ks-engine.js, ks-studio.js, ks-studio.css
 Nicht von Hand ändern: Änderungen in der Quelle machen, dann neu holen.
