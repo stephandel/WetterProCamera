@@ -61,3 +61,21 @@ Zweig `design-gelb-wetterfoto` (Arbeitskopie `Wetter Apps/.arbeitskopien/wpcamer
   - Die braun-schwarze Tagesliste kommt so aus dem Design-Konfigurator: Die Tönung richtet sich nach dem Gelb, nicht nach der blauen Fläche. Ob sie bleibt, entscheidet Stephan.
   - ⌘1–5 folgen der festen Tab-Reihenfolge, nicht dem Platz des Wetterfoto-Knopfs.
 - Nach dem Nachtrag: `npm test` 188 + 37 + 72 grün, ux-check 11 grün. Studio-Tests: Engine 460, Seite 674, Studio 2871 grün.
+
+## Nachtrag 2: offene Punkte umgesetzt (20.10.2026 abends)
+**Geändert**
+- Tagesliste im Blau der Kacheln (`--tag-a` #1158AD, `--tag-b` #0C50A1 wechselnd) statt braun-schwarz (Stephans Wahl).
+- `sw.js` löscht beim Aktualisieren nur noch eigene Zwischenspeicher (`wpc-…`). Vorher löschte jede neue Version die Offline-Daten von WeddaApp, Wedderleuchte, Kamera-Konfigurator usw. unter derselben Adresse. Derselbe Fehler ist in der WeddaApp behoben.
+- `design.json`: echte Adresse (`…/WetterProCamera/`), Repo-Name und Ordner.
+- Studio aus der Hauptfassung des Kamera-Konfigurators (Stand 7f0dee8), Holen wieder ohne `--quelle`. Darin: „Weiter mit diesem Design“ und „Neues Foto“ stehen nach dem Foto ganz sichtbar (vorher halb abgeschnitten im Rollbereich), Galerie behält beim Neuzeichnen ihren Rollstand.
+
+**Geprüft**
+- `npm test` 188 + 38 + 73, `w3-g1` 74, `w3-g2` 115, `w3-g3` 105: alle grün. Neue Prüfungen (Tagesfarben, fremder Zwischenspeicher bleibt) waren vorher rot.
+- Studio: Engine 460, Seite 674, Studio 2871 grün; verschärfte Prüfung J1 war vorher rot.
+- ux-check 11 grün. Bildschirmfotos 390 px angesehen.
+- Zweite Meinung (Fable): drei kleine Funde (Galerie-Rollstand, Höhe kippte 56 → 52 %, WeddaApp-Plakette „lädt …“ hell 1,3:1), alle behoben und getestet.
+
+**Offen**
+- iPhone-Test wie oben (Kamera, Teilen, Galerie nach Neustart, Gelb in der Sonne).
+- Kleines iPhone SE: Vorlagen-Namen rollen weiter (Platz reicht nicht).
+- Gleicher Zwischenspeicher-Fehler in Fuerte, Heilpilze und Scheinfasten (nicht angefasst).
