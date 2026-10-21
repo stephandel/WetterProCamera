@@ -2792,10 +2792,19 @@
   function hintergrundSperren(an) {
     $$('#titelzeile, .inhalt, #tabbar, #hinweis, #macLeiste, .zugang-schwebend').forEach(function (e) { if (an) e.setAttribute('inert', ''); else e.removeAttribute('inert'); });
   }
+  // Nach dem Laden eines Fotos zeichnet das Studio neu und der Fokus fiele auf den Seitenkörper: auf „Teilen“ setzen (sonst auf „Fertig“)
+  function studioEreignis(d) {
+    if (!d || d.typ !== 'foto-geladen') return;
+    setTimeout(function () {
+      var s = $('#studio'); if (!s || s.hidden || s.contains(document.activeElement) && document.activeElement !== document.body) return;
+      var t = $$('#ksWurzel button').filter(function (b) { return b.textContent.trim() === 'Teilen' && b.getClientRects().length; })[0];
+      (t || $('#studioZu')).focus();
+    }, 200);
+  }
   function studioMount() {
     $('#ksWurzel').innerHTML = '';
     ks = KSStudio.mount($('#ksWurzel'), { variante: KS_EINSTELLUNG.variante, funktionen: KS_EINSTELLUNG.funktionen, optionen: KS_EINSTELLUNG.optionen, speicher: KS_EINSTELLUNG.speicher, start: KS_EINSTELLUNG.start, stufenWahl: KS_EINSTELLUNG.stufenWahl,
-      wetter: studioWetter(), theme: 'dunkel', appName: 'WetterProCamera' });
+      wetter: studioWetter(), theme: 'dunkel', appName: 'WetterProCamera', onEreignis: studioEreignis });
   }
   // kamera: der Knopf soll gleich die Kamera öffnen (geht nur direkt im Antippen, also nur, wenn das Studio schon geladen ist)
   // knopf: der angetippte Knopf, dorthin kehrt der Fokus zurück (Safari fokussiert angetippte Knöpfe nicht)
