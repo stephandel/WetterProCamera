@@ -108,7 +108,7 @@ async function start(b, opt, modus) {
       await f.ctx.close();
     }
 
-    console.log('4) Durchgang-Funde 4, 12, 14, 15 (A28)');
+    console.log('4) Durchgang-Funde 4, 12, 14, 15 (A28; Tagesinfo-Zeile bleibt bei 11 px, siehe Abschnitt 5)');
     {
       const s = await start(b, {}, { warnung: 'ja' });
       // Fund 14: Zusammenfassung im Tagesdetail nennt den Abschnitt
@@ -142,7 +142,7 @@ async function start(b, opt, modus) {
       const mg = await s.p.evaluate(() => {
         const sichtbar = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !e.closest('[hidden]') && getComputedStyle(e).visibility !== 'hidden'; };
         const el = [...document.querySelectorAll('#tab-graphs .pc-mg *')].filter(e => sichtbar(e) && ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) || e.tagName === 'text'));
-        const klein = el.filter(e => parseFloat(getComputedStyle(e).fontSize) < 12).map(e => (e.className.baseVal != null ? e.className.baseVal : e.className) + ' ' + getComputedStyle(e).fontSize + ' ' + e.textContent.trim().slice(0, 12));
+        const klein = el.filter(e => parseFloat(getComputedStyle(e).fontSize) < (e.classList && e.classList.contains('mg-tagesinfo') ? 11 : 12)).map(e => (e.className.baseVal != null ? e.className.baseVal : e.className) + ' ' + getComputedStyle(e).fontSize + ' ' + e.textContent.trim().slice(0, 12));
         return { n: el.length, klein: klein.slice(0, 8), seitlich: document.documentElement.scrollWidth - innerWidth };
       });
       pruefe('Fund 4: Meteogramm in 390 px: Kopfzeile, Zeitachse und Werte mind. 12 px', mg.n > 10 && mg.klein.length === 0, mg);
@@ -154,6 +154,77 @@ async function start(b, opt, modus) {
       pruefe('Fund 15: Kartenhinweis (Leaflet) mind. 12 px', at >= 12, at);
       pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
+    }
+
+    console.log('5) Zweite Meinung (22.10.2026)');
+    {
+      // F1: Gitterabrufe zählen, Antwort verzögert (langsames Netz)
+      const s = await H.neueSeite(b, {}, {});
+      await s.ctx.addInitScript(() => localStorage.setItem('wpc-ebene', '"wind"'));
+      const gitter = [];
+      await s.p.route(u => u.host === 'api.open-meteo.com' && /pressure_msl/.test(u.search) && (u.searchParams.get('latitude') || '').includes(','), async route => { gitter.push(Date.now()); await new Promise(r => setTimeout(r, 1500)); await route.fallback(); });
+      await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 }); await s.p.waitForTimeout(500);
+      await s.p.click('#tb-radsat'); await s.p.waitForTimeout(3500);
+      pruefe('Abrufe: Rad/Sat mit gemerkter Ebene Wind öffnen (langsames Netz) = genau 1 Gitterabruf', gitter.length === 1, gitter.length);
+      const box = await s.p.$eval('#radarKarte', e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+      for (let i = 0; i < 5; i++) { await s.p.mouse.move(box.x, box.y); await s.p.mouse.down(); await s.p.mouse.move(box.x + 25, box.y + 10, { steps: 5 }); await s.p.mouse.up(); await s.p.waitForTimeout(700); }
+      await s.p.waitForTimeout(2200);
+      pruefe('Abrufe: 5 kleine Verschiebungen holen nichts Neues', gitter.length === 1, gitter.length);
+      await s.p.click('#ebenenWahl [data-ebene="radar"]'); await s.p.waitForTimeout(300);
+      await s.p.click('#ebenenWahl [data-ebene="wolken"]'); await s.p.waitForTimeout(2200);
+      await s.p.click('#tb-wetter'); await s.p.waitForTimeout(300); await s.p.click('#tb-radsat'); await s.p.waitForTimeout(2200);
+      pruefe('Abrufe: Pillenwechsel und Tabwechsel holen nichts Neues', gitter.length === 1, gitter.length);
+      // F2: Wolken sichtbar auf heller Karte: Bild über hellem Grund, linker Rand (wenig Wolken) gegen rechten Rand (viel Wolken)
+      await s.p.click('#ebenenWahl [data-ebene="wolken"]'); await s.p.waitForTimeout(800);
+      const kon = await s.p.evaluate(async () => {
+        const i = document.querySelector('#radarKarte img.a26-flaeche'); if (!i.complete) await new Promise(r => { i.onload = r; });
+        const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.fillStyle = 'rgb(221,221,221)'; x.fillRect(0, 0, c.width, c.height); x.drawImage(i, 0, 0);
+        const lum = px => { const d = x.getImageData(px, Math.round(c.height / 2), 1, 1).data; return .2126 * d[0] + .7152 * d[1] + .0722 * d[2]; };
+        return { links: lum(2), rechts: lum(c.width - 3) };
+      });
+      pruefe('Wolken: auf heller Karte klarer Unterschied zwischen wenig und viel Bewölkung (Helligkeit mind. 50 von 255)', Math.abs(kon.rechts - kon.links) >= 50, kon);
+      pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+
+      // F3: goldene Stunde in „Was heute geht“ = Kachel „Sonne“
+      const t = await start(b);
+      const gold = await t.p.evaluate(() => ({ tipp: (/Goldene Stunde ab (\d\d:\d\d)/.exec(document.getElementById('a5Tipps').textContent) || [])[1], sonne: (/Goldene Stunde abends (\d\d:\d\d) bis (\d\d:\d\d)/.exec(document.querySelector('.w3-sonne-kachel').textContent) || [])[1] }));
+      pruefe('Goldene Stunde: „Was heute geht“ und Kachel „Sonne“ nennen denselben Beginn', !!gold.tipp && gold.tipp === gold.sonne, gold);
+      await t.ctx.close();
+
+      // F5/F6/F4: Wind mit Einheit, Isobaren bei kleinen Unterschieden
+      const w = await start(b);
+      await w.p.click('#tb-radsat'); await w.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached' }); await w.p.waitForTimeout(400);
+      await w.p.click('#ebenenWahl [data-ebene="wind"]'); await w.p.waitForTimeout(900);
+      pruefe('Wind: Erklärung nennt die gewählte Einheit (km/h)', /km\/h/.test(await w.p.textContent('#ebeneQuelle')), await w.p.textContent('#ebeneQuelle'));
+      await w.ctx.close();
+      for (const [k, erw, name] of [[0.25, /alle 2 hPa/, 'geringe Unterschiede: 2-hPa-Schritt'], [0.01, /kaum Druckunterschiede/i, 'fast kein Unterschied: Hinweis statt leerer Karte'], [1, /alle 4 hPa/, 'normal: 4-hPa-Schritt']]) {
+        const d = await start(b, {}, { druck: k });
+        await d.p.click('#tb-radsat'); await d.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached' }); await d.p.waitForTimeout(400);
+        await d.p.click('#ebenenWahl [data-ebene="druck"]'); await d.p.waitForTimeout(900);
+        const z = await d.p.textContent('#radarZeit');
+        pruefe('Isobaren, ' + name, erw.test(z), z);
+        if (k === 1) await H.foto(d.p, 'a26-390-isobaren-etikett');
+        await d.ctx.close();
+      }
+
+      // F9: Fokus-Kreis nimmt summary auf und lässt tabindex=-1 aus
+      const f = await start(b);
+      await f.p.click('.w3-sonne-kachel [data-w3-sonne]'); await f.p.waitForSelector('#w3Sonne[open]');
+      await f.p.evaluate(() => { document.getElementById('w3SonneInhalt').insertAdjacentHTML('beforeend', '<details id="fkD"><summary id="fkS">Mehr</summary><p>x</p></details><button id="fkM" tabindex="-1">nie</button>'); });
+      const besucht = [];
+      for (let i = 0; i < 8; i++) { await f.p.keyboard.press('Tab'); besucht.push(await f.p.evaluate(() => document.activeElement.id || document.activeElement.textContent.trim().slice(0, 8))); }
+      pruefe('Fokus-Kreis: „summary“ wird erreicht, Knopf mit tabindex=-1 nie', besucht.includes('fkS') && !besucht.includes('fkM'), besucht);
+      await f.ctx.close();
+
+      // F8: UV-Zeile im Meteogramm (390 px) berührt die Jetzt-Linie nicht
+      const m = await start(b);
+      await m.p.click('#tb-graphs'); await m.p.waitForTimeout(400);
+      await m.p.evaluate(() => { const x = [...document.querySelectorAll('#tab-graphs [data-seg] [data-v]')].find(e => /Meteogramm/.test(e.textContent)); if (x) x.click(); });
+      await m.p.waitForSelector('#tab-graphs .mg-jetzt', { state: 'attached', timeout: 10000 }); await m.p.waitForTimeout(500);
+      const uv = await m.p.evaluate(() => { const l = document.querySelector('#tab-graphs .mg-jetzt').getBoundingClientRect().x; return [...document.querySelectorAll('#tab-graphs .mg-tagesinfo')].map(e => { const r = e.getBoundingClientRect(); return { t: e.textContent.slice(0, 20), links: Math.round(r.left), rechts: Math.round(r.right), linie: Math.round(l), fs: getComputedStyle(e).fontSize }; }).filter(x => !(x.rechts < x.linie - 3 || x.links > x.linie + 3)); });
+      pruefe('Meteogramm: keine Tagesinfo-Zeile läuft in die Jetzt-Linie', uv.length === 0, uv);
+      await m.ctx.close();
     }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();

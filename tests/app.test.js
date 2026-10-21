@@ -343,7 +343,7 @@ async function tabsPruefen(p, name, bilder) {
     await s.p.waitForFunction(() => /"49\.49,8\.47":false/.test(localStorage.getItem('wpc-kueste') || ''), null, { timeout: 8000 }).catch(() => { });
     let t = await tipps(s.p);
     pruefe('Mannheim: Kachel „Was heute geht" steht unter „Sonne und Mond" (Reihenfolge laut Link vom 20.10.)', await s.p.evaluate(() => document.getElementById('a5Tipps').previousElementSibling.classList.contains('w3-mond-kachel')));
-    pruefe('Mannheim: nur „Goldene Stunde ab 17:50 Uhr"', t && t.arten.join() === 'gold' && /Goldene Stunde ab 17:50 Uhr/.test(t.saetze[0]), t);
+    pruefe('Mannheim: nur „Goldene Stunde ab 17:53 Uhr“ (wie in der Kachel „Sonne“, A26)', t && t.arten.join() === 'gold' && /Goldene Stunde ab 17:53 Uhr/.test(t.saetze[0]), t);
     pruefe('Mannheim: Marine-API ohne Werte → kein Küstenort (gemerkt in wpc-kueste)', await s.p.evaluate(() => JSON.parse(localStorage.getItem('wpc-kueste'))['49.49,8.47'] === false));
     pruefe('Mannheim: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     // Mehr → Startseite: Schalter, Haken und Quelle Marine-API

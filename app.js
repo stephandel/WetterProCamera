@@ -317,9 +317,9 @@
     sat: ['Satellitenbild in Farbe (Meteosat). „Abspielen“ zeigt die letzten 2 Stunden. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
     ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts. „Abspielen“ zeigt die letzten 2 Stunden.', 'EUMETSAT', 'https://view.eumetsat.int'],
     karte: ['Aktuelle Temperaturen an deinen Orten.', 'Open-Meteo', 'https://open-meteo.com'],
-    wind: ['Aktueller Wind in 10 m Höhe. Der Pfeil zeigt, wohin der Wind weht, die Zahl ist die Geschwindigkeit. Regen zeigt das Radar.', 'Open-Meteo', 'https://open-meteo.com'],
+    wind: ['Aktueller Wind in 10 m Höhe. Der Pfeil zeigt, wohin der Wind weht, die Zahl ist die Geschwindigkeit in der gewählten Einheit (aktuell: ' + EINHEITEN[windEinheit] + '). Regen zeigt das Radar.', 'Open-Meteo', 'https://open-meteo.com'],
     wolken: ['Aktuelle Bewölkung: je weißer die Fläche, desto dichter die Wolken. Das Satellitenbild zeigt die echten Wolken.', 'Open-Meteo', 'https://open-meteo.com'],
-    druck: ['Linien gleichen Luftdrucks auf Meereshöhe, alle 4 hPa. Enge Linien bedeuten starken Wind.', 'Open-Meteo', 'https://open-meteo.com']
+    druck: ['Linien gleichen Luftdrucks auf Meereshöhe, meist alle 4 hPa, bei geringen Unterschieden alle 2 hPa. Enge Linien bedeuten starken Wind.', 'Open-Meteo', 'https://open-meteo.com']
   };
   // Regnet es gerade oder in den nächsten 2 Stunden am Ort? (aus der Vorhersage, nicht aus dem Radarbild)
   function regenInSicht() {
@@ -387,30 +387,35 @@
      Kostenlose Quelle ohne Schlüssel: Open-Meteo, aktuelle Werte für ein Gitter (8 × 7 Punkte, eine Anfrage) rund um den Kartenausschnitt.
      Die Fläche wird auf ein Bild gezeichnet und über die Karte gelegt (wie im Baustein wpkarte.js, Isobaren per Marching Squares); neu gezeichnet nach dem Verschieben oder Zoomen.
      Nicht gebaut: Regen als eigene Ebene (das Radar zeigt Regen), Zeitleiste für Vorhersage-Bilder, Wind als Strömungs-Animation (brauchen Dienste mit Schlüssel oder viel mehr Daten). */
-  var A26_NX = 8, A26_NY = 7, a26 = { g: null, schluessel: '', bild: null, nr: 0, uhr: null };
+  var A26_NX = 8, A26_NY = 7, a26 = { g: null, laeuft: null, bild: null, nr: 0, uhr: null };
   function a26Weg() { if (a26.bild && radarKarte) radarKarte.removeLayer(a26.bild); a26.bild = null; a26.nr++; }
   function a26Bewegt() { clearTimeout(a26.uhr); if (A26_NAMEN[ebene]) a26.uhr = setTimeout(a26Zeigen, 400); }
   function a26Holen() {
-    var b = radarKarte.getBounds(), dLat = (b.getNorth() - b.getSouth()) * .15, dLon = (b.getEast() - b.getWest()) * .15;
+    // Open-Meteo zählt jeden Gitterpunkt als eigenen Abruf: Gitter weiterverwenden, solange die Kartenmitte darin liegt, der Zoom höchstens 1 Stufe anders ist und die Werte jünger als 30 Minuten sind (Prüfung 22.10.2026).
+    // Am Rand des Kartenbilds gelten die Randwerte weiter (a26Wert), sonst würde schon eine kleine Verschiebung neu laden.
+    var b = radarKarte.getBounds(), zoom = radarKarte.getZoom(), g = a26.g, mitte = b.getCenter();
+    if (g && Math.abs(g.zoom - zoom) <= 1 && Date.now() - g.zeit < 30 * 60000 && mitte.lat >= g.lats[0] && mitte.lat <= g.lats[A26_NY - 1] && mitte.lng >= g.lons[0] && mitte.lng <= g.lons[A26_NX - 1]) return Promise.resolve(g);
+    if (a26.laeuft) return a26.laeuft.then(a26Holen);   // läuft schon ein Abruf: abwarten, danach neu entscheiden (sonst doppelte Abrufe beim Öffnen)
+    var dLat = (b.getNorth() - b.getSouth()) * .3, dLon = (b.getEast() - b.getWest()) * .3;
     var sued = Math.max(-85, b.getSouth() - dLat), nord = Math.min(85, b.getNorth() + dLat), west = Math.max(-180, b.getWest() - dLon), ost = Math.min(180, b.getEast() + dLon);
-    var key = [sued, nord, west, ost].map(function (v) { return v.toFixed(1); }).join('|');
-    if (a26.g && key === a26.schluessel) return Promise.resolve(a26.g);
     var lats = [], lons = [], la = [], lo = [], i, j;
     for (j = 0; j < A26_NY; j++) lats.push(+(sued + (nord - sued) * j / (A26_NY - 1)).toFixed(3));
     for (i = 0; i < A26_NX; i++) lons.push(+(west + (ost - west) * i / (A26_NX - 1)).toFixed(3));
     for (j = 0; j < A26_NY; j++) for (i = 0; i < A26_NX; i++) { la.push(lats[j]); lo.push(lons[i]); }
-    return holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + la.join(',') + '&longitude=' + lo.join(',') + '&current=wind_speed_10m,wind_direction_10m,cloud_cover,pressure_msl&timezone=GMT').then(function (antw) {
+    a26.laeuft = holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + la.join(',') + '&longitude=' + lo.join(',') + '&current=wind_speed_10m,wind_direction_10m,cloud_cover,pressure_msl&timezone=GMT').then(function (antw) {
+      a26.laeuft = null;
       var liste = [].concat(antw), f = { wind: [], dir: [], wolken: [], druck: [] };
       if (liste.length < A26_NX * A26_NY) throw new Error('Gitter unvollständig');
       liste.forEach(function (a) { var c = a.current || {}; f.wind.push(c.wind_speed_10m); f.dir.push(c.wind_direction_10m); f.wolken.push(c.cloud_cover); f.druck.push(c.pressure_msl); });
-      a26.g = { lats: lats, lons: lons, f: f }; a26.schluessel = key;
+      a26.g = { lats: lats, lons: lons, f: f, zoom: zoom, zeit: Date.now() };
       return a26.g;
-    });
+    }, function (e) { a26.laeuft = null; throw e; });
+    return a26.laeuft;
   }
   // Wert an einer Stelle: bilinear zwischen den vier Gitterpunkten, null außerhalb oder bei Lücken
   function a26Wert(g, feld, lat, lon) {
     var fx = (lon - g.lons[0]) / (g.lons[A26_NX - 1] - g.lons[0]) * (A26_NX - 1), fy = (lat - g.lats[0]) / (g.lats[A26_NY - 1] - g.lats[0]) * (A26_NY - 1);
-    if (!(fx >= 0 && fy >= 0 && fx <= A26_NX - 1 && fy <= A26_NY - 1)) return null;
+    fx = Math.max(0, Math.min(A26_NX - 1, fx)); fy = Math.max(0, Math.min(A26_NY - 1, fy));   // außerhalb: Randwert
     var i = Math.min(A26_NX - 2, Math.floor(fx)), j = Math.min(A26_NY - 2, Math.floor(fy)), dx = fx - i, dy = fy - j, w = g.f[feld], k = j * A26_NX + i;
     var a = w[k], b = w[k + 1], c = w[k + A26_NX], d = w[k + A26_NX + 1];
     if ([a, b, c, d].some(function (v) { return v == null; })) return null;
@@ -421,6 +426,7 @@
     var s = a26Wert(g, 'wind', lat, lon);
     if (s == null) return null;
     var fx = (lon - g.lons[0]) / (g.lons[A26_NX - 1] - g.lons[0]) * (A26_NX - 1), fy = (lat - g.lats[0]) / (g.lats[A26_NY - 1] - g.lats[0]) * (A26_NY - 1);
+    fx = Math.max(0, Math.min(A26_NX - 1, fx)); fy = Math.max(0, Math.min(A26_NY - 1, fy));
     var i = Math.min(A26_NX - 2, Math.floor(fx)), j = Math.min(A26_NY - 2, Math.floor(fy)), dx = fx - i, dy = fy - j, x = 0, y = 0;
     [[i, j, (1 - dx) * (1 - dy)], [i + 1, j, dx * (1 - dy)], [i, j + 1, (1 - dx) * dy], [i + 1, j + 1, dx * dy]].forEach(function (e) {
       var k = e[1] * A26_NX + e[0], r = g.f.dir[k] * Math.PI / 180; x += Math.sin(r) * g.f.wind[k] * e[2]; y += Math.cos(r) * g.f.wind[k] * e[2];
@@ -457,30 +463,36 @@
     var ctx = cv.getContext('2d'), css = getComputedStyle(document.documentElement), hell = css.getPropertyValue('--label').trim(), dunkel = css.getPropertyValue('--bg').trim();
     var latBei = function (y) { return radarKarte.containerPointToLatLng([0, y]).lat; }, lonBei = function (x) { return radarKarte.containerPointToLatLng([x, 0]).lng; };
     ctx.scale(dpr, dpr); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 12px -apple-system, "SF Pro Text", system-ui, sans-serif';
-    var x, y;
+    var x, y, stufe = 0, anzahl = 0;
     if (ebene === 'wolken') {
       var w = Math.ceil(W / 8), h = Math.ceil(H / 8), kl = document.createElement('canvas'); kl.width = w; kl.height = h;
+      ctx.globalAlpha = .5; ctx.fillStyle = dunkel; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;   // dunkler Schleier, damit die weißen Wolken auch auf der hellen Karte zu sehen sind
       var kc = kl.getContext('2d'); kc.fillStyle = hell;
-      for (y = 0; y < h; y++) for (x = 0; x < w; x++) { var c = a26Wert(g, 'wolken', latBei(y * 8 + 4), lonBei(x * 8 + 4)); if (c != null) { kc.globalAlpha = Math.max(0, Math.min(1, c / 100)) * .8; kc.fillRect(x, y, 1, 1); } }
+      for (y = 0; y < h; y++) for (x = 0; x < w; x++) { var c = a26Wert(g, 'wolken', latBei(y * 8 + 4), lonBei(x * 8 + 4)); if (c != null) { kc.globalAlpha = Math.max(0, Math.min(1, c / 100)) * .9; kc.fillRect(x, y, 1, 1); } }
       ctx.imageSmoothingEnabled = true; ctx.drawImage(kl, 0, 0, w * 8, h * 8);
     } else if (ebene === 'wind') {
-      for (y = 40; y < H; y += 80) for (x = 40; x < W; x += 80) {
+      for (y = 44; y < H; y += 84) for (x = 44; x < W; x += 84) {
         var wi = a26Wind(g, latBei(y), lonBei(x)); if (!wi) continue;
         var len = Math.min(36, 14 + wi.v * .6), r = (wi.dir + 180) * Math.PI / 180, dx = Math.sin(r), dy = -Math.cos(r);
         var x1 = x - dx * len / 2, y1 = y - dy * len / 2, x2 = x + dx * len / 2, y2 = y + dy * len / 2, kopf = function () { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.moveTo(x2 - dx * 8 - dy * 5, y2 - dy * 8 + dx * 5); ctx.lineTo(x2, y2); ctx.lineTo(x2 - dx * 8 + dy * 5, y2 - dy * 8 - dx * 5); ctx.stroke(); };
         ctx.strokeStyle = dunkel; ctx.lineWidth = 5.5; kopf(); ctx.strokeStyle = hell; ctx.lineWidth = 2.5; kopf();
-        var zahl = String(windWert(wi.v)), ty = y + Math.max(len / 2, 12) + 10; ctx.lineWidth = 4; ctx.strokeStyle = dunkel; ctx.strokeText(zahl, x, ty); ctx.fillStyle = hell; ctx.fillText(zahl, x, ty);
+        var zahl = windTxt(wi.v), ty = y + Math.max(len / 2, 12) + 10; ctx.lineWidth = 4; ctx.strokeStyle = dunkel; ctx.strokeText(zahl, x, ty); ctx.fillStyle = hell; ctx.fillText(zahl, x, ty);
       }
     } else {
       var rw = Math.max(24, Math.round(W / 6)), rh = Math.max(18, Math.round(H / 6)), feld = [];
       for (y = 0; y < rh; y++) for (x = 0; x < rw; x++) feld.push(a26Wert(g, 'druck', latBei(y / (rh - 1) * H), lonBei(x / (rw - 1) * W)));
-      var linien = a26Linien(feld, rw, rh, 4), sx = W / (rw - 1), sy = H / (rh - 1);
+      stufe = 4; var linien = a26Linien(feld, rw, rh, stufe);
+      if (linien.length < 2) { stufe = 2; linien = a26Linien(feld, rw, rh, stufe); }   // ruhiges Wetter: feinere Stufe
+      var sx = W / (rw - 1), sy = H / (rh - 1), anzahl = linien.length;
       var strecken = function (l) { ctx.beginPath(); l.seg.forEach(function (sg) { ctx.moveTo(sg[0][0] * sx, sg[0][1] * sy); ctx.lineTo(sg[1][0] * sx, sg[1][1] * sy); }); ctx.stroke(); };
       linien.forEach(function (l) { ctx.strokeStyle = dunkel; ctx.lineWidth = 5; strecken(l); ctx.strokeStyle = hell; ctx.lineWidth = 2; strecken(l); });
+      // Beschriftung nur im Inneren: nicht am Rand und nicht unter den Zoom-Knöpfen (rechts oben)
+      var frei = function (mx, my) { return mx > 30 && my > 20 && mx < W - 30 && my < H - 30 && !(mx > W - 80 && my < 130); };
       linien.forEach(function (l) {
         var n = l.seg.length, k = Math.max(1, Math.floor(n / 2));
         for (var q = Math.floor(k / 2); q < n; q += k) {
           var sg = l.seg[q], mx = (sg[0][0] + sg[1][0]) / 2 * sx, my = (sg[0][1] + sg[1][1]) / 2 * sy, txt = String(Math.round(l.wert));
+          if (!frei(mx, my)) continue;
           ctx.fillStyle = dunkel; ctx.fillRect(mx - 20, my - 10, 40, 20); ctx.fillStyle = hell; ctx.fillText(txt, mx, my);
         }
       });
@@ -488,14 +500,17 @@
     var mb = radarKarte.getBounds(), bounds = [[mb.getSouth(), mb.getWest()], [mb.getNorth(), mb.getEast()]], url = cv.toDataURL('image/png');
     if (a26.bild) radarKarte.removeLayer(a26.bild);
     a26.bild = L.imageOverlay(url, bounds, { interactive: false, className: 'a26-flaeche', zIndex: 5 }).addTo(radarKarte);
+    return { stufe: stufe, anzahl: anzahl };
   }
   function a26Zeigen() {
     if (!A26_NAMEN[ebene] || !radarKarte) return;
+    var gr = radarKarte.getSize(); if (!gr.x || !gr.y) return;   // Karte noch nicht gemessen: nichts holen, das nächste moveend kommt
     var nr = ++a26.nr, z = $('#radarZeit'), name = A26_NAMEN[ebene];
     z.textContent = name + ' · wird geladen …';
     a26Holen().then(function (g) {
       if (nr !== a26.nr || !A26_NAMEN[ebene]) return;
-      a26Zeichnen(g); z.textContent = name + ' · aktuell';
+      var info = a26Zeichnen(g);
+      z.textContent = name + ' · ' + (ebene !== 'druck' ? 'aktuell' : info.anzahl ? 'alle ' + info.stufe + ' hPa' : 'kaum Druckunterschiede im Ausschnitt, deshalb keine Linien');
     }).catch(function () { if (nr !== a26.nr) return; if (a26.bild) { radarKarte.removeLayer(a26.bild); a26.bild = null; } z.textContent = name + ': Wetterdaten für die Karte gerade nicht erreichbar.'; });
   }
   function temperaturMarken() {
@@ -1715,9 +1730,10 @@
       var g = a5Gezeiten(meer, jetzt);
       if (g.length) dazu('gezeiten', Ikon('tropfen'), 'Nächste ' + g.map(function (x) { return (x.flut ? 'Flut' : 'Ebbe') + ' gegen ' + hm(x.zeit) + ' Uhr'; }).join(', danach ') + '.');
     }
-    if (unter && jetzt < unter) {
-      var gold = a5Plus(unter, -45);
-      dazu('gold', Ikon('sunset'), jetzt < gold ? 'Goldene Stunde ab ' + hm(gold) + ' Uhr: warmes, weiches Licht für Fotos.' : 'Goldene Stunde jetzt, bis ' + hm(unter) + ' Uhr: warmes Licht für Fotos.');
+    var ga = w3SonneMond(heute), gv = ga.versatz, g0 = ga.gold.abends[0] != null ? heute + 'T' + w3Uhr(ga.gold.abends[0], gv) : null, g1 = ga.gold.abends[1] != null ? heute + 'T' + w3Uhr(ga.gold.abends[1], gv) : null;   // dieselbe goldene Stunde wie in der Kachel „Sonne“
+    if (unter && jetzt < (g1 || unter)) {
+      var gold = g0 || a5Plus(unter, -45), goldEnde = g1 || unter;
+      dazu('gold', Ikon('sunset'), jetzt < gold ? 'Goldene Stunde ab ' + hm(gold) + ' Uhr: warmes, weiches Licht für Fotos.' : 'Goldene Stunde jetzt, bis ' + hm(goldEnde) + ' Uhr: warmes Licht für Fotos.');
     }
     if (unter && h.time) {
       // Nacht = Sonnenuntergang bis 3 Uhr; ohne Bewölkungswerte zählt das Wettersymbol (klar = 0 %, heiter = 15 %)
@@ -2287,7 +2303,7 @@
     d.addEventListener('click', function (e) { if (e.target.closest('[data-zu]')) d.close(); });
     d.addEventListener('keydown', function (e) {   // Fokus kreist im Blatt (Durchgang 21.10.2026, Fund 12); Safari überspringt Knöpfe beim Tab, deshalb selbst weiterschalten
       if (e.key !== 'Tab') return;
-      var f = $$('button, a[href], input, select, textarea, [tabindex="0"]', d).filter(function (x) { return !x.disabled && x.getClientRects().length; }); if (!f.length) return;
+      var f = $$('button:not([tabindex="-1"]), a[href], input, select, textarea, summary, [tabindex="0"]', d).filter(function (x) { return !x.disabled && x.getClientRects().length; }); if (!f.length) return;
       var i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i < 0 || i === f.length - 1 ? 0 : i + 1);
       e.preventDefault(); f[n].focus();
     });

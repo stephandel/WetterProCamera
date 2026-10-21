@@ -42,8 +42,8 @@ async function umleiten(p, modus) {
     if (modus.offline) return route.abort('internetdisconnected');
     if (u.host === 'api.open-meteo.com') {
       const lat = u.searchParams.get('latitude') || '';
-      // Karten-Ebenen Wind/Wolken/Isobaren (A26): Gitter mit Werten, die von West nach Ost und von Süd nach Nord wachsen (Isobaren sichtbar); modus.gitterFehler = Abbruch
-      if (lat.includes(',') && /pressure_msl/.test(u.searchParams.get('current') || '')) return modus.gitterFehler ? route.abort('connectionfailed') : json(route, JSON.stringify(lat.split(',').map((_, i) => ({ current: { time: '2026-10-15T12:45', wind_speed_10m: 10 + (i % 8) * 3, wind_direction_10m: 270, cloud_cover: (i % 8) * 14, pressure_msl: 1008 + (i % 8) * 2.5 + Math.floor(i / 8) } }))));
+      // Karten-Ebenen Wind/Wolken/Isobaren (A26): Gitter mit Werten, die von West nach Ost und von Süd nach Nord wachsen (Isobaren sichtbar); modus.gitterFehler = Abbruch, modus.druck = Faktor für die Druckunterschiede (1 = 23 hPa Spanne)
+      if (lat.includes(',') && /pressure_msl/.test(u.searchParams.get('current') || '')) return modus.gitterFehler ? route.abort('connectionfailed') : json(route, JSON.stringify(lat.split(',').map((_, i) => ({ current: { time: '2026-10-15T12:45', wind_speed_10m: 10 + (i % 8) * 3, wind_direction_10m: 270, cloud_cover: (i % 8) * 14, pressure_msl: 1008 + (modus.druck != null ? modus.druck : 1) * ((i % 8) * 2.5 + Math.floor(i / 8)) } }))));
       if (lat.includes(',')) return json(route, JSON.stringify(lat.split(',').map((_, i) => ({ current: { temperature_2m: 15 + i, weather_code: 2, is_day: 1 } }))));
       if (u.searchParams.has('past_days')) return json(route, fixture('open-meteo-meteogramm.json'));   // Meteogramm-Baustein (Paket A5)
       return json(route, modus.omAendern ? JSON.stringify(modus.omAendern(JSON.parse(fixture('open-meteo.json')))) : fixture('open-meteo.json'));
