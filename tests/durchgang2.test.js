@@ -22,7 +22,8 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
       await s.p.waitForTimeout(800);
       // Hauptknopf (ks-primaer) heißt „Teilen“, ohne navigator.share (Linux, GitHub-Lauf) „Sichern“
       const f = await s.p.evaluate(() => { const a = document.activeElement; return { imStudio: !!a.closest('#studio'), tag: a.tagName, text: (a.textContent || '').trim().slice(0, 20), haupt: a.classList.contains('ks-primaer') }; });
-      pruefe('Studio ' + name + ': nach dem Laden des Fotos liegt der Fokus auf dem Hauptknopf „Teilen“/„Sichern“ (nicht auf dem Seitenkörper, nicht „Fertig“)', f.imStudio && f.haupt && /^(Teilen|Sichern)$/.test(f.text), f);
+      // Seit Studio-Quelle 1415cff setzt das Studio den Fokus selbst (fokusNachLaden: gewählte Vorlage, sonst Werkzeug/Hauptknopf); die App greift nur noch ein, wenn der Fokus verloren ist
+      pruefe('Studio ' + name + ': nach dem Laden des Fotos liegt der Fokus im Studio auf einem Bedienelement (Vorlage oder Hauptknopf; nicht Seitenkörper, nicht „Fertig“)', f.imStudio && f.tag === 'BUTTON' && f.text !== 'Fertig' && (f.haupt || /^(Empfohlen|Band|Story|Quadrat|Analog|Schwarz-Weiß|Sofortbild)/.test(f.text)), f);
       await s.ctx.close();
     }
     // Fund N2 (zweite Meinung): Warnblatt per Antippen/Klick (Safari fokussiert den Knopf nicht), dann Esc: Fokus zurück auf die Warnkachel
@@ -100,7 +101,7 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
         await s.p.waitForTimeout(ms === 300 ? 300 : ms === 1000 ? 700 : 1500);
         const f = await s.p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, text: (a.textContent || '').trim().slice(0, 12), verbunden: a.isConnected, haupt: a.classList.contains('ks-primaer') }; });
         // nach 300 ms zeichnet das Studio noch ohne Hauptknopf: dann vorläufig „Fertig“, nie der Seitenkörper; Hauptknopf heißt „Teilen“, ohne navigator.share „Sichern“
-        pruefe('Fotowechsel bei offenem Studio: nach ' + ms + ' ms liegt der Fokus ' + (ms === 300 ? 'im Studio (nicht BODY)' : 'auf dem Hauptknopf „Teilen“/„Sichern“'), ms === 300 ? f.tag === 'BUTTON' && f.verbunden : f.tag === 'BUTTON' && f.haupt && /^(Teilen|Sichern)$/.test(f.text), f);
+        pruefe('Fotowechsel bei offenem Studio: nach ' + ms + ' ms liegt der Fokus ' + (ms === 300 ? 'im Studio (nicht BODY)' : 'auf Vorlage oder Hauptknopf (nicht „Fertig“)'), ms === 300 ? f.tag === 'BUTTON' && f.verbunden : f.tag === 'BUTTON' && f.verbunden && f.text !== 'Fertig' && (f.haupt || /^(Empfohlen|Band|Story|Quadrat|Analog|Schwarz-Weiß|Sofortbild)/.test(f.text)), f);
       }
       await s.ctx.close();
     }
