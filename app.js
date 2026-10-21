@@ -2669,7 +2669,8 @@
   var KS_ORDNER = 'lib/kamera-studio/';
   // speicher: 'wpcamera' trennt Galerie (IndexedDB wpcamera-ks-galerie) und Nutzerwahl (wpcamera-ks-nutzer-…) von WeddaApp und Konfigurator unter derselben Adresse
   var KS_EINSTELLUNG = {
-    variante: 'schnell', funktionen: {}, speicher: 'wpcamera',
+    // stufenWahl: Umschalter „Einfach | Profi“ im Studio-Kopf (Stephan, 21.10.2026)
+    variante: 'schnell', funktionen: {}, speicher: 'wpcamera', stufenWahl: true,
     optionen: { zugangAktion: 'kamera', ausloeserOrt: 'frei', galerieOriginale: 3, galerieBearbeitet: 5, vorschauStart: 'studio',
       nutzerDarf: { zugang: [], ausloeser: ['studio'], galerie: [], sucher: ['studio'] } },
     // Foto-Infos (design.json, A26): aufs Foto nur Temperatur, Wettersymbol, Ort und Datum; der Nutzer kann im Studio mehr zuschalten
@@ -2793,7 +2794,7 @@
   }
   function studioMount() {
     $('#ksWurzel').innerHTML = '';
-    ks = KSStudio.mount($('#ksWurzel'), { variante: KS_EINSTELLUNG.variante, funktionen: KS_EINSTELLUNG.funktionen, optionen: KS_EINSTELLUNG.optionen, speicher: KS_EINSTELLUNG.speicher, start: KS_EINSTELLUNG.start,
+    ks = KSStudio.mount($('#ksWurzel'), { variante: KS_EINSTELLUNG.variante, funktionen: KS_EINSTELLUNG.funktionen, optionen: KS_EINSTELLUNG.optionen, speicher: KS_EINSTELLUNG.speicher, start: KS_EINSTELLUNG.start, stufenWahl: KS_EINSTELLUNG.stufenWahl,
       wetter: studioWetter(), theme: 'dunkel', appName: 'WetterProCamera' });
   }
   // kamera: der Knopf soll gleich die Kamera öffnen (geht nur direkt im Antippen, also nur, wenn das Studio schon geladen ist)

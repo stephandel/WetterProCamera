@@ -60,6 +60,9 @@ const knopf = '#tabbar #tb-kamera';
       const teilen = await p.$$eval('#ksWurzel button', bs => bs.filter(x => x.getClientRects().length).map(x => x.textContent.trim()));
       pruefe('Teilen-Knopf und Zahnrad im Studio', teilen.includes('Teilen') && !!(await p.$('#ksWurzel [data-akt="nutzer-oeffnen"]')), teilen.slice(0, 20));
       pruefe('Kein Textvorschlag von Claude (braucht einen Server)', !teilen.some(t => /Claude|Textvorschlag/.test(t)));
+      // Stephan, 21.10.2026: Umschalter „Einfach | Profi“ in den Apps einschalten (Mount-Option stufenWahl)
+      const stufen = await p.$$eval('#ksWurzel .ks-kopf-stufe [data-akt="stufe"]', l => l.map(b => b.textContent.trim()));
+      pruefe('Umschalter „Einfach | Profi“ im Studio-Kopf (stufenWahl an)', stufen.join('|') === 'Einfach|Profi', stufen);
       pruefe('Kein seitliches Scrollen mit Studio', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await H.foto(p, 'wetterfoto-390-studio-foto');
       await p.click('#studioZu'); await p.waitForTimeout(200);
