@@ -242,7 +242,7 @@ async function radsat(s, mac) {
       await H.foto(m.p, 'vollbild-immer-mac-1280-radsat');
       await m.ctx.close();
     }
-    console.log('7) Zweite Meinung: Tastenkürzel bei offenem Blatt');
+    console.log('7) Zweite Meinung: Tastenkürzel bei offenem Blatt, schnelles Auf/Zu/Auf');
     for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
       const s = await start(b, { viewport: vp }), p = s.p, n = vp.width;
       const frei = () => p.evaluate(() => ({ inert: document.querySelectorAll('[inert]').length, overflow: getComputedStyle(document.documentElement).overflow, blatt: !!document.querySelector('.mg-vollbild, .rs-vollbild'), reiter: ['wetter', 'graphs', 'radsat', 'mehr'].filter(t => !document.getElementById('tab-' + t).hidden)[0], zustand: history.state }));
@@ -262,6 +262,21 @@ async function radsat(s, mac) {
       await p.keyboard.press('Control+r'); await p.waitForTimeout(500);
       z = await frei();
       pruefe(n + ': Strg+R im Blatt schließt das Blatt und frischt auf, Reiter bleibt Rad/Sat', !z.blatt && z.reiter === 'radsat' && z.inert === basis, z);
+      // Auf/Zu/Auf ohne Pause: das späte Zurück des Zu darf das neue Blatt nicht schließen
+      await graphs(s, n >= 1024);
+      for (const [sel, auf, zu, name] of [['#pcMg', '#pcMg .mg-btn-voll', '#pcMg .mg-vb-fertig', 'Meteogramm'], ['#tab-radsat', '#radsatVoll', '#radsatFertig', 'Rad/Sat']]) {
+        if (name === 'Rad/Sat') await radsat(s, n >= 1024);
+        const l0 = await p.evaluate(() => history.length);
+        await p.evaluate(([a, z2]) => { document.querySelector(a).click(); document.querySelector(z2).click(); document.querySelector(a).click(); }, [auf, zu]);
+        await p.waitForTimeout(700);
+        const r = await p.evaluate(sel => { const e = document.querySelector(sel).getBoundingClientRect(); return { voll: Math.round(e.width) === innerWidth && Math.round(e.height) === innerHeight, inert: !!document.querySelector('#tabbar').closest('[inert]'), zustand: history.state, laenge: history.length }; }, sel);
+        pruefe(n + ' ' + name + ': Auf/Zu/Auf ohne Pause: Blatt bleibt offen, Seite gesperrt, Verlauf steht auf dem Blatt', r.voll && r.inert && r.zustand && !!r.zustand.wpVollbild, r);
+        await p.click(zu); await p.waitForTimeout(500);
+        const r2 = await p.evaluate(() => ({ zustand: history.state, inert: document.querySelectorAll('[inert]').length }));
+        await p.click(auf); await p.waitForTimeout(300); await p.click(zu); await p.waitForTimeout(500);
+        const l3 = await p.evaluate(() => history.length);
+        pruefe(n + ' ' + name + ': danach schließt „Fertig“ sauber, normales Auf/Zu verlängert den Verlauf nicht weiter', !(r2.zustand && r2.zustand.wpVollbild) && r2.inert === basis && l3 <= r.laenge, [l0, r.laenge, l3, r2]);
+      }
       pruefe(n + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }

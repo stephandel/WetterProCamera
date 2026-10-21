@@ -353,7 +353,7 @@
   /* A32 (21.10.2026): Vollbild-Blatt für Rad/Sat. Die Karte ist kein Baustein (nicht wpkarte.js), deshalb macht die App es selbst,
      nach dem Muster von meteogramm.js: der ganze Reiter (Ebenen, Karte, Abspielen) liegt über dem Bildschirm, „Fertig“, Esc und
      Zurück schließen, der Rest der Seite ist inert, ein Verlaufseintrag fängt die Zurück-Geste. Leaflet rechnet danach die neue Größe nach. */
-  var rsVoll = { an: false, gesperrt: [], overflow: '', gepusht: false };
+  var rsVoll = { an: false, gesperrt: [], overflow: '', gepusht: false, zurueck: 0 };   // zurueck: unterwegs befindliche history.back() (spätes popstate nicht als Zurück werten)
   function radsatVollbild(an, ausVerlauf) {
     var s = $('#tab-radsat'), k = $('#radsatVoll'); an = !!an;
     if (!s || !k || an === rsVoll.an) return;
@@ -367,13 +367,13 @@
         Array.prototype.forEach.call(e.parentNode.children, function (g) { if (g === e || g.hasAttribute('inert') || /^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(g.tagName)) return; g.setAttribute('inert', ''); rsVoll.gesperrt.push(g); });
       }
       rsVoll.overflow = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';
-      try { if (history.state && history.state.wpVollbild === 'radsat') rsVoll.gepusht = true; else { history.pushState({ wpVollbild: 'radsat' }, ''); rsVoll.gepusht = true; } } catch (e2) { }
+      try { if (!rsVoll.zurueck && history.state && history.state.wpVollbild === 'radsat') rsVoll.gepusht = true; else { history.pushState({ wpVollbild: 'radsat' }, ''); rsVoll.gepusht = true; } } catch (e2) { }
       $('#radsatFertig').focus({ preventScroll: true });
     } else {
       s.removeAttribute('role'); s.removeAttribute('aria-modal'); s.removeAttribute('aria-label');
       rsVoll.gesperrt.forEach(function (g) { g.removeAttribute('inert'); }); rsVoll.gesperrt = [];
       document.documentElement.style.overflow = rsVoll.overflow || '';
-      if (rsVoll.gepusht) { rsVoll.gepusht = false; if (!ausVerlauf && history.state && history.state.wpVollbild === 'radsat') { try { history.back(); } catch (e3) { } } }
+      if (rsVoll.gepusht) { rsVoll.gepusht = false; if (!ausVerlauf && history.state && history.state.wpVollbild === 'radsat') { try { rsVoll.zurueck++; history.back(); } catch (e3) { rsVoll.zurueck--; } } }
       k.focus({ preventScroll: true });
     }
     var neu = function () { if (radarKarte) { radarKarte.invalidateSize({ animate: false }); a26Bewegt(); } };
@@ -382,7 +382,11 @@
   }
   var radsatVollbildZu = function () { };   // Paket A32 P3 hängt hier den Rückweg zum vorherigen Reiter an
   document.addEventListener('keydown', function (e) { if (rsVoll.an && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); radsatVollbild(false); } });
-  window.addEventListener('popstate', function () { if (rsVoll.an && rsVoll.gepusht) { rsVoll.gepusht = false; radsatVollbild(false, true); } });
+  window.addEventListener('popstate', function () {
+    // das eigene Zurück von „Fertig“ kommt an; inzwischen neu geöffnet: Eintrag für das Blatt neu anlegen (wie im Meteogramm-Baustein)
+    if (rsVoll.zurueck > 0) { rsVoll.zurueck--; if (!rsVoll.zurueck && rsVoll.an && rsVoll.gepusht && !(history.state && history.state.wpVollbild === 'radsat')) { try { history.pushState({ wpVollbild: 'radsat' }, ''); } catch (e) { } } return; }
+    if (rsVoll.an && rsVoll.gepusht) { rsVoll.gepusht = false; radsatVollbild(false, true); }
+  });
   try { if (history.state && history.state.wpVollbild === 'radsat') history.replaceState(null, ''); } catch (e) { }   // neu geladen im offenen Blatt
 
   function ebeneZeigen() {
