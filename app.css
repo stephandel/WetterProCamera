@@ -161,7 +161,7 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 #ebeneQuelle { display: grid; gap: var(--s2); }
 #ebeneQuelle .info { margin: 0; }
 .leaflet-container { font-family: var(--font); background: var(--bg-2); }
-.leaflet-control-attribution { font-size: 11px !important; }
+.leaflet-control-attribution { font-size: var(--fs-caption) !important; }   /* 12 px statt 11 px (Durchgang 21.10.2026, Fund 15) */
 
 /* ---------- Mehr ---------- */
 .suche { display: flex; gap: var(--s2); }
@@ -431,6 +431,8 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .pc-mg .mg-gruppe .mg-btn { background: transparent; }
 .pc-mg .mg-gruppe > * + * { border-left: 1px solid var(--trenner); }
 .pc-mg .mg-jrel { color: var(--label-2); }
+/* Beschriftungen im Meteogramm auf Caption (12 px) statt 11 px (Durchgang 21.10.2026, Fund 4); der Baustein bleibt unverändert */
+.pc-mg :is(.mg-wz, .mg-wl, .mg-ax-tick, .mg-ax-wert, .mg-ax-titel, .mg-foot, .mg-camhint, .mg-tipps-kopf, .mg-modell-opt span, .mg-svg text, .mg-svg .mg-tagesinfo-stark) { font-size: var(--fs-caption); }
 .pc-mg .mg-ecke { border-color: var(--trenner); border-radius: var(--r-button); background: var(--bg-2); }
 .pc-mg .mg-ecke .mg-btn, .pc-mg .mg-ecke-lupe { color: var(--label); min-height: var(--tap); min-width: var(--tap); }
 .pc-mg .mg-randpfeil { border-color: var(--trenner); background: var(--bg-2); border-radius: var(--r-button); color: var(--akzent); min-height: var(--tap); min-width: var(--tap); }
@@ -438,8 +440,8 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .pc-mg .mg-achse { background: var(--bg-2); border-right: 1px solid var(--trenner); }
 .pc-mg .mg-ax-titel, .pc-mg .mg-ax-datum { border-radius: 0 var(--s2) var(--s2) 0; }
 .pc-mg .mg-svg .mg-nacht { fill: var(--fuellung); }
-.pc-mg .mg-wl, .pc-mg .mg-wz, .pc-mg .mg-wv small, .pc-mg small { font-size: 11px; }        /* nichts unter 11 px */
-.pc-mg .mg-svg .mg-mark, .pc-mg .mg-svg .mg-sonne, .pc-mg .mg-svg .mg-tagesinfo { font-size: 11px; }
+.pc-mg .mg-wl, .pc-mg .mg-wz, .pc-mg .mg-wv small, .pc-mg small { font-size: var(--fs-caption); }        /* 12 px (Fund 4), nie unter 11 px */
+.pc-mg .mg-svg .mg-mark, .pc-mg .mg-svg .mg-sonne, .pc-mg .mg-svg .mg-tagesinfo { font-size: var(--fs-caption); }
 .pc-mg .mg-foot { padding-bottom: var(--s4); font-size: var(--fs-caption); color: var(--label-2); }
 /* Vollbild des Meteogramms: Kopfzeile und Tab-Leiste der App ausblenden */
 .pc-mg-voll .titelzeile, .pc-mg-voll .tabbar, .pc-mg-voll .pc-graphs-kopf { display: none; }

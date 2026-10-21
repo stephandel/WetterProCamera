@@ -107,6 +107,54 @@ async function start(b, opt, modus) {
       pruefe('Gitter nicht erreichbar: ruhiger Satz, keine Fläche, keine Seitenfehler', /nicht erreichbar/.test(await f.p.textContent('#radarZeit')) && !(await f.p.$('#radarKarte img.a26-flaeche')) && !f.konsole.some(k => /Seitenfehler/.test(k)), [await f.p.textContent('#radarZeit'), f.konsole]);
       await f.ctx.close();
     }
+
+    console.log('4) Durchgang-Funde 4, 12, 14, 15 (A28)');
+    {
+      const s = await start(b, {}, { warnung: 'ja' });
+      // Fund 14: Zusammenfassung im Tagesdetail nennt den Abschnitt
+      await s.p.click('.tag[data-w3-tag="1"]'); await s.p.waitForSelector('#w3Tag[open]');
+      const sum = () => s.p.textContent('#w3Tag .w3-summe');
+      pruefe('Fund 14: Zusammenfassung beginnt mit dem Abschnitt („Tag: Tief …“)', /^Tag: Tief \d+/.test(await sum()), await sum());
+      await s.p.click('#w3Tag [data-v="n1"]');
+      pruefe('Fund 14: nach dem Wechsel „Nacht davor: Tief …“', /^Nacht davor: Tief \d+/.test(await sum()), await sum());
+      await s.p.click('#w3Tag [data-v="n2"]');
+      pruefe('Fund 14: „Nacht danach: Tief …“', /^Nacht danach: Tief \d+/.test(await sum()), await sum());
+      // Fund 12: Fokus kreist im Blatt (Tagesblatt und Warnblatt)
+      const kreist = async (id, n) => {
+        const aus = [];
+        for (let i = 0; i < n; i++) { await s.p.keyboard.press(i % 2 ? 'Shift+Tab' : 'Tab'); aus.push(await s.p.evaluate(i2 => { const d = document.getElementById(i2), a = document.activeElement; return !!d && d.contains(a) && a !== d ? (a.textContent.trim() || a.getAttribute('aria-label') || a.tagName).slice(0, 14) : 'DRAUSSEN:' + (a && a.tagName); }, id)); }
+        for (let i = 0; i < 9; i++) await s.p.keyboard.press('Tab');
+        aus.push(await s.p.evaluate(i2 => document.getElementById(i2).contains(document.activeElement) && document.activeElement !== document.getElementById(i2) ? 'innen' : 'DRAUSSEN', id));
+        return aus;
+      };
+      let k = await kreist('w3Tag', 14);
+      pruefe('Fund 12: Tab und Umschalt+Tab bleiben im Tagesblatt (nie auf Rahmen oder Seitenkörper)', k.every(x => !/DRAUSSEN/.test(x)), k);
+      await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
+      await s.p.click('#a9Warnung button'); await s.p.waitForSelector('#a9WarnBlatt[open]');
+      k = await kreist('a9WarnBlatt', 8);
+      pruefe('Fund 12: Tab bleibt im Warnblatt', k.every(x => !/DRAUSSEN/.test(x)), k);
+      await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
+      // Fund 4: Beschriftungen im Meteogramm mind. 12 px
+      await s.p.click('#tb-graphs'); await s.p.waitForTimeout(400);
+      await s.p.evaluate(() => { const m = [...document.querySelectorAll('#tab-graphs [data-seg] [data-v]')].find(x => /Meteogramm/.test(x.textContent)); if (m) m.click(); });
+      await s.p.waitForSelector('#tab-graphs .mg-svg, #tab-graphs .mg-wrap', { timeout: 10000 }).catch(() => { });
+      await s.p.waitForTimeout(800);
+      const mg = await s.p.evaluate(() => {
+        const sichtbar = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !e.closest('[hidden]') && getComputedStyle(e).visibility !== 'hidden'; };
+        const el = [...document.querySelectorAll('#tab-graphs .pc-mg *')].filter(e => sichtbar(e) && ([...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) || e.tagName === 'text'));
+        const klein = el.filter(e => parseFloat(getComputedStyle(e).fontSize) < 12).map(e => (e.className.baseVal != null ? e.className.baseVal : e.className) + ' ' + getComputedStyle(e).fontSize + ' ' + e.textContent.trim().slice(0, 12));
+        return { n: el.length, klein: klein.slice(0, 8), seitlich: document.documentElement.scrollWidth - innerWidth };
+      });
+      pruefe('Fund 4: Meteogramm in 390 px: Kopfzeile, Zeitachse und Werte mind. 12 px', mg.n > 10 && mg.klein.length === 0, mg);
+      pruefe('Fund 4: kein seitliches Scrollen', mg.seitlich <= 0, mg.seitlich);
+      await H.foto(s.p, 'a28-390-graphs-meteogramm');
+      // Fund 15: Leaflet-Hinweis 12 px
+      await s.p.click('#tb-radsat'); await s.p.waitForSelector('#radarKarte .leaflet-control-attribution', { state: 'attached' });
+      const at = await s.p.$eval('#radarKarte .leaflet-control-attribution', e => parseFloat(getComputedStyle(e).fontSize));
+      pruefe('Fund 15: Kartenhinweis (Leaflet) mind. 12 px', at >= 12, at);
+      pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+    }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');

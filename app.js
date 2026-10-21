@@ -2285,6 +2285,12 @@
     d.innerHTML = '<div class="pc-blatt-kopf"><h2 id="' + id + 'T">' + titel + '</h2><button type="button" class="pc-kopf-knopf tippbar" data-zu="1">Fertig</button></div><div class="pc-blatt-inhalt" id="' + id + 'Inhalt"></div>';
     document.body.appendChild(d);
     d.addEventListener('click', function (e) { if (e.target.closest('[data-zu]')) d.close(); });
+    d.addEventListener('keydown', function (e) {   // Fokus kreist im Blatt (Durchgang 21.10.2026, Fund 12); Safari überspringt Knöpfe beim Tab, deshalb selbst weiterschalten
+      if (e.key !== 'Tab') return;
+      var f = $$('button, a[href], input, select, textarea, [tabindex="0"]', d).filter(function (x) { return !x.disabled && x.getClientRects().length; }); if (!f.length) return;
+      var i = f.indexOf(document.activeElement), n = e.shiftKey ? (i <= 0 ? f.length - 1 : i - 1) : (i < 0 || i === f.length - 1 ? 0 : i + 1);
+      e.preventDefault(); f[n].focus();
+    });
     d.addEventListener('close', function () { if (w3Fokus && document.contains(w3Fokus) && !dialogOffen()) { try { w3Fokus.focus({ preventScroll: true }); } catch (x) { } } });
     return d;
   }
@@ -2335,7 +2341,8 @@
     var jetzt = w3Jetzt().slice(0, 13), zeilen = [];
     h.time.forEach(function (z, k) { if (z.slice(0, 10) === datum && w3SegFuer(z, auf, unter) === w3Seg) zeilen.push(k); });
     var wortTag = i === 0 ? 'Heute' : teile(datum).wt;
-    var summe = zeilen.length ? 'Tief ' + rund(w3Min(zeilen.map(function (k) { return h.temperature_2m[k]; }))) + '°C · Hoch ' + rund(w3Max(zeilen.map(function (k) { return h.temperature_2m[k]; }))) + '°C · Regen ' + dez(zeilen.reduce(function (a, k) { return a + (h.precipitation[k] || 0); }, 0)) + ' mm' +
+    var segName = W3_SEGMENTE.filter(function (x) { return x[0] === w3Seg; })[0][1];
+    var summe = zeilen.length ? segName + ': Tief ' + rund(w3Min(zeilen.map(function (k) { return h.temperature_2m[k]; }))) + '°C · Hoch ' + rund(w3Max(zeilen.map(function (k) { return h.temperature_2m[k]; }))) + '°C · Regen ' + dez(zeilen.reduce(function (a, k) { return a + (h.precipitation[k] || 0); }, 0)) + ' mm' +
       (h.wind_speed_10m ? ' · Wind bis ' + windTxt(w3Max(zeilen.map(function (k) { return h.wind_speed_10m[k]; }))) : '') : 'Für diesen Abschnitt gibt es keine Stundenwerte.';
     var sm = w3SonneMond(datum);
     var liste = zeilen.map(function (k) {
