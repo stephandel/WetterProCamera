@@ -272,7 +272,7 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     const mondUrls = await zusatz(s.p, []);
     await s.p.goto(START); await s.p.waitForSelector('.w3-mond-kachel'); await s.p.waitForTimeout(500); const nachLaden = mondUrls.length;
     const kachel = await s.p.textContent('.w3-mond-kachel');
-    pruefe('Kachel „Sonne und Mond" unter der Tagesliste', await s.p.evaluate(() => document.querySelector('.w3-mond-kachel').previousElementSibling.classList.contains('tage')) && /Sonne ↑ 07:4\d ↓ 18:3\d/.test(kachel), kachel);
+    pruefe('Kachel „Sonne und Mond" unter der Tagesliste (dazwischen nur die Luftqualität, A9)', await s.p.evaluate(() => { const v = document.querySelector('.w3-mond-kachel').previousElementSibling; return v.classList.contains('tage') || (v.id === 'a9Luft' && v.previousElementSibling.classList.contains('tage')); }) && /Sonne ↑ 07:4\d ↓ 18:3\d/.test(kachel), kachel);
     await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]');
     const mond = await s.p.evaluate(() => {
       const t = document.getElementById('w3MondInhalt').textContent.replace(/\s+/g, ' ');

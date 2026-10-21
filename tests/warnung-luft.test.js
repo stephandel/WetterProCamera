@@ -63,6 +63,42 @@ async function start(b, modus, opt) {
     pruefe('Mac 1280: Warnung über beiden Spalten, volle Breite, kein seitliches Scrollen', !!mac && mac.oben && mac.b > 600 && mac.h <= 0, mac);
     await H.foto(s.p, 'a9-warnung-mac-1280');
     await s.ctx.close();
+
+    console.log('Luftqualität (Ampel-Ring)');
+    s = await start(b, {});
+    const l = await s.p.evaluate(() => {
+      const k = document.getElementById('a9Luft'); if (!k) return null;
+      const w = [...document.getElementById('tab-wetter').children].map(e => e.id || (e.className.match(/\b(akt|std|tage|w3-mond-kachel)\b/) || [''])[0]);
+      const cs = getComputedStyle(k), bogen = getComputedStyle(k.querySelector('.a9-ring-bogen')), sum = k.querySelector('summary').getBoundingClientRect();
+      const tx = [...k.querySelectorAll('.a9-luft-kopf *, .kachel-titel, summary')].filter(e => [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).map(e => getComputedStyle(e).color);
+      return { reihe: w, text: k.textContent, zahl: k.querySelector('.a9-ring-zahl').textContent, bg: cs.backgroundColor, bogen: bogen.stroke, textfarben: tx, sumH: sum.height, offen: k.querySelector('details').open, balkenSichtbar: k.querySelector('.a9-stoffe').checkVisibility ? k.querySelector('.a9-stoffe').checkVisibility() : k.querySelector('.a9-balken').getBoundingClientRect().height > 0, anz: k.querySelectorAll('.a9-stoffe li').length, stoffe: k.querySelector('.a9-stoffe').textContent };
+    });
+    pruefe('Kachel Luftqualität steht nach der Tagesliste, vor Sonne und Mond', !!l && l.reihe.indexOf('a9Luft') === l.reihe.indexOf('tage') + 1 && l.reihe.indexOf('w3-mond-kachel') === l.reihe.indexOf('a9Luft') + 1, l && l.reihe);
+    pruefe('Ring zeigt Zahl 43 und das Wort „Mittel“ (Europäischer AQI 40–60)', !!l && l.zahl === '43' && /Mittel/.test(l.text) && /Luftqualitätsindex 43/.test(l.text), l && l.text);
+    pruefe('Ring-Farbe: Stufe „mittel“ = Gelb #FFD633', !!l && l.bogen === 'rgb(255, 214, 51)', l && l.bogen);
+    pruefe('Text auf der Kachel mind. 4,5:1, Ringfarbe mind. 3:1', !!l && l.textfarben.every(c => kontrast(c, l.bg) >= 4.5) && kontrast(l.bogen, l.bg) >= 3, l && [l.textfarben, l.bg, l.bogen]);
+    pruefe('Klein: Schadstoffe zugeklappt, Knopf mind. 44 px hoch', !!l && !l.offen && !l.balkenSichtbar && l.sumH >= 43.5, l && [l.offen, l.sumH]);
+    await s.p.click('#a9Luft summary'); await s.p.waitForTimeout(200);
+    const l2 = await s.p.evaluate(() => { const k = document.getElementById('a9Luft'); return { sicht: k.querySelector('.a9-stoffe').checkVisibility ? k.querySelector('.a9-stoffe').checkVisibility() : k.querySelector('.a9-balken').getBoundingClientRect().height > 0, text: k.querySelector('.a9-stoffe').textContent, n: k.querySelectorAll('.a9-stoffe li').length }; });
+    pruefe('Antippen zeigt vier Schadstoff-Balken mit Wert und Wort', l2.sicht && l2.n === 4 && /Feinstaub PM2,5[\s\S]*8,1 µg\/m³ · gut/.test(l2.text) && /Ozon[\s\S]*58,0 µg\/m³ · mäßig/.test(l2.text), l2.text);
+    await H.foto(s.p, 'a9-luft-390');
+    pruefe('Ein einziger Aufruf bei Open-Meteo Luftqualität (Staub und aktuelle Werte zusammen)', s.anfragen.filter(u => /air-quality/.test(u)).length === 1 && /current=european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone/.test(s.anfragen.join(' ')) && /hourly=dust/.test(s.anfragen.join(' ')), s.anfragen);
+    await s.p.click('#tb-mehr'); await s.p.waitForTimeout(300);
+    pruefe('Quellen und Datenschutz nennen die Luftqualität', /Luftqualität: Open-Meteo Air Quality[\s\S]*CAMS/.test(await s.p.textContent('#quellen')) && /Für Luftqualität und Saharastaub sieht Open-Meteo deine IP-Adresse und den Ort/.test(await s.p.textContent('#tab-mehr')));
+    pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+    await s.ctx.close();
+    s = await start(b, { luftFehler: true });
+    pruefe('Luftqualität-Abruf scheitert: Kachel fehlt still, Startseite lädt normal', !(await s.p.$('#a9Luft')) && !!(await s.p.$('.tage')) && !(await s.p.$('.leer-zustand')));
+    await s.ctx.close();
+    s = await start(b, { warnung: 'ja' }, { viewport: { width: 1280, height: 800 } });
+    const lm = await s.p.evaluate(() => { const k = document.getElementById('a9Luft'); return k ? { r: k.getBoundingClientRect().width, h: document.documentElement.scrollWidth - innerWidth } : null; });
+    pruefe('Mac 1280: Luftqualität sichtbar, kein seitliches Scrollen', !!lm && lm.r > 200 && lm.h <= 0, lm);
+    await H.foto(s.p, 'a9-luft-mac-1280');
+    await s.ctx.close();
+    s = await start(b, { warnung: 'ja' }, { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
+    await s.p.evaluate(() => document.getElementById('a9Luft').scrollIntoView()); await s.p.waitForTimeout(300);
+    await H.foto(s.p, 'a9-luft-390-hell');
+    await s.ctx.close();
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');

@@ -1974,15 +1974,15 @@
     });
   }
 
-  /* --- 3. Saharastaub (Calima): Open-Meteo Luftqualität, Feld dust --- */
+  /* --- 3. Saharastaub (Calima) und Luftqualität (A9): ein Aufruf bei Open-Meteo Luftqualität, Felder dust (stündlich) und european_aqi, pm10, pm2_5, nitrogen_dioxide, ozone (aktuell) --- */
   var w3Staub = {};
   function w3StaubHolen(o) {
     var k = a5PosKey(o), m = w3Staub[k];
-    if (!w3Calima().an || (m && (m.laedt || Date.now() - m.zeit < 3 * 3600e3))) return;
-    w3Staub[k] = { laedt: true, zeit: 0, d: m && m.d };
-    holeJson('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + o.lat + '&longitude=' + o.lon + '&hourly=dust&forecast_days=3&timezone=auto').then(function (r) {
-      var h = r && r.hourly; w3Staub[k] = { zeit: Date.now(), d: h && h.dust && h.time ? h : null }; w3ZusatzNeu();
-    }, function () { w3Staub[k] = { zeit: Date.now() - 2.5 * 3600e3, d: m && m.d }; });
+    if (m && (m.laedt || Date.now() - m.zeit < 3 * 3600e3)) return;
+    w3Staub[k] = { laedt: true, zeit: 0, d: m && m.d, c: m && m.c };
+    holeJson('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + o.lat + '&longitude=' + o.lon + '&current=european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone&hourly=dust&forecast_days=3&timezone=auto').then(function (r) {
+      var h = r && r.hourly; w3Staub[k] = { zeit: Date.now(), d: h && h.dust && h.time ? h : null, c: r && r.current && r.current.european_aqi != null ? r.current : null }; w3ZusatzNeu(); a9LuftNeu();
+    }, function () { w3Staub[k] = { zeit: Date.now() - 2.5 * 3600e3, d: m && m.d, c: m && m.c }; });
   }
   var w3StaubWort = function (v) { return v < 50 ? 'klare Luft' : v < 150 ? 'leichter Dunst' : v < 300 ? 'Calima' : 'starke Calima'; };
   function w3CalimaHtml() {
@@ -2706,14 +2706,49 @@
     return function () {
       alt();
       var d = $('#tab-mehr #datenschutz');
-      if (d && !$('#datenschutzWarnung', d)) d.insertAdjacentHTML('beforeend', '<p id="datenschutzWarnung">Für Warnungen sieht brightsky.dev deine IP-Adresse und den Ort (nur bei Orten in Deutschland).</p>');
+      if (d && !$('#datenschutzWarnung', d)) d.insertAdjacentHTML('beforeend', '<p id="datenschutzWarnung">Für Warnungen sieht brightsky.dev deine IP-Adresse und den Ort (nur bei Orten in Deutschland). Für Luftqualität und Saharastaub sieht Open-Meteo deine IP-Adresse und den Ort.</p>');
     };
   })(renderMehr);
+
+  /* === A9: Modul „Luftqualität“ (Ampel-Ring nach dem Europäischen Luftqualitätsindex, Open-Meteo/CAMS, CC BY 4.0) ===
+     Größe laut Design-Link „klein“: Ring mit Zahl und Wort; die Schadstoff-Balken klappen auf („groß“ zeigt sie gleich offen). */
+  var A9_LUFT_GROESSE = 'klein';
+  var A9_LUFT = [['gut', 20], ['mäßig', 40], ['mittel', 60], ['schlecht', 80], ['sehr schlecht', 100], ['extrem', Infinity]];
+  var a9LuftStufe = function (v) { for (var i = 0; i < A9_LUFT.length; i++) if (v <= A9_LUFT[i][1]) return i; return 5; };
+  // Grenzen je Schadstoff (µg/m³) nach EEA: Obergrenzen von gut, mäßig, mittel, schlecht, sehr schlecht
+  var A9_STOFFE = [['pm2_5', 'Feinstaub PM2,5', [10, 20, 25, 50, 75]], ['pm10', 'Feinstaub PM10', [20, 40, 50, 100, 150]], ['nitrogen_dioxide', 'Stickstoffdioxid', [40, 90, 120, 230, 340]], ['ozone', 'Ozon', [50, 100, 130, 240, 380]]];
+  function a9LuftHtml() {
+    var m = w3Staub[a5PosKey(ort)], c = m && m.c; if (!c || c.european_aqi == null) return '';
+    var v = Math.round(c.european_aqi), st = a9LuftStufe(v), wort = A9_LUFT[st][0], R = 28, U = 2 * Math.PI * R, anteil = Math.max(.04, Math.min(1, v / 100));
+    var ring = '<svg class="a9-ring" viewBox="0 0 72 72" aria-hidden="true"><circle class="a9-ring-spur" cx="36" cy="36" r="' + R + '"/><circle class="a9-ring-bogen a9-luft-' + st + '" cx="36" cy="36" r="' + R + '" stroke-dasharray="' + (anteil * U).toFixed(1) + ' ' + U.toFixed(1) + '" transform="rotate(-90 36 36)"/></svg>';
+    var balken = A9_STOFFE.filter(function (x) { return c[x[0]] != null; }).map(function (x) {
+      var w = c[x[0]], g = x[2], i = 0; while (i < g.length && w > g[i]) i++;
+      return '<li><span class="a9-stoff-name">' + x[1] + '</span><span class="a9-stoff-wert zahl">' + dez(w) + ' µg/m³ · ' + A9_LUFT[i][0] + '</span><span class="a9-balken" aria-hidden="true"><i class="a9-luft-' + i + '" style="width:' + Math.max(4, Math.min(100, w / g[4] * 100)).toFixed(0) + '%"></i></span></li>';
+    }).join('');
+    return '<section class="kachel a9-luft" id="a9Luft" aria-labelledby="a9LuftT"><h2 class="kachel-titel" id="a9LuftT">' + Ikon('wind') + 'Luftqualität</h2>' +
+      '<div class="a9-luft-kopf"><div class="a9-ring-box">' + ring + '<span class="a9-ring-zahl zahl">' + v + '</span></div>' +
+      '<p class="regen-satz">' + wort.charAt(0).toUpperCase() + wort.slice(1) + '<br><span class="w3-leise">Europäischer Luftqualitätsindex ' + v + ' von 100</span></p></div>' +
+      (balken ? '<details class="a9-luft-mehr"' + (A9_LUFT_GROESSE === 'gross' ? ' open' : '') + '><summary class="tippbar">Schadstoffe</summary><ul class="a9-stoffe">' + balken + '</ul></details>' : '') + '</section>';
+  }
+  function a9LuftNeu() {
+    if (aktiv !== 'wetter' || !daten) return;
+    var s = $('#tab-wetter'); if (!s) return;
+    var alt = $('#a9Luft', s), offen = alt && $('details', alt) && $('details', alt).open; if (alt) alt.remove();
+    var html = a9LuftHtml(), tage = $('.tage', s); if (!html || !tage) return;
+    tage.insertAdjacentHTML('afterend', html);
+    if (offen) $('#a9Luft details').open = true;
+  }
+  renderWetter = (function (alt) { return function () { alt(); try { a9LuftNeu(); } catch (e) { console.error('Luftqualität', e); } }; })(renderWetter);
+  quellenHtml = (function (alt) {
+    return function () {
+      return alt() + '<a class="tippbar" href="https://open-meteo.com/en/docs/air-quality-api" target="_blank" rel="noopener"><span class="modell-text"><span>Luftqualität: Open-Meteo Air Quality</span><small class="leise">Europäischer Luftqualitätsindex aus CAMS-Modelldaten, CC BY 4.0</small></span><span aria-hidden="true">↗</span></a>';
+    };
+  })(quellenHtml);
 
   /* === Startseite nach dem Design-Link vom 20.10.2026 ===
      Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond"), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
      Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Luftqualität und Warnung sind im Link an, in der App aber noch nicht gebaut (Wunschliste). */
-  var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
+  var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '#a9Luft', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
   function startseiteOrdnen() {
     var s = $('#tab-wetter'); if (!s || !s.querySelector('.akt')) return;
     var regen = $('#regenTitel', s); if (regen && !startLesen().radar) regen.closest('section').remove();

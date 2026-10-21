@@ -71,7 +71,7 @@ const rgba = n => { const m = /rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec
     pruefe('Temperaturen (Aktuell, Stunden, Höchstwert) in der Zweitfarbe Gelb', [d.aktTemp, d.stdTemp, d.tagMax].every(c => c === 'rgb(255, 214, 51)'), [d.aktTemp, d.stdTemp, d.tagMax]);
     pruefe('Kamera-Auslöser: gelbe Fläche mit dunklem Symbol', d.knopf.f === 'rgb(255, 214, 51)' && d.knopf.c === 'rgb(0, 0, 0)', d.knopf);
     pruefe('Browser-Leiste: ein einziges theme-color #03428A, keine Hell-Variante', d.theme.length === 1 && /^#03428A\|$/i.test(d.theme[0]), d.theme);
-    pruefe('Startseite: Reihenfolge Aktuell, Stunden, Tagesliste, Mond, Was heute geht', JSON.stringify(d.kinder.filter(k => k !== 'update-zeile')) === JSON.stringify(['akt', 'std', 'tage', 'w3-mond-kachel', 'a5Tipps']), d.kinder);
+    pruefe('Startseite: Reihenfolge Aktuell, Stunden, Tagesliste, Luftqualität, Mond, Was heute geht (Warnung nur bei Warnlage ganz oben)', JSON.stringify(d.kinder.filter(k => k !== 'update-zeile')) === JSON.stringify(['akt', 'std', 'tage', 'a9Luft', 'w3-mond-kachel', 'a5Tipps']), d.kinder);
     pruefe('Startseite: Regenradar-Kachel aus, keine Webcam-Kachel', !d.regen && !d.webcam, d);
     pruefe('Startseite: Meteogramm aus', !d.kinder.includes('a5-mg-kachel'), d.kinder);
     await H.foto(s.p, 'design-gelb-start-390');
