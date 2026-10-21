@@ -2703,10 +2703,21 @@
       return alt() + '<a class="tippbar" href="https://brightsky.dev" target="_blank" rel="noopener"><span class="modell-text"><span>Warnungen: DWD über Bright Sky</span><small class="leise">Amtliche Wetterwarnungen des Deutschen Wetterdienstes, CC BY 4.0</small></span><span aria-hidden="true">↗</span></a>';
     };
   })(quellenHtml);
+  // Tab „Mehr“ (Nutzertest 19.10.): Pilot-Karte nach unten (vor „Über die App“), Einstellungen in Gruppen mit Zwischenüberschriften; auf dem Mac sind sie ausgeblendet, dort gruppiert schon mehrOrdnen
+  function a9MehrGliedern() {
+    var s = $('#tab-mehr'); if (!s || $('.mehr-gruppe', s) || !$('#datenschutz', s)) return;
+    var pt = $('#pilotTitel', s), pk = $('.pilot', s), ueber = $$('h2.abschnitt-titel', s).filter(function (h) { return /Über die App/.test(h.textContent); })[0];
+    if (pt && pk) { if (ueber) { s.insertBefore(pt, ueber); s.insertBefore(pk, ueber); } else { s.appendChild(pt); s.appendChild(pk); } }
+    var quellen = $$('h2.abschnitt-titel', s).filter(function (h) { return h.textContent.trim() === 'Quellen'; })[0];
+    [['Orte', s.firstElementChild], ['Wetterdaten', $('#quelleTitel', s)], ['Startseite und Ansicht', $('#a5StartTitel', s)], ['Kamera und Webcam', $('#wfTitel', s)], ['Quellen und Info', quellen]].forEach(function (g, i) {
+      if (g[1]) g[1].insertAdjacentHTML('beforebegin', '<h2 class="mehr-gruppe" id="mehrGruppe' + i + '">' + g[0] + '</h2>');
+    });
+  }
   renderMehr = (function (alt) {
     return function () {
       alt();
       var d = $('#tab-mehr #datenschutz');
+      a9MehrGliedern();
       if (d && !$('#datenschutzWarnung', d)) d.insertAdjacentHTML('beforeend', '<p id="datenschutzWarnung">Für Warnungen sieht brightsky.dev deine IP-Adresse und den Ort (nur bei Orten in Deutschland). Für Luftqualität und Saharastaub sieht Open-Meteo deine IP-Adresse und den Ort.</p>');
     };
   })(renderMehr);

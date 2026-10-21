@@ -1,9 +1,9 @@
 /* tests/warnung-luft.test.js – Module „Warnung“ (DWD über Bright Sky) und „Luftqualität“ (Ampel-Ring) auf der Startseite (Paket A9, 21.10.2026)
-   Start:  PORT=8942 node tests/warnung-luft.test.js   (Exit-Code 0 = grün). Alle fremden Dienste sind auf Antworten aus tests/fixtures umgeleitet (tests/hilfe.js). */
+   Start:  PORT=8946 node tests/warnung-luft.test.js   (Exit-Code 0 = grün). Alle fremden Dienste sind auf Antworten aus tests/fixtures umgeleitet (tests/hilfe.js). */
 'use strict';
 const { webkit } = require('playwright');
 const { neu } = require('./hilfe.js');
-const H = neu(+process.env.PORT || 8942);
+const H = neu(+process.env.PORT || 8946);
 const { pruefe } = H;
 
 const hex = c => (c.match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);

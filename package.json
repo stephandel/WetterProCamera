@@ -4,7 +4,7 @@
   "private": true,
   "description": "WetterProCamera – Wetter-App im Apple-Stil (PWA). Kern-Tests und Versionswerkzeug.",
   "scripts": {
-    "test": "node tools/version.js && node tests/app.test.js && node tests/design-gelb.test.js && node tests/wetterfoto.test.js && node tests/warnung-luft.test.js",
+    "test": "node tools/version.js && node tests/app.test.js && node tests/design-gelb.test.js && node tests/wetterfoto.test.js && node tests/warnung-luft.test.js && node tests/nutzertest-funde.test.js",
     "version": "node tools/version.js",
     "hooks": "git config core.hooksPath tools/hooks"
   },
