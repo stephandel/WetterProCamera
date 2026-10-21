@@ -515,6 +515,7 @@
       ctx.imageSmoothingEnabled = true; ctx.drawImage(kl, 0, 0, w * 8, h * 8);
     } else if (ebene === 'wind') {
       for (y = 44; y < H; y += 84) for (x = 44; x < W; x += 84) {
+        if (x + 30 > W - 80 && y < 150) continue;   // nicht unter den Zoom-Knöpfen (rechts oben), wie bei den Isobaren
         var wi = a26Wind(g, latBei(y), lonBei(x)); if (!wi) continue;
         var len = Math.min(36, 14 + wi.v * .6), r = (wi.dir + 180) * Math.PI / 180, dx = Math.sin(r), dy = -Math.cos(r);
         var x1 = x - dx * len / 2, y1 = y - dy * len / 2, x2 = x + dx * len / 2, y2 = y + dy * len / 2, kopf = function () { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.moveTo(x2 - dx * 8 - dy * 5, y2 - dy * 8 + dx * 5); ctx.lineTo(x2, y2); ctx.lineTo(x2 - dx * 8 + dy * 5, y2 - dy * 8 - dx * 5); ctx.stroke(); };
@@ -1567,10 +1568,10 @@
   function macLeisteAktualisieren() { macBereiche(); macOrte(); }
   macLeiste.addEventListener('click', function (e) {
     var t = e.target.closest('[data-ml-tab]'), o = e.target.closest('[data-ml-ort]');
-    if (t) { if (t.dataset.mlTab === 'kamera') studioAuf(false); else zeigeTab(t.dataset.mlTab); return; }
+    if (t) { if (t.dataset.mlTab === 'kamera') studioAuf(false, t); else zeigeTab(t.dataset.mlTab); return; }
     if (o) { ortSetzen(meineOrte()[+o.dataset.mlOrt]); return; }
     if (e.target.closest('#mlSuche')) return ortSucheOeffnen();
-    if (e.target.closest('#mlTeilen')) studioAuf(false);
+    if (e.target.closest('#mlTeilen')) studioAuf(false, e.target.closest('#mlTeilen'));
   });
   // Tab-Wechsel und Ortswechsel halten die Seitenleiste aktuell (ortSetzen ruft zeigeTab)
   zeigeTab = (function (alt) { return function (id) { alt(id); macLeisteAktualisieren(); }; })(zeigeTab);
@@ -2792,14 +2793,21 @@
   function hintergrundSperren(an) {
     $$('#titelzeile, .inhalt, #tabbar, #hinweis, #macLeiste, .zugang-schwebend').forEach(function (e) { if (an) e.setAttribute('inert', ''); else e.removeAttribute('inert'); });
   }
-  // Nach dem Laden eines Fotos zeichnet das Studio neu und der Fokus fiele auf den Seitenkörper: auf „Teilen“ setzen (sonst auf „Fertig“)
+  // Nach dem Laden eines Fotos zeichnet das Studio neu und der Fokus fiele auf den Seitenkörper: auf „Teilen“ setzen, sobald der Knopf da ist (höchstens 1 s), sonst auf „Fertig“
   function studioEreignis(d) {
     if (!d || d.typ !== 'foto-geladen') return;
-    setTimeout(function () {
-      var s = $('#studio'); if (!s || s.hidden || s.contains(document.activeElement) && document.activeElement !== document.body) return;
-      var t = $$('#ksWurzel button').filter(function (b) { return b.textContent.trim() === 'Teilen' && b.getClientRects().length; })[0];
+    var wurzel = $('#ksWurzel'), obs = null, ende = null;
+    var teilen = function () { return $$('#ksWurzel button').filter(function (b) { return b.textContent.trim() === 'Teilen' && b.getClientRects().length; })[0]; };
+    var fertig = function (t) {
+      if (obs) obs.disconnect(); clearTimeout(ende);
+      var s = $('#studio'); if (!s || s.hidden) return;
+      if (s.contains(document.activeElement) && document.activeElement !== document.body && document.activeElement !== $('#studioZu')) return;
       (t || $('#studioZu')).focus();
-    }, 200);
+    };
+    var t0 = teilen(); if (t0) return fertig(t0);
+    obs = new MutationObserver(function () { var t = teilen(); if (t) fertig(t); });
+    obs.observe(wurzel, { childList: true, subtree: true });
+    ende = setTimeout(function () { fertig(null); }, 1000);
   }
   function studioMount() {
     $('#ksWurzel').innerHTML = '';
@@ -2914,10 +2922,10 @@
     var z = $('.update-zeile', s);
     if (z) z.insertAdjacentHTML('afterend', html); else s.insertAdjacentHTML('afterbegin', html);
   }
-  function a9WarnBlatt(i) {
+  function a9WarnBlatt(i, knopf) {
     var a = a9WarnListe()[i]; if (!a) return;
     var d = w3Blatt('a9WarnBlatt', 'Wetterwarnung');
-    if (!d.open) w3Fokus = document.activeElement;
+    if (!d.open) w3Fokus = knopf || document.activeElement;   // Safari fokussiert angetippte Knöpfe nicht: der Knopf aus dem Klick
     var absatz = function (t) { return t ? '<p>' + esc(t) + '</p>' : ''; };
     $('#a9WarnBlattInhalt').innerHTML = '<section class="kachel a9-blatt a9-warn-' + a.severity + '"><p class="a9-warn-art">' + A9_WARN[a.severity][0] + (a.event_de ? ': ' + esc(a.event_de) : '') + '</p><h3 class="w3-h3">' + esc(a.headline_de) + '</h3><p class="zahl">' + esc(a9Zeitraum(a)) + '</p></section>' +
       '<section class="kachel">' + absatz(a.description_de) + (a.instruction_de ? '<h3 class="w3-h3">Verhaltenshinweise</h3>' + absatz(a.instruction_de) : '') +
@@ -2925,7 +2933,7 @@
     if (!d.open) d.showModal();
     $('[data-zu]', d).focus();
   }
-  document.addEventListener('click', function (e) { var b = e.target.closest('#a9Warnung [data-a9-warn]'); if (b) a9WarnBlatt(+b.dataset.a9Warn); });
+  document.addEventListener('click', function (e) { var b = e.target.closest('#a9Warnung [data-a9-warn]'); if (b) a9WarnBlatt(+b.dataset.a9Warn, b); });
   renderWetter = (function (alt) { return function () { alt(); try { a9WarnHolen(ort); a9WarnNeu(); } catch (e) { console.error('Warnung', e); } }; })(renderWetter);
   quellenHtml = (function (alt) {
     return function () {
@@ -3055,7 +3063,7 @@
   // Orte-Symbol (Pin) statt Menü-Symbol, führt direkt zu „Meine Orte" (UX-Prüfung A10)
   $('#btnMenue').addEventListener('click', function () { zeigeTab('mehr'); a9MehrOeffnen(0); var l = $('#orteListe'); if (l) { var t = l.previousElementSibling || l; window.scrollTo(0, Math.max(0, t.getBoundingClientRect().top + window.scrollY - $('#titelzeile').offsetHeight - 16)); var e = $('#orteListe [aria-current="true"]') || $('#orteListe button'); if (e) e.focus({ preventScroll: true }); } });
   $('#btnSuche').addEventListener('click', function () { zeigeTab('mehr'); setTimeout(function () { var f = $('#sucheFeld'); if (f) f.focus(); }, 50); });
-  $('#btnTeilen').addEventListener('click', function () { studioAuf(false); });
+  $('#btnTeilen').addEventListener('click', function () { studioAuf(false, $('#btnTeilen')); });
   bindTabs(); zugangAnwenden(true); kopfModell(); paketCStart();
   var start = 'wetter'; try { start = sessionStorage.getItem('wpgt-tab') || 'wetter'; } catch (e) { }
   zeigeTab(SEITEN.some(function (t) { return t[0] === start; }) ? start : 'wetter');
