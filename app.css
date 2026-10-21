@@ -529,8 +529,6 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
   #tab-mehr.mac-gruppiert { display: block; column-count: 2; column-gap: var(--s6); }
   #tab-mehr.mac-gruppiert > .mac-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); margin-bottom: var(--s6); break-inside: avoid; -webkit-column-break-inside: avoid; }
 
-  /* Teilen als Fenster mittig (nicht Vollbild): Bild links, Formate, Vorlagen und Knöpfe rechts */
-
   /* Blätter und Galerie ebenfalls als Fenster mittig */
   dialog.pc-blatt { margin: auto; border-radius: var(--r-kachel); max-height: min(720px, calc(100dvh - 2 * var(--s8))); }
   dialog.pc-voll { margin: auto; width: min(860px, calc(100vw - 2 * var(--s8))); height: min(820px, calc(100dvh - 2 * var(--s8))); border-radius: var(--r-kachel); overflow: hidden; }

@@ -40,10 +40,12 @@ function server() {
 }
 
 /* ---------- fremde Dienste auf feste Antworten umleiten ---------- */
+const fremdeHosts = new Set();   // alle angefragten fremden Dienste der ganzen Sitzung (Netz-Wächter am Ende)
 async function umleiten(p, modus) {
   const json = (route, text, status) => route.fulfill({ status: status || 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: text });
   await p.route(u => !u.href.startsWith(BASIS), route => {
     const u = new URL(route.request().url());
+    fremdeHosts.add(u.host);
     if (modus.offline) return route.abort('internetdisconnected');
     if (u.host === 'api.open-meteo.com') {
       const lat = u.searchParams.get('latitude') || '';
@@ -205,6 +207,15 @@ async function tabsPruefen(p, name, bilder) {
     pruefe('DWD: UV fehlt (null), Regenrisiko aus MOSMIX', sonne.uv === null && typeof sonne.regenrisiko === 'number', sonne);
     await foto(s.p, 'hell-390-wetter-dwd');
     pruefe('DWD Mannheim: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+    // DWD-Werte kommen auch im Wetterfoto-Studio an (Übergabe an KSStudio.mount abfangen)
+    await s.p.waitForFunction(() => window.KSStudio, null, { timeout: 10000 }).catch(() => { });
+    await s.p.evaluate(() => { const m = KSStudio.mount; KSStudio.mount = (e, o) => { window.__ksWetter = o.wetter; return m.call(KSStudio, e, o); }; });
+    await s.p.click('#btnTeilen');
+    await s.p.waitForFunction(() => window.__ksWetter, null, { timeout: 10000 }).catch(() => { });
+    const ksw = await s.p.evaluate(() => window.__ksWetter || null);
+    pruefe('DWD: Wetterfoto-Studio bekommt DWD-Werte (Modell DWD MOSMIX, 18 °C)', !!ksw && ksw.modell === 'DWD MOSMIX' && Math.round(ksw.temp) === 18, ksw);
+    await s.p.keyboard.press('Escape');
+    s.konsole.length = 0;
     s.konsole.length = 0;
     // Corralejo: Bright Sky hat dort eine MOSMIX-Vorhersage (Station Fuerteventura), aber keine aktuelle Messung
     await s.p.evaluate(() => { localStorage.setItem('wpgt-ort', JSON.stringify({ name: 'Corralejo', land: 'Spanien', lat: 28.73, lon: -13.867 })); });
@@ -413,6 +424,9 @@ async function tabsPruefen(p, name, bilder) {
     await s.p.goto(START); await s.p.waitForFunction(() => /DWD MOSMIX/.test(document.getElementById('ortZeile').textContent)); await s.p.waitForSelector('.tag');
     pruefe('Mannheim DWD: Aktuell aus der Station, ohne „(Vorhersage)"', await s.p.evaluate(() => !document.querySelector('.a5-vorhersage') && /^Aktuell 14:\d\d$/.test(document.querySelector('.akt-kopf').textContent.replace(/\s+/g, ' ').trim())), await s.p.textContent('.akt-kopf'));
     await s.ctx.close();
+    /* Netz-Wächter: in der ganzen Sitzung nur die bekannten Dienste angefragt */
+    const fremd = [...fremdeHosts].filter(h => !/(^|\.)open-meteo\.com$|^api\.brightsky\.dev$|rainviewer|tile|eumetsat/.test(h));
+    pruefe('Nur die bekannten Dienste angefragt (Open-Meteo, Bright Sky, Radar, Kacheln)', fremd.length === 0, fremd);
   } catch (e) {
     fehler++; console.log('  ✗ Test abgebrochen: ' + (e && e.stack || e));
   } finally {

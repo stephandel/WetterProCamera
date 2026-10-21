@@ -434,7 +434,7 @@
       zeile('Satellit: EUMETSAT', 'Meteosat, Farbe und Infrarot', 'https://view.eumetsat.int') +
       zeile('Karte: OpenTopoMap', '© OpenStreetMap-Mitwirkende', 'https://opentopomap.org') +
       zeile('Ortssuche: Open-Meteo Geocoding', 'GeoNames, CC BY 4.0', 'https://open-meteo.com/en/docs/geocoding-api') +
-      zeile('Luftqualität beim Teilen', 'Open-Meteo Air Quality (CAMS)', 'https://open-meteo.com/en/docs/air-quality-api') +
+      zeile('Saharastaub (Calima): Open-Meteo Air Quality', 'CAMS', 'https://open-meteo.com/en/docs/air-quality-api') +
       zeile('Wettersymbole und Beispielfoto', 'Eigene Zeichnung „Klassisch", eigene Aufnahme aus Mannheim');
   }
   function renderMehr() {
@@ -743,7 +743,7 @@
     if (ds && ds.nextElementSibling) nach(ds.nextElementSibling, satz); else if (ql) nach(ql, '<p class="info hilfe" id="datenschutzDwd"><b>Datenschutz:</b> Bei Datenquelle DWD sieht brightsky.dev deine IP-Adresse und den Ort.</p>');
     // Kurzbefehl „Wetterfoto" vor „Über die App"
     var kb = '<h2 class="abschnitt-titel" id="kbTitel">Kurzbefehl „Wetterfoto“</h2><section class="kachel kurzbefehl" aria-labelledby="kbTitel">' +
-      '<p>Mit Apples App „Kurzbefehle“ fotografierst du mit einem Tipp und landest danach direkt im Teilen-Bildschirm dieser App.</p><ol class="kb-schritte">' +
+      '<p>Mit Apples App „Kurzbefehle“ fotografierst du mit einem Tipp und landest danach direkt im Wetterfoto dieser App.</p><ol class="kb-schritte">' +
       '<li>Öffne die App <b>Kurzbefehle</b> und tippe oben rechts auf <b>+</b>.</li>' +
       '<li>Füge die Aktion <b>App öffnen</b> hinzu und wähle <b>ProCamera</b> (oder <b>Kamera</b>).</li>' +
       '<li>Füge die Aktion <b>Warten bis Rückkehr</b> hinzu. Der Kurzbefehl wartet dann, bis du fotografiert hast und zurückwechselst.</li>' +
@@ -1180,7 +1180,7 @@
       fotos.sort(function (a, b) { return b.zeit - a.zeit; }); gal.fotos = fotos; urlsFrei();
       var inhalt = $('#pcGalInhalt'); $('#pcAlleWeg').hidden = !fotos.length;
       if (!fotos.length) {
-        inhalt.innerHTML = '<section class="kachel leer-zustand">' + Ikon('image') + '<p><b>Noch keine Wetterfotos.</b><br>Teile ein Foto mit dem Wetter, dann landet es hier, mit Ort, Datum und Werten.</p>' +
+        inhalt.innerHTML = '<section class="kachel leer-zustand">' + Ikon('image') + '<p><b>Keine früheren Wetterfotos.</b><br>Neue Wetterfotos findest du im Wetterfoto unter „Meine Wetterfotos“.</p>' +
           '<button type="button" class="button tippbar" data-kamera-auf="1">Foto mit Wetter machen</button></section>';
         return;
       }
