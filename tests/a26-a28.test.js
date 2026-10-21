@@ -108,7 +108,7 @@ async function start(b, opt, modus) {
       await f.ctx.close();
     }
 
-    console.log('4) Durchgang-Funde 4, 12, 14, 15 (A28; Tagesinfo-Zeile bleibt bei 11 px, siehe Abschnitt 5)');
+    console.log('4) Durchgang-Funde 4, 12, 14, 15 (A28; Tagesinfo-Zeile 12 px mit Hof, siehe Abschnitt 5)');
     {
       const s = await start(b, {}, { warnung: 'ja' });
       // Fund 14: Zusammenfassung im Tagesdetail nennt den Abschnitt
@@ -217,14 +217,16 @@ async function start(b, opt, modus) {
       pruefe('Fokus-Kreis: „summary“ wird erreicht, Knopf mit tabindex=-1 nie', besucht.includes('fkS') && !besucht.includes('fkM'), besucht);
       await f.ctx.close();
 
-      // F8: UV-Zeile im Meteogramm (390 px) berührt die Jetzt-Linie nicht
+      // F8: UV-Zeile im Meteogramm (390 px) bleibt lesbar, wenn die Jetzt-Linie sie kreuzt. Ob sie kreuzt, hängt von der Uhrzeit
+      // und der Schriftbreite ab (Linux-WebKit auf GitHub setzt breiter als der Mac; zweite Meinung 22.10.: bei 10:00 und 13:00 kreuzt sie
+      // immer, bei 14:40 nie). Deshalb wird nicht die Überlappung geprüft, sondern der Hof in Flächenfarbe (paint-order: stroke), der die
+      // Schrift über der Linie freistellt; die Linie wird vor dem Text gezeichnet (meteogramm.js, mg-jetzt vor mg-tagesinfo).
       const m = await start(b);
       await m.p.click('#tb-graphs'); await m.p.waitForTimeout(400);
       await m.p.evaluate(() => { const x = [...document.querySelectorAll('#tab-graphs [data-seg] [data-v]')].find(e => /Meteogramm/.test(e.textContent)); if (x) x.click(); });
       await m.p.waitForSelector('#tab-graphs .mg-jetzt', { state: 'attached', timeout: 10000 }); await m.p.waitForTimeout(500);
-      const uv = await m.p.evaluate(() => { const l = document.querySelector('#tab-graphs .mg-jetzt').getBoundingClientRect().x; return [...document.querySelectorAll('#tab-graphs .mg-tagesinfo')].map(e => { const r = e.getBoundingClientRect(); return { t: e.textContent.slice(0, 20), links: Math.round(r.left), rechts: Math.round(r.right), linie: Math.round(l), fs: getComputedStyle(e).fontSize }; }).filter(x => !(x.rechts < x.linie - 3 || x.links > x.linie + 3)); });
-      // Nur echte Überlappung zählt: Linux-WebKit (GitHub) setzt die Schrift 1–2 px breiter als der Mac, dort endet die Zeile knapp vor der Linie
-      pruefe('Meteogramm: keine Tagesinfo-Zeile läuft in die Jetzt-Linie', !uv.some(x => x.links < x.linie && x.rechts > x.linie), uv);
+      const uv = await m.p.evaluate(() => [...document.querySelectorAll('#tab-graphs .mg-tagesinfo')].map(e => { const c = getComputedStyle(e); return { t: e.textContent.slice(0, 20), fs: c.fontSize, hof: c.paintOrder, breite: c.strokeWidth, farbe: c.stroke }; }));
+      pruefe('Meteogramm: Tagesinfo-Zeilen 12 px mit Hof in Flächenfarbe (lesbar über der Jetzt-Linie)', uv.length > 0 && uv.every(x => x.fs === '12px' && /stroke/.test(x.hof) && x.breite === '3px' && x.farbe !== 'none'), uv.slice(0, 3));
       await m.ctx.close();
     }
   } finally { await b.close(); srv.close(); }
