@@ -4,7 +4,7 @@
    - Übrige Hülle (CSS, JS, Bilder, Leaflet): sofort aus dem Zwischenspeicher, im Hintergrund auffrischen.
    - Gespeichert werden nur einwandfreie Antworten der eigenen Seite (r.ok und Typ „basic").
    - Wetterdaten, Karten und Radar kommen von fremden Diensten und gehen direkt ins Netz; den letzten Stand merkt sich app.js. */
-const VERSION = 'wpc-09c3e05835';
+const VERSION = 'wpc-0c0ed6094f';
 const HUELLE = ['./', 'index.html', 'app.css', 'app.js', 'base.css', 'tokens.css', 'symbole.js', 'ikonen.js', 'manifest.json', 'meteogramm.js', 'meteogramm.css', 'apple-touch-icon.png', 'app-symbol-1024.png', 'foto-mannheim.jpg',
   'lib/kamera-studio/ks-symbole.js', 'lib/kamera-studio/ks-engine.js', 'lib/kamera-studio/ks-studio.js', 'lib/kamera-studio/ks-studio.css',
   'lib/leaflet/leaflet.min.js', 'lib/leaflet/leaflet.css', 'lib/leaflet/images/layers.png', 'lib/leaflet/images/layers-2x.png', 'lib/leaflet/images/marker-icon.png', 'lib/leaflet/images/marker-icon-2x.png', 'lib/leaflet/images/marker-shadow.png'];

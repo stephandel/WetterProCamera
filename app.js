@@ -1629,10 +1629,17 @@
     setTimeout(function () { var f = $('#sucheFeld'); if (f) { f.focus(); f.select(); } }, 50);
   }
   function dialogOffen() { var st = $('#studio'); return (st && !st.hidden) || $$('dialog').some(function (d) { return d.open; }); }   // das Studio ist kein <dialog>
+  // Ein offenes Vollbild-Blatt (A32) schließt ein Kürzel zuerst, danach wirkt es wie sonst (wie „Fertig“ und dann die Tab-Leiste).
+  // Sonst bliebe die Seite nach dem Reiterwechsel gesperrt (zweite Meinung 21.10.2026).
+  function vollbilderSchliessen() {
+    $$('.mg-vollbild .mg-vb-fertig').forEach(function (f) { f.click(); });
+    if (rsVoll.an) radsatVollbild(false);
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') return;   // Fenster (<dialog>) schließt der Browser selbst mit Esc, siehe „cancel“ unten
     if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
     var k = (e.key || '').toLowerCase();
+    if (/^[1-5kr]$/.test(k) && !dialogOffen()) vollbilderSchliessen();
     if (/^[1-5]$/.test(k)) {
       if (dialogOffen()) return;
       e.preventDefault();

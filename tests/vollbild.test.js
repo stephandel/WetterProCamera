@@ -242,6 +242,29 @@ async function radsat(s, mac) {
       await H.foto(m.p, 'vollbild-immer-mac-1280-radsat');
       await m.ctx.close();
     }
+    console.log('7) Zweite Meinung: Tastenkürzel bei offenem Blatt');
+    for (const vp of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+      const s = await start(b, { viewport: vp }), p = s.p, n = vp.width;
+      const frei = () => p.evaluate(() => ({ inert: document.querySelectorAll('[inert]').length, overflow: getComputedStyle(document.documentElement).overflow, blatt: !!document.querySelector('.mg-vollbild, .rs-vollbild'), reiter: ['wetter', 'graphs', 'radsat', 'mehr'].filter(t => !document.getElementById('tab-' + t).hidden)[0], zustand: history.state }));
+      const basis = await p.evaluate(() => document.querySelectorAll('[inert]').length);   // am Mac ist die Tab-Leiste immer inert
+      await graphs(s, n >= 1024);
+      await p.click('#pcMg .mg-btn-voll'); await p.waitForTimeout(300);
+      await p.keyboard.press('Control+1'); await p.waitForTimeout(500);
+      let z = await frei();
+      pruefe(n + ': Strg+1 im Meteogramm-Blatt schließt erst das Blatt, dann Reiter Wetter, Seite bedienbar', !z.blatt && z.reiter === 'wetter' && z.inert === basis && z.overflow !== 'hidden' && !(z.zustand && z.zustand.wpVollbild), z);
+      await radsat(s, n >= 1024);
+      await p.click('#radsatVoll'); await p.waitForTimeout(300);
+      await p.keyboard.press('Control+k'); await p.waitForTimeout(500);
+      z = await frei();
+      pruefe(n + ': Strg+K im Rad/Sat-Blatt schließt das Blatt und öffnet die Ortssuche (Mehr), Seite bedienbar', !z.blatt && z.reiter === 'mehr' && z.inert === basis && z.overflow !== 'hidden', z);
+      await radsat(s, n >= 1024);
+      await p.click('#radsatVoll'); await p.waitForTimeout(300);
+      await p.keyboard.press('Control+r'); await p.waitForTimeout(500);
+      z = await frei();
+      pruefe(n + ': Strg+R im Blatt schließt das Blatt und frischt auf, Reiter bleibt Rad/Sat', !z.blatt && z.reiter === 'radsat' && z.inert === basis, z);
+      pruefe(n + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+    }
     console.log('4) Reduzierte Bewegung: Blatt erscheint ohne Animation');
     {
       const s = await start(b, { reducedMotion: 'reduce' });
