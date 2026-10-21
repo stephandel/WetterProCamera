@@ -20,8 +20,10 @@ async function graphs(s, mac) {
 }
 
 // Zustand des Blatts: Größe, wer oben liegt, Sperre, Fokus, Fertig-Knopf
-const ZUSTAND = (a) => {
-  const sel = typeof a === 'string' ? a : a.sel, w = document.querySelector(sel), r = w.getBoundingClientRect();
+const ZUSTAND = async (a) => {
+  const sel = typeof a === 'string' ? a : a.sel, w = document.querySelector(sel);
+  await Promise.all(w.getAnimations().map(x => x.finished.catch(() => {})));   // Öffnen-Animation (250 ms) abwarten, auf langsamer CI läuft sie nach dem festen Warten noch (GitHub-Lauf 39605961695: Blatt 386 statt 390 breit)
+  const r = w.getBoundingClientRect();
   const fertig = w.querySelector(typeof a === 'string' ? '.mg-vb-fertig' : a.fertig), fr = fertig && fertig.getBoundingClientRect();
   const oben = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && w.contains(e); };
   const fs2 = fertig && getComputedStyle(fertig);
@@ -121,7 +123,8 @@ async function rsVollbild(s, name, w, h) {
   pruefe(name + ': „Fertig“ oben rechts, mind. 44 px (Mac 28 px), Fokus darauf', !!z.fertig && z.fertig.t === 'Fertig' && z.fertig.h >= (w >= 1024 ? 28 : 44) && z.fertig.right < 40 && z.fokus === 'fertig', [z.fertig, z.fokus]);
   if (!z.fertig) return;
   pruefe(name + ': Rest der Seite gesperrt, Verlaufseintrag', z.gesperrt.length === 0 && z.tabbarInert && z.overflow === 'hidden' && z.zustand && z.zustand.wpVollbild === 'radsat' && z.laenge === vorher.laenge + 1, z);
-  const k = await p.evaluate(() => {
+  const k = await p.evaluate(async () => {
+    await Promise.all(document.querySelector('#tab-radsat').getAnimations().map(x => x.finished.catch(() => {})));
     const r = s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]; };
     const m = document.querySelector('#radarKarte'), lf = m._leaflet_id && window.L ? null : null;
     return { karte: r('#radarKarte'), chips: r('#ebenenWahl'), fuss: r('#tab-radsat .karte-fuss'), plus: r('#radarKarte [data-z="1"]'), play: r('#radarPlay'), vw: innerWidth, vh: innerHeight,
