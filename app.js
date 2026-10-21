@@ -2454,7 +2454,9 @@
   var KS_EINSTELLUNG = {
     variante: 'schnell', funktionen: {}, speicher: 'wpcamera',
     optionen: { zugangAktion: 'kamera', ausloeserOrt: 'frei', galerieOriginale: 3, galerieBearbeitet: 5, vorschauStart: 'studio',
-      nutzerDarf: { zugang: [], ausloeser: ['studio'], galerie: [], sucher: ['studio'] } }
+      nutzerDarf: { zugang: [], ausloeser: ['studio'], galerie: [], sucher: ['studio'] } },
+    // Foto-Infos (design.json, A26): aufs Foto nur Temperatur, Wettersymbol, Ort und Datum; der Nutzer kann im Studio mehr zuschalten
+    start: { daten: { temperatur: true, symbol: true, ort: 'genau', datum: true, lage: false, uhrzeit: false, logo: false, wind: false, regen: false, feuchte: false, uv: false, sonne: false, druck: false, boeen: false, regenRisiko: false } }
   };
   var ZUGANG_STD = { ort: 'tab', platz: '3', aus: 'rund' };
   var ZUGANG_ORTE = [['tab', 'Tab-Leiste'], ['kopf', 'Kopfzeile'], ['schwebend', 'Schwebend'], ['mehr', 'Im Tab „Mehr“'], ['kachel', 'Kachel']];
@@ -2574,7 +2576,7 @@
   }
   function studioMount() {
     $('#ksWurzel').innerHTML = '';
-    ks = KSStudio.mount($('#ksWurzel'), { variante: KS_EINSTELLUNG.variante, funktionen: KS_EINSTELLUNG.funktionen, optionen: KS_EINSTELLUNG.optionen, speicher: KS_EINSTELLUNG.speicher,
+    ks = KSStudio.mount($('#ksWurzel'), { variante: KS_EINSTELLUNG.variante, funktionen: KS_EINSTELLUNG.funktionen, optionen: KS_EINSTELLUNG.optionen, speicher: KS_EINSTELLUNG.speicher, start: KS_EINSTELLUNG.start,
       wetter: studioWetter(), theme: 'dunkel', appName: 'WetterProCamera' });
   }
   // kamera: der Knopf soll gleich die Kamera öffnen (geht nur direkt im Antippen, also nur, wenn das Studio schon geladen ist)
