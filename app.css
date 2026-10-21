@@ -609,6 +609,7 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .w3-mond-hell { fill: var(--gelb); }
 .w3-leise { font-weight: 400; font-size: var(--fs-subhead); color: var(--label-2); }
 .w3-bogen { width: 100%; height: auto; display: block; }
+.w3-sonne-kachel .w3-bogen { max-block-size: calc(var(--s8) * 4); margin-block-end: var(--s2); }   /* Kachel: Bogen niedriger als im Blatt (A26) */
 .w3-horizont { stroke: var(--trenner); stroke-width: 1; }
 .w3-sonne-linie { fill: none; stroke: var(--akzent); stroke-width: 2.5; stroke-linejoin: round; }
 .w3-sonne-jetzt { fill: var(--orange); stroke: var(--bg-2); stroke-width: 2; }

@@ -90,12 +90,12 @@ async function start(b, modus, opt) {
     s = await start(b, {});
     const l = await s.p.evaluate(() => {
       const k = document.getElementById('a9Luft'); if (!k) return null;
-      const w = [...document.getElementById('tab-wetter').children].map(e => e.id || (e.className.match(/\b(akt|std|tage|w3-mond-kachel)\b/) || [''])[0]);
+      const w = [...document.getElementById('tab-wetter').children].map(e => e.id || (e.className.match(/\b(akt|std|tage|w3-sonne-kachel|w3-mond-kachel)\b/) || [''])[0]);
       const cs = getComputedStyle(k), bogen = getComputedStyle(k.querySelector('.a9-ring-bogen')), sum = k.querySelector('summary').getBoundingClientRect();
       const tx = [...k.querySelectorAll('.a9-luft-kopf *, .kachel-titel, summary')].filter(e => [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())).map(e => getComputedStyle(e).color);
       return { reihe: w, text: k.textContent, zahl: k.querySelector('.a9-ring-zahl').textContent, bg: cs.backgroundColor, bogen: bogen.stroke, textfarben: tx, sumH: sum.height, offen: k.querySelector('details').open, balkenSichtbar: k.querySelector('.a9-stoffe').checkVisibility ? k.querySelector('.a9-stoffe').checkVisibility() : k.querySelector('.a9-balken').getBoundingClientRect().height > 0, anz: k.querySelectorAll('.a9-stoffe li').length, stoffe: k.querySelector('.a9-stoffe').textContent };
     });
-    pruefe('Kachel Luftqualität steht nach der Tagesliste, vor Sonne und Mond', !!l && l.reihe.indexOf('a9Luft') === l.reihe.indexOf('tage') + 1 && l.reihe.indexOf('w3-mond-kachel') === l.reihe.indexOf('a9Luft') + 1, l && l.reihe);
+    pruefe('Kachel Luftqualität steht nach der Tagesliste, vor Sonne und Mond', !!l && l.reihe.indexOf('a9Luft') === l.reihe.indexOf('tage') + 1 && l.reihe.indexOf('w3-sonne-kachel') === l.reihe.indexOf('a9Luft') + 1 && l.reihe.indexOf('w3-mond-kachel') === l.reihe.indexOf('a9Luft') + 2, l && l.reihe);
     pruefe('Ring zeigt Zahl 43 und das Wort „Mäßig“ (Europäischer AQI 40–60)', !!l && l.zahl === '43' && /Mäßig/.test(l.text) && /Luftqualitätsindex 43/.test(l.text), l && l.text);
     pruefe('Ring-Farbe: Stufe „mäßig“ = Gelb #FFD633', !!l && l.bogen === 'rgb(255, 214, 51)', l && l.bogen);
     pruefe('Text auf der Kachel mind. 4,5:1, Ringfarbe mind. 3:1', !!l && l.textfarben.every(c => kontrast(c, l.bg) >= 4.5) && kontrast(l.bogen, l.bg) >= 3, l && [l.textfarben, l.bg, l.bogen]);

@@ -31,6 +31,40 @@ async function start(b, opt, modus) {
       pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }
+
+    console.log('2) Sonne getrennt von Mond (A26)');
+    {
+      const s = await start(b);
+      const k = await s.p.evaluate(() => {
+        const so = document.querySelector('.w3-sonne-kachel'), mo = document.querySelector('.w3-mond-kachel');
+        const reihe = [...document.getElementById('tab-wetter').children].map(e => e.id || e.className.split(' ').find(c => /^(tage|w3-sonne-kachel|w3-mond-kachel)$/.test(c)) || '');
+        return { so: so && so.textContent.replace(/\s+/g, ' '), mo: mo && mo.textContent.replace(/\s+/g, ' '), reihe, soT: so && so.querySelector('h2').textContent, moT: mo && mo.querySelector('h2').textContent,
+          soK: so && so.querySelector('[data-w3-sonne]') && so.querySelector('[data-w3-sonne]').getBoundingClientRect().height, moK: mo && mo.querySelector('[data-w3-mond]') && mo.querySelector('[data-w3-mond]').getBoundingClientRect().height, bogen: !!(so && so.querySelector('.w3-bogen')) };
+      });
+      pruefe('Zwei getrennte Kacheln: „Sonne“ und „Mond“', k.soT === 'Sonne' && k.moT === 'Mond', [k.soT, k.moT]);
+      pruefe('Reihenfolge: Tagesliste, Luftqualität, Sonne, Mond, Was heute geht', k.reihe.join(',').includes('tage,a9Luft,w3-sonne-kachel,w3-mond-kachel,a5Tipps'), k.reihe);
+      pruefe('Sonne-Kachel: Auf- und Untergang, Tageslänge, goldene Stunde, Sonnenbogen; nichts vom Mond', !!k.so && /↑ 07:4\d ↓ 18:3\d/.test(k.so) && /Tageslänge/.test(k.so) && /Goldene Stunde/.test(k.so) && k.bogen && !/Mond|beleuchtet/.test(k.so), k.so);
+      pruefe('Mond-Kachel: Phase in Prozent, Auf- und Untergang; nichts von der Sonne', !!k.mo && /\d+ %/.test(k.mo) && /Mondaufgang/.test(k.mo) && /Monduntergang/.test(k.mo) && !/Sonne|Dämmerung/.test(k.mo), k.mo);
+      pruefe('Knöpfe „Sonne ausführlich“ und „Mond ausführlich“ mind. 44 px', k.soK >= 43.5 && k.moK >= 43.5, [k.soK, k.moK]);
+      await s.p.click('.w3-sonne-kachel [data-w3-sonne]'); await s.p.waitForSelector('#w3Sonne[open]');
+      const bs = await s.p.evaluate(() => ({ t: document.getElementById('w3SonneInhalt').textContent.replace(/\s+/g, ' '), titel: document.getElementById('w3SonneT').textContent, bogen: !!document.querySelector('#w3Sonne .w3-bogen'), jetzt: !!document.querySelector('#w3Sonne .w3-sonne-jetzt'), mondbild: !!document.querySelector('#w3Sonne .w3-mond-bild') }));
+      pruefe('Sonne-Blatt: Titel „Sonne“, Bogen mit Jetzt-Punkt, Aufgang, goldene Stunde, drei Dämmerungen, kein Mond', bs.titel === 'Sonne' && bs.bogen && bs.jetzt && /Sonnenaufgang\s*07:/.test(bs.t) && /Goldene Stunde abends/.test(bs.t) && /Bürgerliche Dämmerung/.test(bs.t) && /Nautische Dämmerung/.test(bs.t) && /Astronomische Dämmerung/.test(bs.t) && !bs.mondbild && !/Mondaufgang|beleuchtet/.test(bs.t), bs);
+      await H.foto(s.p, 'a26-390-sonne-blatt');
+      await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
+      pruefe('Fokus kehrt auf den Sonne-Knopf zurück', await s.p.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-w3-sonne')));
+      await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]');
+      const bm = await s.p.evaluate(() => ({ t: document.getElementById('w3MondInhalt').textContent.replace(/\s+/g, ' '), titel: document.getElementById('w3MondT').textContent, mondbild: !!document.querySelector('#w3Mond .w3-mond-bild'), bogen: !!document.querySelector('#w3Mond .w3-bogen') }));
+      pruefe('Mond-Blatt: Titel „Mond“, Mondbild, Phase, Auf- und Untergang, Voll- und Neumond; kein Sonnenbogen, keine Dämmerung', bm.titel === 'Mond' && bm.mondbild && /beleuchtet/.test(bm.t) && /Mondaufgang/.test(bm.t) && /Monduntergang/.test(bm.t) && /Nächster Vollmond/.test(bm.t) && /Nächster Neumond/.test(bm.t) && !bm.bogen && !/Dämmerung|Sonnenaufgang/.test(bm.t), bm);
+      await H.foto(s.p, 'a26-390-mond-blatt');
+      await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
+      await s.p.click('.tag[data-w3-tag="1"]'); await s.p.waitForSelector('#w3Tag[open]');
+      const td = await s.p.evaluate(() => ({ h3: [...document.querySelectorAll('#w3TagInhalt h3')].map(x => x.textContent), knoepfe: [...document.querySelectorAll('#w3TagInhalt [data-w3-sonne], #w3TagInhalt [data-w3-mond]')].map(x => x.textContent.trim()) }));
+      pruefe('Tagesdetail: getrennte Abschnitte „Sonne“ und „Mond“ mit je einem Knopf', JSON.stringify(td.h3) === JSON.stringify(['Sonne', 'Mond']) && td.knoepfe.join('|') === 'Sonne ausführlich|Mond ausführlich', td);
+      await s.p.click('#w3Tag [data-w3-sonne]'); await s.p.waitForSelector('#w3Sonne[open]');
+      pruefe('Vom Tagesdetail öffnet „Sonne ausführlich“ das Sonne-Blatt für den gewählten Tag', /Sonnenaufgang\s*07:/.test(await s.p.textContent('#w3SonneInhalt')));
+      pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+    }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');

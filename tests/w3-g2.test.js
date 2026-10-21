@@ -264,36 +264,39 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
     await s.p.focus('.tag[data-w3-tag="2"]'); await s.p.keyboard.press('Enter'); await s.p.waitForSelector('#w3Tag[open]');
     pruefe('Per Tastatur (Enter) auf einem Tag öffnen', /17\.10\./.test(await s.p.textContent('#w3TagT')));
     // von hier zu Sonne und Mond
-    await s.p.click('#w3Tag [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]');
-    const sm = await s.p.evaluate(() => ({ t: document.getElementById('w3MondInhalt').textContent.replace(/\s+/g, ' '), bogen: !!document.querySelector('#w3Mond .w3-bogen'), mond: !!document.querySelector('#w3Mond .w3-mond-bild') }));
-    pruefe('Sonne-und-Mond-Blatt für den 17.10.: Aufgang 07:49–07:5x, Untergang 18:3x, Bogen, Mondbild', /Sonnenaufgang\s*07:(49|5\d) Uhr/.test(sm.t) && /Sonnenuntergang\s*18:[2-3]\d Uhr/.test(sm.t) && sm.bogen && sm.mond, sm.t.slice(0, 260));
+    await s.p.click('#w3Tag [data-w3-sonne]'); await s.p.waitForSelector('#w3Sonne[open]');
+    const sm = await s.p.evaluate(() => ({ t: document.getElementById('w3SonneInhalt').textContent.replace(/\s+/g, ' '), bogen: !!document.querySelector('#w3Sonne .w3-bogen') }));
+    pruefe('Sonne-Blatt für den 17.10.: Aufgang 07:49–07:5x, Untergang 18:3x, Bogen', /Sonnenaufgang\s*07:(49|5\d) Uhr/.test(sm.t) && /Sonnenuntergang\s*18:[2-3]\d Uhr/.test(sm.t) && sm.bogen, sm.t.slice(0, 260));
     await s.p.keyboard.press('Escape'); await s.p.keyboard.press('Escape');
     await s.ctx.close();
 
     s = await neueSeite(b, { colorScheme: 'light' }, { omAendern: d => d });
     const mondUrls = await zusatz(s.p, []);
     await s.p.goto(START); await s.p.waitForSelector('.w3-mond-kachel'); await s.p.waitForTimeout(500); const nachLaden = mondUrls.length;
-    const kachel = await s.p.textContent('.w3-mond-kachel');
-    pruefe('Kachel „Sonne und Mond" unter der Tagesliste (dazwischen nur die Luftqualität, A9)', await s.p.evaluate(() => { const v = document.querySelector('.w3-mond-kachel').previousElementSibling; return v.classList.contains('tage') || (v.id === 'a9Luft' && v.previousElementSibling.classList.contains('tage')); }) && /Sonne ↑ 07:4\d ↓ 18:3\d/.test(kachel), kachel);
-    await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]');
+    const kachel = await s.p.textContent('.w3-sonne-kachel');
+    pruefe('Kacheln „Sonne“ und „Mond" unter der Tagesliste (dazwischen nur die Luftqualität, A9; Sonne vor Mond, A26)', await s.p.evaluate(() => { const v = document.querySelector('.w3-sonne-kachel').previousElementSibling; return document.querySelector('.w3-mond-kachel').previousElementSibling === document.querySelector('.w3-sonne-kachel') && (v.classList.contains('tage') || (v.id === 'a9Luft' && v.previousElementSibling.classList.contains('tage'))); }) && /Sonne ↑ 07:4\d ↓ 18:3\d/.test(kachel), kachel);
+    await s.p.click('.w3-sonne-kachel [data-w3-sonne]'); await s.p.waitForSelector('#w3Sonne[open]');
     const mond = await s.p.evaluate(() => {
-      const t = document.getElementById('w3MondInhalt').textContent.replace(/\s+/g, ' ');
+      const t = document.getElementById('w3SonneInhalt').textContent.replace(/\s+/g, ' ');
       const z = n => { const m = new RegExp(n + '\\s*(\\d\\d:\\d\\d)').exec(t); return m && m[1]; };
       return { t, auf: z('Sonnenaufgang'), unter: z('Sonnenuntergang') };
     });
     const min = hm => +hm.slice(0, 2) * 60 + +hm.slice(3);
     pruefe('Sonnenaufgang stimmt mit Open-Meteo (07:47) auf 4 Minuten überein', Math.abs(min(mond.auf) - min('07:47')) <= 4, mond.auf);
     pruefe('Sonnenuntergang stimmt mit Open-Meteo (18:35) auf 4 Minuten überein', Math.abs(min(mond.unter) - min('18:35')) <= 4, mond.unter);
-    const ph = /(Zunehmende Sichel|Erstes Viertel|Zunehmender Mond|Neumond|Vollmond|Abnehmender Mond|Letztes Viertel|Abnehmende Sichel)\s*(\d+) % beleuchtet/.exec(mond.t);
-    pruefe('Mondphase am 15.10.2026 (5 Tage nach Neumond): zunehmend, 15–40 %', ph && /^Zunehmende Sichel|Erstes Viertel$/.test(ph[1]) && +ph[2] >= 15 && +ph[2] <= 40, ph && ph.slice(1));
-    pruefe('Nächster Vollmond um den 26.10., nächster Neumond um den 9.11.', /Nächster Vollmond\s*(25|26|27)\.10\./.test(mond.t) && /Nächster Neumond\s*(8|9|10)\.11\./.test(mond.t), mond.t.slice(-260));
     pruefe('Goldene Stunde und drei Dämmerungen stehen im Blatt', /Goldene Stunde morgens/.test(mond.t) && /Goldene Stunde abends/.test(mond.t) && /Bürgerliche Dämmerung/.test(mond.t) && /Nautische Dämmerung/.test(mond.t) && /Astronomische Dämmerung/.test(mond.t));
     const gold = /Goldene Stunde abends\s*(\d\d:\d\d) bis (\d\d:\d\d)/.exec(mond.t);
     pruefe('Goldene Stunde abends endet nach Sonnenuntergang (gegen 18:50)', gold && min(gold[1]) < min(mond.unter) && min(gold[2]) > min(mond.unter) && min(gold[2]) < min('19:10'), gold && gold.slice(1));
-    pruefe('Sonnenbogen zeigt den aktuellen Stand', await s.p.evaluate(() => !!document.querySelector('#w3Mond .w3-sonne-jetzt') && /Die Sonne steht jetzt \d+ Grad über dem Horizont/.test(document.getElementById('w3MondInhalt').textContent)));
+    pruefe('Sonnenbogen zeigt den aktuellen Stand', await s.p.evaluate(() => !!document.querySelector('#w3Sonne .w3-sonne-jetzt') && /Die Sonne steht jetzt \d+ Grad über dem Horizont/.test(document.getElementById('w3SonneInhalt').textContent)));
     pruefe('Sonne/Mond ohne Netzdienst (Öffnen löst keine Anfrage aus)', mondUrls.length === nachLaden, [mondUrls.length, nachLaden]);
     await foto(s.p, 'hell-390-w3-sonne-mond');
-    await s.p.$eval('#w3Mond .pc-blatt-inhalt', e => { e.scrollTop = 600; }); await foto(s.p, 'hell-390-w3-sonne-mond-unten');
+    await s.p.$eval('#w3Sonne .pc-blatt-inhalt', e => { e.scrollTop = 600; }); await foto(s.p, 'hell-390-w3-sonne-mond-unten');
+    await s.p.keyboard.press('Escape'); await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]');
+    const mond2 = { t: await s.p.evaluate(() => document.getElementById('w3MondInhalt').textContent.replace(/\s+/g, ' ')) };
+    const ph = /(Zunehmende Sichel|Erstes Viertel|Zunehmender Mond|Neumond|Vollmond|Abnehmender Mond|Letztes Viertel|Abnehmende Sichel)\s*(\d+) % beleuchtet/.exec(mond2.t);
+    pruefe('Mondphase am 15.10.2026 (5 Tage nach Neumond): zunehmend, 15–40 %', ph && /^Zunehmende Sichel|Erstes Viertel$/.test(ph[1]) && +ph[2] >= 15 && +ph[2] <= 40, ph && ph.slice(1));
+    pruefe('Mond-Blatt: Nächster Vollmond um den 26.10., nächster Neumond um den 9.11.', /Nächster Vollmond\s*(25|26|27)\.10\./.test(mond2.t) && /Nächster Neumond\s*(8|9|10)\.11\./.test(mond2.t), mond2.t.slice(-260));
+    await foto(s.p, 'hell-390-w3-mond');
     pruefe('Sonne/Mond: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     await s.ctx.close();
 
@@ -466,7 +469,8 @@ const warte = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: 8000 }).then
       pruefe(name + ': Tagesblatt passt in den Bildschirm' + (mac ? ' (Fenster, nicht randlos)' : ''), bl.b <= bl.vb && bl.h <= bl.vh && (!mac || bl.b < bl.vb - 100) && bl.seitlich <= 0, bl);
       await foto(s.p, name.replace(' ', '-') + '-w3-tagesdetail');
       await s.p.keyboard.press('Escape');
-      await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]'); await foto(s.p, name.replace(' ', '-') + '-w3-sonne-mond'); await s.p.keyboard.press('Escape');
+      await s.p.click('.w3-sonne-kachel [data-w3-sonne]'); await s.p.waitForSelector('#w3Sonne[open]'); await foto(s.p, name.replace(' ', '-') + '-w3-sonne'); await s.p.keyboard.press('Escape');
+      await s.p.click('.w3-mond-kachel [data-w3-mond]'); await s.p.waitForSelector('#w3Mond[open]'); await foto(s.p, name.replace(' ', '-') + '-w3-mond'); await s.p.keyboard.press('Escape');
       pruefe(name + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }

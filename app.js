@@ -2122,27 +2122,35 @@
     return '<svg class="w3-mond-bild" viewBox="-22 -22 44 44" role="img" aria-label="Mondphase"><circle class="w3-mond-dunkel" r="' + r + '"/><path class="w3-mond-hell" d="' + lit + '" transform="' + (zun ? '' : 'scale(-1 1)') + '"/></svg>';
   }
   var w3Zeitraum = function (a, b, vers) { return a == null || b == null ? '–' : w3Uhr(a, vers) + ' bis ' + w3Uhr(b, vers) + ' Uhr'; };
-  function w3SonneMondHtml(datum) {
-    var m = w3SonneMond(datum), v = m.v, vers = m.versatz, B = 320, H = 110, hmax = Math.max(20, m.hoechst.grad), jetzt = Date.now();
+  // Sonnenbogen eines Tages als SVG (gemeinsam für Kachel und Blatt „Sonne“); jetztGrad ist nur für den heutigen Tag gesetzt
+  function w3Bogen(m) {
+    var v = m.v, vers = m.versatz, B = 320, H = 110, hmax = Math.max(20, m.hoechst.grad), jetzt = Date.now();
     var x = function (ms) { return (ms - v.start) / 864e5 * B; }, y = function (g) { return H - 14 - (g + 5) / (hmax + 5) * (H - 24); };
     var pfad = v.ts.map(function (ms, i) { return i % 3 ? '' : (i ? 'L' : 'M') + x(ms).toFixed(1) + ' ' + y(v.sonne[i]).toFixed(1); }).join(' ');
     var jetztHeute = jetzt >= v.start && jetzt < v.start + 864e5, jetztGrad = jetztHeute ? v.sonne[Math.round((jetzt - v.start) / 120000)] : null;
-    var bogen = '<svg class="w3-bogen" viewBox="0 0 ' + B + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sonnenbogen: Aufgang ' + w3Uhr(m.sonne.auf, vers) + ' Uhr, Untergang ' + w3Uhr(m.sonne.ab, vers) + ' Uhr' + (jetztGrad != null ? ', jetzt ' + rund(jetztGrad) + ' Grad über dem Horizont' : '') + '">' +
+    return { jetztGrad: jetztGrad, svg: '<svg class="w3-bogen" viewBox="0 0 ' + B + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sonnenbogen: Aufgang ' + w3Uhr(m.sonne.auf, vers) + ' Uhr, Untergang ' + w3Uhr(m.sonne.ab, vers) + ' Uhr' + (jetztGrad != null ? ', jetzt ' + rund(jetztGrad) + ' Grad über dem Horizont' : '') + '">' +
       '<line class="w3-horizont" x1="0" x2="' + B + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '"/><path class="w3-sonne-linie" d="' + pfad + '"/>' +
-      (jetztGrad != null ? '<circle class="w3-sonne-jetzt" cx="' + x(jetzt).toFixed(1) + '" cy="' + y(jetztGrad).toFixed(1) + '" r="7"/>' : '') + '</svg>';
-    var zeile = function (t, w) { return '<div><dt>' + t + '</dt><dd>' + w + '</dd></div>'; };
-    var lang = m.sonne.auf != null && m.sonne.ab != null ? Math.round((m.sonne.ab - m.sonne.auf) / 60000) : null;
-    var d2 = function (a) { return a == null ? '–' : (+a.slice(8, 10)) + '.' + (+a.slice(5, 7)) + '.'; };
-    return '<h3 class="w3-h3">Sonne</h3>' + bogen +
+      (jetztGrad != null ? '<circle class="w3-sonne-jetzt" cx="' + x(jetzt).toFixed(1) + '" cy="' + y(jetztGrad).toFixed(1) + '" r="7"/>' : '') + '</svg>' };
+  }
+  var w3Lang = function (m) { var l = m.sonne.auf != null && m.sonne.ab != null ? Math.round((m.sonne.ab - m.sonne.auf) / 60000) : null; return l == null ? '–' : Math.floor(l / 60) + ' Std. ' + (l % 60) + ' Min.'; };
+  var w3ZeileHtml = function (t, w) { return '<div><dt>' + t + '</dt><dd>' + w + '</dd></div>'; };
+  function w3SonneHtml(datum) {
+    var m = w3SonneMond(datum), vers = m.versatz, bo = w3Bogen(m), jetztGrad = bo.jetztGrad, zeile = w3ZeileHtml;
+    return bo.svg +
       '<p class="info zahl">' + (jetztGrad != null ? 'Die Sonne steht jetzt ' + (jetztGrad >= 0 ? rund(jetztGrad) + ' Grad über dem Horizont.' : (rund(-jetztGrad) + ' Grad unter dem Horizont.')) : 'Sonnenbogen für ' + teile(datum).wt + ' ' + datumKurz(datum)) + '</p>' +
       '<dl class="werte w3-liste-werte">' + zeile('Sonnenaufgang', w3Uhr(m.sonne.auf, vers) + ' Uhr') + zeile('Sonnenuntergang', w3Uhr(m.sonne.ab, vers) + ' Uhr') +
-      zeile('Tageslänge', lang == null ? '–' : Math.floor(lang / 60) + ' Std. ' + (lang % 60) + ' Min.') + zeile('Höchster Stand', w3Uhr(m.hoechst.ms, vers) + ' Uhr, ' + rund(m.hoechst.grad) + '°') +
+      zeile('Tageslänge', w3Lang(m)) + zeile('Höchster Stand', w3Uhr(m.hoechst.ms, vers) + ' Uhr, ' + rund(m.hoechst.grad) + '°') +
       zeile('Goldene Stunde morgens', w3Zeitraum(m.gold.morgens[0], m.gold.morgens[1], vers)) + zeile('Goldene Stunde abends', w3Zeitraum(m.gold.abends[0], m.gold.abends[1], vers)) +
       zeile('Bürgerliche Dämmerung', 'ab ' + w3Uhr(m.buerger.auf, vers) + ' · bis ' + w3Uhr(m.buerger.ab, vers) + ' Uhr') +
       zeile('Nautische Dämmerung', 'ab ' + w3Uhr(m.nautisch.auf, vers) + ' · bis ' + w3Uhr(m.nautisch.ab, vers) + ' Uhr') +
       zeile('Astronomische Dämmerung', 'ab ' + w3Uhr(m.astro.auf, vers) + ' · bis ' + w3Uhr(m.astro.ab, vers) + ' Uhr') + '</dl>' +
       '<p class="info">Goldene Stunde: Die Sonne steht zwischen 6 Grad über und 4 Grad unter dem Horizont, das Licht ist warm und weich. Bei der astronomischen Dämmerung ist der Himmel ganz dunkel; im Sommer wird er in Deutschland nie so dunkel (dann steht „–“).</p>' +
-      '<h3 class="w3-h3">Mond</h3><div class="w3-mond-kopf">' + w3MondSvg(m.phase.phase) + '<p class="regen-satz">' + m.name + '<br><span class="w3-leise">' + m.prozent + ' % beleuchtet</span></p></div>' +
+      '<p class="info">Alles wird auf deinem Gerät berechnet, es ist kein Netzdienst nötig. Die Zeiten stimmen auf wenige Minuten. „–“ heißt: An diesem Tag gibt es das Ereignis nicht.</p>';
+  }
+  function w3MondHtml(datum) {
+    var m = w3SonneMond(datum), vers = m.versatz, zeile = w3ZeileHtml;
+    var d2 = function (a) { return a == null ? '–' : (+a.slice(8, 10)) + '.' + (+a.slice(5, 7)) + '.'; };
+    return '<div class="w3-mond-kopf">' + w3MondSvg(m.phase.phase) + '<p class="regen-satz">' + m.name + '<br><span class="w3-leise">' + m.prozent + ' % beleuchtet</span></p></div>' +
       '<dl class="werte w3-liste-werte">' + zeile('Mondaufgang', w3Uhr(m.mond.auf, vers) + (m.mond.auf == null ? '' : ' Uhr')) + zeile('Monduntergang', w3Uhr(m.mond.ab, vers) + (m.mond.ab == null ? '' : ' Uhr')) +
       zeile('Nächster Vollmond', d2(m.voll)) + zeile('Nächster Neumond', d2(m.neu)) + '</dl>' +
       '<p class="info">Alles wird auf deinem Gerät berechnet, es ist kein Netzdienst nötig. Die Zeiten stimmen auf wenige Minuten. „–“ heißt: An diesem Tag gibt es das Ereignis nicht.</p>';
@@ -2158,19 +2166,28 @@
     d.addEventListener('close', function () { if (w3Fokus && document.contains(w3Fokus) && !dialogOffen()) { try { w3Fokus.focus({ preventScroll: true }); } catch (x) { } } });
     return d;
   }
-  function w3MondBlatt(datum) {
-    var d = w3Blatt('w3Mond', 'Sonne und Mond');
-    if (!d.open) w3Fokus = document.activeElement;
-    $('#w3MondInhalt').innerHTML = w3SonneMondHtml(datum);
+  function w3ModulBlatt(id, titel, html) {
+    var d = w3Blatt(id, titel);
+    if (!d.open && document.activeElement !== document.body) w3Fokus = document.activeElement;   // Safari fokussiert angetippte Knöpfe nicht: dann bleibt der Knopf aus dem Klick
+    $('#' + id + 'Inhalt').innerHTML = html;
     if (!d.open) d.showModal();
     $('[data-zu]', d).focus();
+  }
+  function w3SonneBlatt(datum) { w3ModulBlatt('w3Sonne', 'Sonne', w3SonneHtml(datum)); }
+  function w3MondBlatt(datum) { w3ModulBlatt('w3Mond', 'Mond', w3MondHtml(datum)); }
+  function w3SonneKachel() {
+    var heute = w3Jetzt().slice(0, 10); if (!heute) return '';
+    var m = w3SonneMond(heute), bo = w3Bogen(m);
+    return '<section class="kachel w3-sonne-kachel" aria-labelledby="w3SonneKachelT"><h2 class="kachel-titel" id="w3SonneKachelT">' + Ikon('sun') + 'Sonne</h2>' + bo.svg +
+      '<p class="regen-satz">Sonne ↑ ' + w3Uhr(m.sonne.auf, m.versatz) + ' ↓ ' + w3Uhr(m.sonne.ab, m.versatz) + '<br><span class="w3-leise zahl">Tageslänge ' + w3Lang(m) + ' · Goldene Stunde abends ' + w3Zeitraum(m.gold.abends[0], m.gold.abends[1], m.versatz) + '</span></p>' +
+      '<button type="button" class="button leise tippbar mehr-link" data-w3-sonne="' + heute + '" aria-haspopup="dialog">Sonne ausführlich</button></section>';
   }
   function w3MondKachel() {
     var heute = w3Jetzt().slice(0, 10); if (!heute) return '';
     var m = w3SonneMond(heute);
-    return '<section class="kachel w3-mond-kachel" aria-labelledby="w3MondKachelT"><h2 class="kachel-titel" id="w3MondKachelT">' + Ikon('moon') + 'Sonne und Mond</h2>' +
-      '<div class="w3-mond-kopf">' + w3MondSvg(m.phase.phase) + '<p class="regen-satz">' + m.name + ', ' + m.prozent + ' %<br><span class="w3-leise zahl">Sonne ↑ ' + w3Uhr(m.sonne.auf, m.versatz) + ' ↓ ' + w3Uhr(m.sonne.ab, m.versatz) + ' · Mond ↑ ' + w3Uhr(m.mond.auf, m.versatz) + ' ↓ ' + w3Uhr(m.mond.ab, m.versatz) + '</span></p></div>' +
-      '<button type="button" class="button leise tippbar mehr-link" data-w3-mond="' + heute + '" aria-haspopup="dialog">Sonne und Mond ausführlich</button></section>';
+    return '<section class="kachel w3-mond-kachel" aria-labelledby="w3MondKachelT"><h2 class="kachel-titel" id="w3MondKachelT">' + Ikon('moon') + 'Mond</h2>' +
+      '<div class="w3-mond-kopf">' + w3MondSvg(m.phase.phase) + '<p class="regen-satz">' + m.name + ', ' + m.prozent + '\u00a0%<br><span class="w3-leise zahl">Mondaufgang ' + w3Uhr(m.mond.auf, m.versatz) + ' · Monduntergang ' + w3Uhr(m.mond.ab, m.versatz) + '</span></p></div>' +
+      '<button type="button" class="button leise tippbar mehr-link" data-w3-mond="' + heute + '" aria-haspopup="dialog">Mond ausführlich</button></section>';
   }
 
   /* --- 6. Tagesdetail: Blatt (am Mac Fenster) mit Nacht davor / Tag / Nacht danach, Stundenwerte, Sonne und Mond --- */
@@ -2209,9 +2226,11 @@
     $('#w3TagInhalt').innerHTML = '<p class="regen-satz">' + esc(wText(t.weather_code[i], 1)) + ', ' + rund(t.temperature_2m_min[i]) + ' bis ' + rund(t.temperature_2m_max[i]) + '°C</p>' +
       seg('w3tag', w3Seg, W3_SEGMENTE, 'Abschnitt des Tages') + '<p class="info zahl w3-summe" aria-live="polite">' + summe + '</p>' +
       '<ul class="w3-std-liste" aria-label="Stundenwerte">' + liste + '</ul>' +
-      '<h3 class="w3-h3">Sonne und Mond</h3><dl class="werte w3-liste-werte"><div><dt>Sonne</dt><dd class="zahl">↑ ' + (auf ? hm(auf) : '–') + ' ↓ ' + (unter ? hm(unter) : '–') + '</dd></div><div><dt>Mond</dt><dd>' + sm.name + ', ' + sm.prozent + ' %</dd></div>' +
-      '<div><dt>Mond auf und unter</dt><dd class="zahl">↑ ' + w3Uhr(sm.mond.auf, sm.versatz) + ' ↓ ' + w3Uhr(sm.mond.ab, sm.versatz) + '</dd></div></dl>' +
-      '<button type="button" class="button leise tippbar mehr-link" data-w3-mond="' + datum + '" aria-haspopup="dialog">Sonne und Mond ausführlich</button>';
+      '<h3 class="w3-h3">Sonne</h3><dl class="werte w3-liste-werte"><div><dt>Auf und unter</dt><dd class="zahl">↑ ' + (auf ? hm(auf) : '–') + ' ↓ ' + (unter ? hm(unter) : '–') + '</dd></div></dl>' +
+      '<button type="button" class="button leise tippbar mehr-link" data-w3-sonne="' + datum + '" aria-haspopup="dialog">Sonne ausführlich</button>' +
+      '<h3 class="w3-h3">Mond</h3><dl class="werte w3-liste-werte"><div><dt>Phase</dt><dd>' + sm.name + ', ' + sm.prozent + ' %</dd></div>' +
+      '<div><dt>Auf und unter</dt><dd class="zahl">↑ ' + w3Uhr(sm.mond.auf, sm.versatz) + ' ↓ ' + w3Uhr(sm.mond.ab, sm.versatz) + '</dd></div></dl>' +
+      '<button type="button" class="button leise tippbar mehr-link" data-w3-mond="' + datum + '" aria-haspopup="dialog">Mond ausführlich</button>';
   }
   function w3TagBlatt(i) {
     if (!daten) return;
@@ -2221,6 +2240,7 @@
       d.addEventListener('click', function (e) {
         var b = e.target.closest('[data-seg="w3tag"] [data-v]');
         if (b) { w3Seg = b.dataset.v; w3TagFuellen(); var n = $('[data-seg="w3tag"] [aria-checked="true"]', d); if (n) n.focus(); return; }
+        var so = e.target.closest('[data-w3-sonne]'); if (so) return w3SonneBlatt(so.dataset.w3Sonne);
         var m = e.target.closest('[data-w3-mond]'); if (m) w3MondBlatt(m.dataset.w3Mond);
       });
     }
@@ -2231,20 +2251,21 @@
   }
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-w3-tag]'); if (t && daten) return w3TagBlatt(+t.dataset.w3Tag);
+    var so = e.target.closest('#tab-wetter [data-w3-sonne]'); if (so) { w3Fokus = so; return w3SonneBlatt(so.dataset.w3Sonne); }
     var m = e.target.closest('#tab-wetter [data-w3-mond]'); if (m) { w3Fokus = m; w3MondBlatt(m.dataset.w3Mond); }
   });
   document.addEventListener('keydown', function (e) {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.tag[data-w3-tag]')) { e.preventDefault(); e.target.click(); }
   });
 
-  /* --- Wetter-Tab: Tage antippbar, Calima/Meer unter „Was heute geht", Kachel „Sonne und Mond" ganz unten --- */
+  /* --- Wetter-Tab: Tage antippbar, Calima/Meer unter „Was heute geht", Kacheln „Sonne“ und „Mond“ --- */
   renderWetter = (function (alt) {
     return function () {
       alt();
       var s = $('#tab-wetter'); if (!s || !daten) return;
       try {
         w3TageMarkieren();
-        var tage = $('.tage', s); if (tage && !$('.w3-mond-kachel', s)) tage.insertAdjacentHTML('afterend', w3MondKachel());
+        var tage = $('.tage', s); if (tage && !$('.w3-mond-kachel', s)) tage.insertAdjacentHTML('afterend', w3SonneKachel() + w3MondKachel());
         w3StaubHolen(ort); w3MeerHolen(ort); w3ZusatzNeu();
       } catch (e) { console.error('Welle 3 Wetter', e); }
     };
@@ -2779,9 +2800,9 @@
   })(quellenHtml);
 
   /* === Startseite nach dem Design-Link vom 20.10.2026 ===
-     Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond“), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
+     Reihenfolge: Aktuell, Stunden, Tagesliste, Luftqualität, Sonne, Mond (seit 22.10.2026 getrennt, A26), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
      Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Warnung (ganz oben, nur bei Warnlage) und Luftqualität (nach der Tagesliste) sind seit 21.10.2026 (A9) gebaut. */
-  var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '#a9Luft', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
+  var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '#a9Luft', '.w3-sonne-kachel', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
   function startseiteOrdnen() {
     var s = $('#tab-wetter'); if (!s || !s.querySelector('.akt')) return;
     var regen = $('#regenTitel', s); if (regen && !startLesen().radar) regen.closest('section').remove();
