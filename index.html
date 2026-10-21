@@ -43,25 +43,7 @@
 
 <nav class="tabbar pille glas" role="tablist" aria-label="Bereiche" id="tabbar"></nav>
 
-<!-- Teilen-Bildschirm: immer schwarz, Knöpfe wie in der Kamera-App -->
-<dialog class="teilen" id="teilen" aria-label="Wetter mit Foto teilen">
-  <div class="teilen-kopf"><button class="teilen-text tippbar" id="tAbbrechen">Abbrechen</button><button class="teilen-text tippbar" id="tGalerie" aria-haspopup="dialog" aria-label="Meine Wetterfotos öffnen">Galerie</button><button class="teilen-text tippbar" id="tInfosAuf" aria-haspopup="true" aria-controls="tBlatt">Infos</button></div>
-  <div class="teilen-bild"><canvas id="tBild" role="img" aria-label="Vorschau des Bildes zum Teilen" tabindex="-1" autofocus></canvas><p class="teilen-beispiel" id="tBeispiel">Beispielfoto · tippe auf „Fotos" oder „Kamera"</p></div>
-  <div class="teilen-formate" id="tFormate" role="radiogroup" aria-label="Format des Bildes"></div>
-  <div class="teilen-stile" id="tStile" role="radiogroup" aria-label="Gestaltung des Bildes"></div>
-  <div class="teilen-knoepfe">
-    <label class="teilen-rund klein tippbar"><input type="file" accept="image/*" id="tFotos" hidden><span id="tFotosIkon"></span><span>Fotos</span></label>
-    <button class="teilen-rund gross tippbar" id="tTeilen" aria-label="Bild teilen"></button>
-    <label class="teilen-rund klein tippbar"><input type="file" accept="image/*" capture="environment" id="tKamera" hidden><span id="tKameraIkon"></span><span>Kamera</span></label>
-  </div>
-  <!-- Blatt „Infos": was aufs Foto kommt, Reihenfolge, Ort, Text, Farbton, Größe -->
-  <div class="teilen-blatt" id="tBlatt" role="region" aria-labelledby="tBlattTitel" hidden>
-    <div class="blatt-kopf"><h2 id="tBlattTitel">Infos aufs Foto</h2><button class="teilen-text tippbar" id="tInfosZu">Fertig</button></div>
-    <div class="blatt-inhalt" id="tBlattInhalt"></div>
-  </div>
-</dialog>
-
-<!-- Wetterfoto: Kamera-Studio aus lib/kamera-studio/, wird erst bei Bedarf geladen (Teilen-Bildschirm oben bleibt nur über ?teilen=alt) -->
+<!-- Wetterfoto: Kamera-Studio aus lib/kamera-studio/, wird erst bei Bedarf geladen -->
 <div class="studio" id="studio" role="dialog" aria-modal="true" aria-label="Wetterfoto" hidden>
   <div class="studio-kopf">
     <h2 class="studio-titel">Wetterfoto</h2>

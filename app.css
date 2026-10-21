@@ -184,56 +184,8 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
   .inhalt { padding-bottom: calc(var(--leiste-hoehe) + var(--safe-bottom) + var(--s8) + var(--s4)); }
 }
 
-/* ---------- Teilen-Bildschirm: immer schwarz ---------- */
-dialog.teilen { inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: calc(var(--safe-top) + var(--s2)) var(--rand) calc(var(--safe-bottom) + var(--s4)); background: #000; color: #fff; }
-/* Der Teilen-Bildschirm ist immer dunkel: eigene Werte aus den dunklen Apple-Systemfarben (wie tokens.css dunkel) */
-dialog.teilen { --t-flaeche: #1C1C1E; --t-fuellung: rgba(120,120,128,.36); --t-leise: rgba(235,235,245,.6); --t-trenner: rgba(84,84,88,.6); --t-akzent: var(--akzent); overflow: hidden; }
-dialog.teilen[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: var(--s3); }
-dialog.teilen::backdrop { background: #000; }
-.teilen-kopf { display: flex; justify-content: space-between; align-items: center; }
-.teilen-text { color: #fff; font-size: var(--fs-body); min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s2); }
-#tInfosAuf, #tInfosZu { color: var(--t-akzent); font-weight: 600; }
-.teilen-bild { min-height: 0; display: grid; place-items: center; overflow: hidden; position: relative; }
-#tBild:focus { outline: none; }   /* nur Vorschau, keine Tippfläche */
-.teilen-beispiel { position: absolute; top: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s1) var(--s3); border-radius: var(--r-chip); background: rgba(0,0,0,.7); color: #fff; font-size: var(--fs-footnote); font-weight: 600; white-space: nowrap; max-width: calc(100% - var(--s4)); overflow: hidden; text-overflow: ellipsis; }
-.teilen-bild canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: var(--s2); }
-/* Format-Chips über den Vorlagen; zu viele für die Breite: waagrecht wischen */
-.teilen-formate { display: flex; gap: var(--s2); overflow-x: auto; justify-content: safe center; scrollbar-width: none; padding: 2px; }
-.teilen-formate::-webkit-scrollbar, .teilen-stile::-webkit-scrollbar { display: none; }
-.t-chip { flex: none; min-height: var(--tap); min-width: var(--tap); padding: 0 var(--s4); border-radius: var(--r-chip); background: var(--t-fuellung); color: #fff; font-size: var(--fs-subhead); font-weight: 600; font-variant-numeric: tabular-nums; }
-.t-chip[aria-checked="true"] { background: #fff; color: #000; }
-.teilen-stile { display: flex; gap: var(--s3); justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 4px; }
-.teilen-stile button { flex: none; }
-.teilen-stile button { display: grid; gap: var(--s1); justify-items: center; color: #fff; font-size: var(--fs-caption); min-height: var(--tap); }
-.teilen-stile canvas { width: 54px; height: 72px; border-radius: 6px; outline: 2px solid transparent; outline-offset: 2px; }
-.teilen-stile button[aria-checked="true"] canvas { outline-color: #fff; }
-.teilen-knoepfe { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; justify-items: center; }
-.teilen-rund { display: grid; justify-items: center; gap: var(--s1); color: #fff; font-size: var(--fs-caption); cursor: pointer; }
-.teilen-rund.klein > span:first-of-type { width: var(--tap); height: var(--tap); border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; }
-.teilen-rund.gross { width: 76px; height: 76px; border-radius: 50%; background: #fff; color: #000; display: grid; place-items: center; box-shadow: 0 0 0 4px #000, 0 0 0 7px #fff; }
-.teilen-rund.gross .ikon { width: 30px; height: 30px; }
-
-/* Blatt „Infos" im Teilen-Bildschirm (deckend, kein Glas auf Glas) */
-.teilen-blatt { position: absolute; left: 0; right: 0; bottom: 0; max-height: 78dvh; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--t-flaeche); border-radius: var(--r-kachel) var(--r-kachel) 0 0; z-index: 2; color: #fff; }
-.blatt-kopf { display: flex; justify-content: space-between; align-items: center; padding: var(--s2) var(--rand) var(--s2) var(--s4); border-bottom: 1px solid var(--t-trenner); }
-.blatt-kopf h2 { font-size: var(--fs-body); margin: 0; }
-.blatt-inhalt { overflow-y: auto; padding: var(--s3) var(--rand) calc(var(--safe-bottom) + var(--s6)); overscroll-behavior: contain; }
-.blatt-inhalt h3 { font-size: var(--fs-footnote); font-weight: 600; color: var(--t-leise); margin: var(--s5) 0 var(--s2); }
-.blatt-hilfe { font-size: var(--fs-footnote); color: var(--t-leise); margin: var(--s2) 0; max-width: 65ch; }
-.blatt-liste { list-style: none; margin: 0; padding: 0; border-radius: var(--r-button); background: var(--t-fuellung); overflow: hidden; }
-.blatt-liste li { display: flex; align-items: center; }
-.blatt-liste li + li { border-top: 1px solid var(--t-trenner); }
-.blatt-liste label { flex: 1; min-height: var(--tap); display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3); font-size: var(--fs-body); }
-.blatt-liste input, .blatt-aus input { width: 22px; height: 22px; accent-color: var(--t-akzent); flex: none; }
 .pfeil { width: var(--tap); height: var(--tap); color: #fff; font-size: var(--fs-title3); flex: none; }
 .pfeil:disabled { color: var(--t-trenner); }
-.blatt-feld { width: 100%; min-height: var(--tap); border-radius: var(--r-button); border: 1px solid var(--t-trenner); background: var(--t-fuellung); color: #fff; padding: 0 var(--s3); font-size: var(--fs-body); }
-.blatt-feld::placeholder { color: var(--t-leise); }
-.blatt-aus { display: flex; gap: var(--s3); align-items: center; min-height: var(--tap); margin-top: var(--s3); color: var(--t-leise); }
-.blatt-aus small { display: block; font-size: var(--fs-footnote); }
-.teilen .seg { background: var(--t-fuellung); }
-.teilen .seg button { color: #fff; }
-.teilen .seg button[aria-checked="true"] { background: #fff; color: #000; }
 
 /* Segment-Wahl (Wind-Einheit, Blatt-Einstellungen) */
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 2px; border-radius: var(--r-button); background: var(--fuellung); }
@@ -280,8 +232,7 @@ dialog.teilen::backdrop { background: #000; }
 .kb-fuss { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
 .kb-fuss .button { min-height: var(--tap); }
 .kb-fuss .leise { font-size: var(--fs-subhead); }
-/* Hinweis im Teilen-Bildschirm nach dem Direktlink ?kamera=1 */
-.teilen-tipp { position: absolute; bottom: var(--s2); left: 50%; transform: translateX(-50%); margin: 0; padding: var(--s2) var(--s4); border-radius: var(--r-chip); background: var(--t-flaeche); color: #fff; font-size: var(--fs-subhead); font-weight: 600; text-align: center; width: max-content; max-width: calc(100% - var(--s4)); }
+
 /* Plus/Minus der Karte (Leaflet, jetzt lokal): Tippfläche 44 px statt 30 px */
 .leaflet-touch .leaflet-control-zoom.leaflet-bar a, .leaflet-control-zoom.leaflet-bar a { width: var(--tap); height: var(--tap); line-height: var(--tap); }
 /* === Paket A: App-Grundlagen (15.10.2026) === */
@@ -385,24 +336,13 @@ dialog.rm-blatt::backdrop { background: rgba(0,0,0,.45); }
   #tab-wetter:has(> .akt) > .akt { grid-column: 1; grid-row: 2 / span 3; position: sticky; top: calc(var(--kopf-hoehe) + var(--s3)); }
   #tab-wetter:has(> .akt) > :not(.akt):not(.update-zeile) { grid-column: 2; }
   .karte { height: calc(100dvh - var(--kopf-hoehe) - var(--tap) - 140px); min-height: 200px; }
-  /* Teilen-Bildschirm: Bild links, Formate, Vorlagen und Knöpfe rechts */
-  dialog.teilen { padding: var(--s2) max(var(--rand), var(--safe-right)) calc(var(--safe-bottom) + var(--s2)) max(var(--rand), var(--safe-left)); }
-  dialog.teilen[open] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr); column-gap: var(--s5); row-gap: var(--s2); }
-  .teilen-kopf { grid-column: 1 / -1; grid-row: 1; }
-  .teilen-bild { grid-column: 1; grid-row: 2 / -1; }
-  .teilen-bild canvas { max-height: calc(100dvh - var(--tap) - var(--safe-bottom) - 3 * var(--s2)); }   /* ganze Höhe neben den Knöpfen, nichts abgeschnitten */
-  .teilen-formate { grid-column: 2; grid-row: 3; justify-content: flex-start; }
-  .teilen-stile { grid-column: 2; grid-row: 4; justify-content: flex-start; }
-  .teilen-knoepfe { grid-column: 2; grid-row: 5; }
-  .teilen-rund.gross { width: 64px; height: 64px; }
-  .teilen-blatt { left: auto; top: 0; width: min(440px, 56%); max-height: none; border-radius: var(--r-kachel) 0 0 var(--r-kachel); }
-  .blatt-inhalt { padding-right: max(var(--rand), var(--safe-right)); padding-bottom: calc(var(--safe-bottom) + var(--s5)); }
+
   dialog.rm-blatt { max-height: calc(100dvh - 2 * var(--s2)); }
 }
 /* === Paket C: App-Funktionen (15.10.2026) === */
 /* Kurze Meldung in Dialogen, Rückfrage im eigenen Dialog */
 .pc-meldung { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + var(--s8) * 3); transform: translateX(-50%); z-index: 50; max-width: min(90vw, 480px); padding: var(--s2) var(--s4); border-radius: var(--r-chip); background: var(--label); color: var(--bg-2); font-size: var(--fs-subhead); font-weight: 600; text-align: center; }
-dialog.teilen .pc-meldung { background: #fff; color: #000; }   /* Teilen-Bildschirm ist immer schwarz */
+
 dialog.pc-frage { border: 0; border-radius: var(--r-kachel); background: var(--bg-2); color: var(--label); padding: var(--s5) var(--s4) var(--s4); width: min(340px, calc(100vw - 2 * var(--rand))); }
 dialog.pc-frage::backdrop, dialog.pc-blatt::backdrop { background: rgba(0,0,0,.45); }
 .pc-frage p { margin: 0 0 var(--s4); font-size: var(--fs-body); text-align: center; }
@@ -410,16 +350,6 @@ dialog.pc-frage::backdrop, dialog.pc-blatt::backdrop { background: rgba(0,0,0,.4
 .pc-frage-knoepfe .button { min-height: var(--tap); }
 :root { --pc-auf-rot: #000; }   /* Schwarz auf Apple-Rot: hell 5,9:1, dunkel 6,3:1 (Weiß hätte nur 3,6:1) */
 .pc-frage .button.pc-gefahr { background: var(--rot); color: var(--pc-auf-rot); }
-
-/* (1) Eigenes Logo im Blatt „Infos" */
-.pc-logo { display: grid; gap: var(--s2); margin-top: var(--s3); }
-.pc-logo-bild { max-height: 64px; max-width: 60%; object-fit: contain; justify-self: start; padding: var(--s2); border-radius: var(--r-button); background: var(--t-fuellung); }
-.pc-logo-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); }
-.pc-datei { display: inline-flex; align-items: center; cursor: pointer; }
-.pc-schalter { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); padding: var(--s2) var(--s3); border-radius: var(--r-button); background: var(--t-fuellung); font-size: var(--fs-body); }
-.pc-schalter small { display: block; font-size: var(--fs-footnote); color: var(--t-leise); }
-.pc-schalter input { width: 22px; height: 22px; accent-color: var(--t-akzent); flex: none; }
-.teilen-kopf #tGalerie { color: var(--t-akzent); }
 
 /* (3) Galerie „Meine Wetterfotos": Vollbild-Dialog im Erscheinungsbild der App */
 dialog.pc-voll { inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: 0; background: var(--bg); color: var(--label); }
@@ -600,19 +530,7 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
   #tab-mehr.mac-gruppiert > .mac-gruppe { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--kachel-abstand); margin-bottom: var(--s6); break-inside: avoid; -webkit-column-break-inside: avoid; }
 
   /* Teilen als Fenster mittig (nicht Vollbild): Bild links, Formate, Vorlagen und Knöpfe rechts */
-  dialog.teilen { --mac-teilen-h: min(760px, calc(100dvh - 2 * var(--s8)));
-    inset: 0; margin: auto; width: min(1040px, calc(100vw - 2 * var(--s8))); height: var(--mac-teilen-h); border-radius: var(--r-kachel); padding: var(--s3) var(--s5) var(--s4); box-shadow: var(--glas-schatten); }
-  dialog.teilen::backdrop { background: rgba(0,0,0,.55); }
-  dialog.teilen[open] { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto auto minmax(0, 1fr); column-gap: var(--s6); row-gap: var(--s3); }
-  .teilen-kopf { grid-column: 1 / -1; grid-row: 1; }
-  .teilen-bild { grid-column: 1; grid-row: 2 / -1; }
-  .teilen-bild canvas { max-height: calc(var(--mac-teilen-h) - var(--tap) - var(--s3) - var(--s3) - var(--s4)); }
-  .teilen-formate { grid-column: 2; grid-row: 3; justify-content: flex-start; flex-wrap: wrap; overflow: visible; }
-  .teilen-stile { grid-column: 2; grid-row: 4; justify-content: flex-start; flex-wrap: wrap; overflow: visible; }
-  .teilen-knoepfe { grid-column: 2; grid-row: 5; }
-  .teilen-rund.gross { width: 64px; height: 64px; }
-  .teilen-blatt { left: auto; top: 0; width: min(420px, 46%); max-height: none; border-radius: 0 var(--r-kachel) var(--r-kachel) 0; }
-  .blatt-inhalt { padding-bottom: var(--s5); }
+
   /* Blätter und Galerie ebenfalls als Fenster mittig */
   dialog.pc-blatt { margin: auto; border-radius: var(--r-kachel); max-height: min(720px, calc(100dvh - 2 * var(--s8))); }
   dialog.pc-voll { margin: auto; width: min(860px, calc(100vw - 2 * var(--s8))); height: min(820px, calc(100dvh - 2 * var(--s8))); border-radius: var(--r-kachel); overflow: hidden; }
@@ -740,39 +658,7 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .w3-spar-vorschlag p { margin: 0; font-size: var(--fs-body); }
 .w3-knoepfe { display: flex; flex-wrap: wrap; gap: var(--s2); }
 
-/* === Welle 3 Gruppe 1: Foto und Teilen (16.10.2026) === */
-/* Ebene über dem Bild: Sticker anfassen (Finger, Maus, Tastatur); ohne Sticker greift sie nichts ab */
-.w3-ebene { position: absolute; pointer-events: none; }
-.w3-griff { position: absolute; transform: translate(-50%, -50%); min-width: var(--tap); min-height: var(--tap); background: transparent; border: 0; border-radius: var(--s3); pointer-events: auto; cursor: grab; touch-action: none; }
-.w3-griff:active { cursor: grabbing; }
-.w3-griff.ist-gewaehlt { outline: 2px dashed #fff; outline-offset: 2px; }
-.w3-griff:focus-visible { outline: 2px solid var(--t-akzent); outline-offset: 2px; }
-.teilen-bild.w3-hat-sticker { touch-action: none; }
-.w3-status { position: absolute; left: 50%; bottom: var(--s2); transform: translateX(-50%); margin: 0; padding: var(--s1) var(--s3); border-radius: var(--r-chip); background: rgba(0,0,0,.7); color: #fff; font-size: var(--fs-footnote); font-weight: 600; text-align: center; width: max-content; max-width: calc(100% - var(--s4)); }
-.w3-status[hidden] { display: none; }
-/* Blatt „Infos": Regler und Felder */
-.w3-regler, .w3-feld { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(0, 1fr); align-items: center; gap: var(--s3); min-height: var(--tap); font-size: var(--fs-body); }
-.w3-regler input[type="range"] { width: 100%; min-height: var(--tap); accent-color: var(--t-akzent); }
-.w3-feld .blatt-feld { color-scheme: dark; }
-#w3Regler { display: grid; gap: var(--s1); margin-top: var(--s3); }
-.w3-auf-felder { display: grid; gap: var(--s2); margin-top: var(--s2); }
 .seg button:disabled { opacity: .4; }
-.w3-pro { display: inline-flex; align-items: center; min-height: var(--tap); }
-/* Live-Kamera: schwarzer Vollbildschirm wie der Teilen-Bildschirm */
-dialog.w3-live { inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; border: 0; padding: calc(var(--safe-top) + var(--s2)) var(--rand) calc(var(--safe-bottom) + var(--s4)); background: #000; color: #fff; overflow: hidden; }
-dialog.w3-live[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: var(--s3); }
-dialog.w3-live::backdrop { background: #000; }
-.w3-live-kopf { display: flex; justify-content: space-between; align-items: center; }
-.w3-live-bild { min-height: 0; display: grid; place-items: center; overflow: hidden; position: relative; }
-.w3-live-bild canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; border-radius: var(--s2); background: #111; }
-#w3LiveVideo { position: absolute; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
-.w3-live-hilfe { margin: 0; text-align: center; font-size: var(--fs-subhead); color: rgba(235,235,245,.6); }
-.w3-live-knoepfe { display: grid; place-items: center; }
-.w3-live-knoepfe .teilen-rund.gross:disabled { opacity: .4; }
-.w3-live-meldung { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: var(--s4); padding: var(--s5); text-align: center; background: #111; border-radius: var(--s2); }
-.w3-live-meldung[hidden] { display: none; }
-.w3-live-meldung p { margin: 0; font-size: var(--fs-body); max-width: 40ch; }
-@media (min-width: 1024px) and (hover: hover) { dialog.w3-live { padding: var(--s3) var(--s8) var(--s4); } .w3-live-bild canvas { max-height: calc(100dvh - 12 * var(--s4)); } }
 
 /* === Kontrast auf Glas (16.10.2026, Skill ux-check): Akzentschrift in Tab-Leiste, Seitenleiste und „Aktualisieren"
    etwas kräftiger, damit sie auf Glas ≥ 4,5:1 erreicht. Seit 20.10.2026 ist die App immer dunkel mit gelbem Akzent: Gelbe Schrift steht nur auf dunklem Grund,

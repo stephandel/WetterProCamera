@@ -2,6 +2,8 @@
 
 **Online:** https://stephandel.github.io/WetterProCamera/
 
+> **Stand 21.10.2026 (A24):** Den alten Teilen-Bildschirm (Canvas, Vorlagen, Sticker, Live-Kamera, „Wetter von damals“, eigenes Logo) und den Schalter `?teilen=alt` gibt es nicht mehr. Alle Einstiege öffnen das Wetterfoto-Studio. Die Abschnitte unten, die den alten Bildschirm beschreiben, sind Geschichte. Geblieben ist die Galerie „Frühere Wetterfotos“ (`wpc-galerie`). Die Testdatei `tests/w3-g1.test.js` entfiel mit dem Bildschirm.
+
 Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Design-Konfigurator** nach den Empfehlungen der KI und gebaut von Claude Code aus dem exportierten Projektpaket (15.10.2026).
 
 - Live-Wetter von [Open-Meteo](https://open-meteo.com) (CC BY 4.0), ohne Schlüssel und ohne eigenen Server
