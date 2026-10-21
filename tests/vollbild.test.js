@@ -192,6 +192,56 @@ async function radsat(s, mac) {
       pruefe(name + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }
+    console.log('6) Einstellung „Meteogramm und Karten immer im Vollbild“ (A32 P3)');
+    {
+      const s = await start(b), p = s.p;
+      await p.click('#tb-mehr'); await p.waitForTimeout(300);
+      const sch = await p.$('#a32Liste input[data-a32]');
+      pruefe('Mehr → Startseite und Ansicht: Schalter „Meteogramm und Karten immer im Vollbild“ (role=switch, aus)', !!sch && await sch.getAttribute('role') === 'switch' && !(await sch.isChecked()) && /immer im Vollbild/.test(await p.textContent('#a32Liste')));
+      if (sch) {
+        await sch.check(); await p.waitForTimeout(100);
+        pruefe('Wahl gespeichert (wpc-vollbild-immer)', await p.evaluate(() => localStorage.getItem('wpc-vollbild-immer')) === 'true');
+        const blatt = (sel) => p.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight && !!document.querySelector('#tabbar').closest('[inert]'); }, sel);
+        const reiter = () => p.evaluate(() => ['wetter', 'graphs', 'radsat', 'mehr'].filter(t => !document.getElementById('tab-' + t).hidden)[0]);
+        await p.click('#tb-wetter'); await p.waitForTimeout(200);
+        await p.click('#tb-graphs'); await p.waitForSelector('#pcMg .mg-svg text', { timeout: 15000 }); await p.waitForTimeout(500);
+        pruefe('Tipp auf Graphs öffnet das Meteogramm direkt als Blatt, Fokus auf „Fertig“', await blatt('#pcMg') && await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('mg-vb-fertig')));
+        await H.foto(p, 'vollbild-immer-390-graphs');
+        await p.click('#pcMg .mg-vb-fertig'); await p.waitForTimeout(400);
+        pruefe('„Fertig“ führt zum vorherigen Reiter (Wetter), Seite frei', await reiter() === 'wetter' && !(await blatt('#pcMg')) && await p.evaluate(() => !document.querySelector('#tabbar').closest('[inert]')), await reiter());
+        await p.click('#tb-mehr'); await p.waitForTimeout(200);
+        await p.click('#tb-radsat'); await p.waitForTimeout(700);
+        pruefe('Tipp auf Rad/Sat öffnet die Karte direkt als Blatt', await blatt('#tab-radsat'));
+        await H.foto(p, 'vollbild-immer-390-radsat');
+        await p.evaluate(() => history.back()); await p.waitForTimeout(500);
+        pruefe('Zurück aus Rad/Sat führt zum vorherigen Reiter (Mehr)', await reiter() === 'mehr' && !(await blatt('#tab-radsat')), await reiter());
+        await p.keyboard.press('Escape');
+        await p.click('#tb-graphs'); await p.waitForTimeout(500); await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+        pruefe('Esc aus Graphs führt ebenfalls zurück (Mehr)', await reiter() === 'mehr', await reiter());
+        // Nach einem Neustart: Wahl noch gesetzt, Start mit gemerktem Reiter Graphs öffnet das Blatt, Fertig führt zu Wetter
+        await p.click('#tb-graphs'); await p.waitForTimeout(300);
+        await p.reload(); await p.waitForSelector('#pcMg .mg-svg text', { timeout: 15000 }); await p.waitForTimeout(600);
+        pruefe('Neustart im Reiter Graphs: Blatt offen, Wahl noch gesetzt', await blatt('#pcMg') && await p.evaluate(() => localStorage.getItem('wpc-vollbild-immer')) === 'true');
+        await p.click('#pcMg .mg-vb-fertig'); await p.waitForTimeout(400);
+        pruefe('Fertig nach dem Neustart: Reiter Wetter', await reiter() === 'wetter', await reiter());
+        await p.click('#tb-mehr'); await p.waitForTimeout(200);
+        pruefe('Schalter steht nach dem Neustart auf an', await p.isChecked('#a32Liste input[data-a32]'));
+        // Darstellung „Kurve“ hat kein Blatt
+        await p.evaluate(() => localStorage.setItem('wpc-graphs', '"kurve"'));
+        await p.click('#tb-graphs'); await p.waitForTimeout(500);
+        pruefe('Darstellung „Kurve“: Graphs öffnet normal (kein Blatt), Tab-Leiste bedienbar', await reiter() === 'graphs' && await p.evaluate(() => !document.querySelector('#tabbar').closest('[inert]')));
+        await p.uncheck('#a32Liste input[data-a32]').catch(() => { });
+      }
+      pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+      const m = await start(b, { viewport: { width: 1280, height: 800 } });
+      await m.p.evaluate(() => localStorage.setItem('wpc-vollbild-immer', 'true'));
+      await m.p.click('#macLeiste [data-ml-tab="radsat"]'); await m.p.waitForTimeout(700);
+      const mz = await m.p.evaluate(() => { const r = document.getElementById('tab-radsat').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
+      pruefe('Mac 1280: „immer“ öffnet Rad/Sat über der Seitenleiste', mz[0] === 1280 && mz[1] === 800, mz);
+      await H.foto(m.p, 'vollbild-immer-mac-1280-radsat');
+      await m.ctx.close();
+    }
     console.log('4) Reduzierte Bewegung: Blatt erscheint ohne Animation');
     {
       const s = await start(b, { reducedMotion: 'reduce' });
