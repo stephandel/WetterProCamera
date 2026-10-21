@@ -65,7 +65,6 @@ const knopf = '#tabbar #tb-kamera';
       pruefe('Fokus zurück auf dem Wetterfoto-Knopf', await p.evaluate(() => document.activeElement && document.activeElement.id === 'tb-kamera'));
       await p.click('#btnTeilen'); await p.waitForTimeout(200);
       pruefe('Teilen-Knopf oben öffnet das Studio (ohne Kamera)', await studioDa(p));
-      pruefe('Der alte Teilen-Bildschirm bleibt zu', await p.evaluate(() => !document.getElementById('teilen').open));
       await H.foto(p, 'wetterfoto-390-studio');
       await p.keyboard.press('Meta+2'); await p.waitForTimeout(150);
       pruefe('Tastenkürzel ⌘2 wechselt bei offenem Studio nicht den Tab im Hintergrund', await p.evaluate(() => document.getElementById('tab-graphs').hidden));
@@ -161,8 +160,36 @@ const knopf = '#tabbar #tb-kamera';
       pruefe('Keine Fehler in der Konsole', r.konsole.length === 0, r.konsole);
       await r.ctx.close();
       r = await neueSeite(b, { adresse: '?teilen=alt' });
-      await r.p.click(knopf); await r.p.waitForTimeout(400);
-      pruefe('?teilen=alt: alter Teilen-Bildschirm zum Vergleich', await r.p.evaluate(() => document.getElementById('teilen').open && document.getElementById('studio').hidden && !window.KSStudio));
+      await r.p.click(knopf);
+      await r.p.waitForFunction(() => document.querySelector('#ksWurzel .ks'), null, { timeout: 12000 }).catch(() => { });
+      pruefe('?teilen=alt gibt es nicht mehr: öffnet trotzdem das Studio, kein Element #teilen und kein #tBild', await studioDa(r.p) && await r.p.evaluate(() => !document.getElementById('teilen') && !document.getElementById('tBild') && !document.querySelector('.teilen')));
+      pruefe('?teilen=alt: keine Fehler in der Konsole', r.konsole.length === 0, r.konsole);
+      await r.ctx.close();
+    }
+
+    console.log('4b) Frühere Wetterfotos (alte Galerie wpc-galerie)');
+    {
+      // leer: Abschnitt „Meine/Frühere Wetterfotos“ fehlt unter „Mehr“
+      let r = await neueSeite(b);
+      await r.p.click('#tb-mehr'); await r.p.waitForTimeout(500);
+      pruefe('Ohne Fotos in wpc-galerie: kein Abschnitt „Frühere Wetterfotos“ unter „Mehr“', await r.p.evaluate(() => !document.getElementById('pcGalMehr') && !/Wetterfotos/.test([...document.querySelectorAll('#tab-mehr h2.abschnitt-titel')].map(h => h.textContent).join('|').replace(/Wetterfoto(?!s)/g, ''))));
+      // ein Foto ablegen, wie es der alte Teilen-Bildschirm getan hat
+      await r.p.evaluate(() => new Promise((ok, fehl) => {
+        const cv = document.createElement('canvas'); cv.width = 60; cv.height = 80; const x = cv.getContext('2d'); x.fillStyle = '#c33'; x.fillRect(0, 0, 60, 80);
+        cv.toBlob(bl => bl.arrayBuffer().then(ab => {
+          const q = indexedDB.open('wpc-galerie');
+          q.onupgradeneeded = () => { if (!q.result.objectStoreNames.contains('fotos')) q.result.createObjectStore('fotos', { keyPath: 'id', autoIncrement: true }).createIndex('tag', 'tag'); };
+          q.onsuccess = () => { const db = q.result, tx = db.transaction('fotos', 'readwrite'); tx.objectStore('fotos').add({ zeit: Date.now(), tag: new Date().toISOString().slice(0, 10), ort: 'Mannheim', art: 'sonne', lage: 'Sonnig', werte: ['12 °C', 'Sonnig'], w: 60, h: 80, bild: ab, mini: ab }); tx.oncomplete = () => { db.close(); ok(); }; tx.onerror = () => fehl(tx.error); };
+          q.onerror = () => fehl(q.error);
+        }), 'image/jpeg', 0.8);
+      }));
+      await r.p.reload(); await r.p.waitForSelector('#tabbar button'); await r.p.click('#tb-mehr'); await r.p.waitForSelector('#pcGalMehr', { timeout: 8000 }).catch(() => { });
+      await r.p.waitForFunction(() => [...document.querySelectorAll('#tab-mehr h2.abschnitt-titel')].some(h => h.textContent === 'Frühere Wetterfotos'), null, { timeout: 5000 }).catch(() => { });
+      pruefe('Frühere Wetterfotos erscheinen, wenn in wpc-galerie Fotos liegen (Überschrift, 1 Foto)', await r.p.evaluate(() => [...document.querySelectorAll('#tab-mehr h2.abschnitt-titel')].some(h => h.textContent === 'Frühere Wetterfotos') && /\(1\)/.test(document.getElementById('pcGalZahl').textContent)));
+      await r.p.click('#pcGalMehr'); await r.p.waitForSelector('#pcGalerie[open] .pc-foto', { timeout: 8000 }).catch(() => { });
+      const gal = await r.p.evaluate(() => ({ foto: !!document.querySelector('#pcGalerie[open] .pc-foto img'), teilen: !!document.querySelector('#pcGalerie [data-teilen]'), loeschen: !!document.querySelector('#pcGalerie [data-loeschen]') }));
+      pruefe('Frühere Wetterfotos: Foto ist zu sehen, mit „Teilen“ und „Löschen“', gal.foto && gal.teilen && gal.loeschen, gal);
+      pruefe('Frühere Wetterfotos: keine Fehler in der Konsole', r.konsole.length === 0, r.konsole);
       await r.ctx.close();
     }
 

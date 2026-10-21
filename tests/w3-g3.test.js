@@ -12,7 +12,7 @@ const { webkit } = require('playwright');
 const WURZEL = path.join(__dirname, '..');
 const PORT = +process.env.PORT || 8873;
 const BASIS = 'http://127.0.0.1:' + PORT + '/';
-const START = BASIS + '?teilen=alt';   // seit 20.10.2026 öffnet die App das Kamera-Studio; diese Tests prüfen den alten Teilen-Bildschirm (wetterfoto.test.js prüft das Studio)
+const START = BASIS;
 const BILDER = process.env.BILDER || path.join(__dirname, 'bilder');
 const JETZT = new Date('2026-10-15T14:40:00+02:00');   // Zeitpunkt der gespeicherten Antworten
 const fixture = n => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');

@@ -12,7 +12,7 @@ const { webkit } = require('playwright');
 const WURZEL = path.join(__dirname, '..');
 const PORT = +process.env.PORT || 8862;
 const BASIS = 'http://127.0.0.1:' + PORT + '/';
-const START = BASIS + '?teilen=alt';   // seit 20.10.2026 öffnet die App das Kamera-Studio; diese Tests prüfen den alten Teilen-Bildschirm (wetterfoto.test.js prüft das Studio)
+const START = BASIS;
 const BILDER = process.env.BILDER || path.join(__dirname, 'bilder');
 const JETZT = new Date('2026-10-15T14:40:00+02:00');   // Zeitpunkt der gespeicherten Antworten
 const fixture = n => fs.readFileSync(path.join(__dirname, 'fixtures', n), 'utf8');
@@ -134,20 +134,13 @@ async function tabsPruefen(p, name, bilder) {
     pruefe('390 px unverändert: keine Seitenleiste, Tab-Leiste unten, keine Spalten-Hüllen', ohneMac.leiste === 'none' && ohneMac.tabbar !== 'none' && ohneMac.huellen === 0, ohneMac);
     await foto(s.p, 'hell-390-start');
     await tabsPruefen(s.p, 'hell 390', true);
-    // Kamera-Tab öffnet den Teilen-Bildschirm und zeichnet das Bild
+    // Kamera-Tab öffnet das Wetterfoto-Studio
     await s.p.click('#tb-kamera');
-    await s.p.waitForFunction(() => document.getElementById('teilen').open && document.getElementById('tBild').dataset.stand, null, { timeout: 8000 }).catch(() => { });
-    const bild = await s.p.evaluate(() => ({ offen: document.getElementById('teilen').open, stand: document.getElementById('tBild').dataset.stand || '', breite: document.getElementById('tBild').width }));
-    pruefe('Teilen-Bildschirm öffnet und zeichnet (3:4, 1080 px)', bild.offen && /^hoch\/klassisch\/1080x1440$/.test(bild.stand), bild);
-    let m = await s.p.evaluate(MESSEN);
-    pruefe('Teilen-Bildschirm: Tippflächen ≥ 44 px', m.klein.length === 0, m.klein);
-    await foto(s.p, 'hell-390-teilen');
-    await s.p.click('#tInfosAuf'); await s.p.waitForTimeout(200);
-    pruefe('Blatt „Infos" öffnet mit allen Angaben', await s.p.evaluate(() => !document.getElementById('tBlatt').hidden && document.querySelectorAll('#tInfoListe li').length >= 19));
-    m = await s.p.evaluate(MESSEN);
-    pruefe('Blatt „Infos": kleinste Schrift ≥ 11 px', m.kleinsteSchrift >= 11, m.kleinsteSchrift);
-    await foto(s.p, 'hell-390-infos');
-    await s.p.click('#tInfosZu'); await s.p.click('#tAbbrechen');
+    await s.p.waitForFunction(() => !document.getElementById('studio').hidden && document.querySelector('#ksWurzel .ks'), null, { timeout: 10000 }).catch(() => { });
+    const studio = await s.p.evaluate(() => ({ offen: !document.getElementById('studio').hidden, ks: !!document.querySelector('#ksWurzel .ks') }));
+    pruefe('Kamera-Tab öffnet das Wetterfoto-Studio', studio.offen && studio.ks, studio);
+    await foto(s.p, 'hell-390-studio');
+    await s.p.click('#studioZu');
     // Offline: Neu laden ohne Netz zeigt den letzten Stand mit Uhrzeit
     await s.p.unrouteAll({ behavior: 'ignoreErrors' }); await umleiten(s.p, { offline: true });
     s.konsole.length = 0;
@@ -166,7 +159,7 @@ async function tabsPruefen(p, name, bilder) {
     s = await neueSeite(b, { colorScheme: 'dark' });
     await s.p.goto(START); await s.p.waitForSelector('.tag', { timeout: 15000 });
     await tabsPruefen(s.p, 'dunkel 390', true);
-    await s.p.click('#tb-kamera'); await s.p.waitForTimeout(600); await foto(s.p, 'dunkel-390-teilen'); await s.p.click('#tAbbrechen');
+    await s.p.click('#tb-kamera'); await s.p.waitForTimeout(1200); await foto(s.p, 'dunkel-390-studio'); await s.p.click('#studioZu');
     pruefe('dunkel 390: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     await s.ctx.close();
 
@@ -211,9 +204,6 @@ async function tabsPruefen(p, name, bilder) {
     pruefe('DWD: Sonnenuntergang selbst berechnet (18:3x)', /^2026-10-15T18:[2-4]\d$/.test(sonne.unter), sonne);
     pruefe('DWD: UV fehlt (null), Regenrisiko aus MOSMIX', sonne.uv === null && typeof sonne.regenrisiko === 'number', sonne);
     await foto(s.p, 'hell-390-wetter-dwd');
-    await s.p.click('#tb-kamera'); await s.p.waitForTimeout(800);
-    pruefe('DWD: Teilen-Bild wird gezeichnet', /1080x1440/.test(await s.p.evaluate(() => document.getElementById('tBild').dataset.stand || '')));
-    await s.p.click('#tAbbrechen');
     pruefe('DWD Mannheim: Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     s.konsole.length = 0;
     // Corralejo: Bright Sky hat dort eine MOSMIX-Vorhersage (Station Fuerteventura), aber keine aktuelle Messung
@@ -241,16 +231,16 @@ async function tabsPruefen(p, name, bilder) {
 
     /* 6. Kurzbefehl „Wetterfoto" */
     console.log('Kurzbefehl');
-    for (const [name, url, schema] of [['?kamera=1', BASIS + '?teilen=alt&kamera=1', 'light'], ['#kamera', BASIS + '?teilen=alt#kamera', 'dark']]) {
+    for (const [name, url, schema] of [['?kamera=1', BASIS + '?kamera=1', 'light'], ['#kamera', BASIS + '#kamera', 'dark']]) {
       s = await neueSeite(b, { colorScheme: schema });
       await s.p.goto(url);
-      await s.p.waitForFunction(() => document.getElementById('teilen').open && document.getElementById('tTipp'), null, { timeout: 10000 }).catch(() => { });
-      const k = await s.p.evaluate(() => ({ offen: document.getElementById('teilen').open, tipp: (document.getElementById('tTipp') || {}).textContent || '', adresse: location.search + location.hash }));
-      pruefe('Direktlink ' + name + ' öffnet den Teilen-Bildschirm mit Hinweis', k.offen && /Tippe auf „Fotos“ und wähle das neueste Bild/.test(k.tipp), k);
+      await s.p.waitForFunction(() => !document.getElementById('studio').hidden && document.querySelector('#ksWurzel .ks'), null, { timeout: 10000 }).catch(() => { });
+      const k = await s.p.evaluate(() => ({ offen: !document.getElementById('studio').hidden, ks: !!document.querySelector('#ksWurzel .ks'), adresse: location.search + location.hash }));
+      pruefe('Direktlink ' + name + ' öffnet das Wetterfoto-Studio', k.offen && k.ks, k);
       pruefe('Direktlink ' + name + ': Adresse danach ohne Zusatz (Neuladen öffnet nicht erneut)', k.adresse === '', k.adresse);
-      await foto(s.p, (schema === 'light' ? 'hell' : 'dunkel') + '-390-kurzbefehl-teilen');
+      await foto(s.p, (schema === 'light' ? 'hell' : 'dunkel') + '-390-kurzbefehl-studio');
       if (schema === 'light') {
-        await s.p.click('#tAbbrechen'); await s.p.click('#tb-mehr');
+        await s.p.click('#studioZu'); await s.p.click('#tb-mehr');
         const kb = await s.p.evaluate(() => ({ schritte: document.querySelectorAll('.kb-schritte li').length, link: document.querySelector('.kb-link').textContent }));
         pruefe('Mehr: Anleitung „Wetterfoto" mit 6 Schritten und Link', kb.schritte === 6 && kb.link === 'https://stephandel.github.io/WetterProCamera/?kamera=1', kb);
         await s.ctx.grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => { });
@@ -306,18 +296,12 @@ async function tabsPruefen(p, name, bilder) {
         await s.p.keyboard.press('Meta+r'); await s.p.waitForTimeout(400);
         pruefe('Kürzel ⌘R aktualisiert das Wetter, ohne die Seite neu zu laden', await s.p.evaluate(() => window.__nichtNeu === 1 && document.querySelectorAll('.tag').length >= 7));
         await s.p.keyboard.press('Meta+3');
-        await s.p.waitForFunction(() => document.getElementById('teilen').open && document.getElementById('tBild').dataset.stand, null, { timeout: 8000 }).catch(() => { });
-        const fenster = await s.p.evaluate(() => { const r = document.getElementById('teilen').getBoundingClientRect(); return { offen: document.getElementById('teilen').open, l: Math.round(r.left), r: Math.round(innerWidth - r.right), o: Math.round(r.top), u: Math.round(innerHeight - r.bottom) }; });
-        pruefe('Kürzel ⌘3 öffnet Teilen als Fenster mittig (nicht Vollbild)', fenster.offen && fenster.l > 20 && Math.abs(fenster.l - fenster.r) <= 2 && fenster.o > 0 && Math.abs(fenster.o - fenster.u) <= 2, fenster);
-        const tm = await s.p.evaluate(MESSEN, 27.5);
-        pruefe('Teilen-Fenster: Klickflächen ≥ 28 px, Schrift ≥ 12 px', tm.klein.length === 0 && tm.kleinsteSchrift >= 12, tm);
-        await foto(s.p, 'mac-1280-hell-teilen');
-        await s.p.click('#tInfosAuf'); await s.p.waitForTimeout(150);
+        await s.p.waitForFunction(() => !document.getElementById('studio').hidden && document.querySelector('#ksWurzel .ks'), null, { timeout: 10000 }).catch(() => { });
+        const mst = await s.p.evaluate(() => ({ offen: !document.getElementById('studio').hidden, ks: !!document.querySelector('#ksWurzel .ks') }));
+        pruefe('Kürzel ⌘3 öffnet das Wetterfoto-Studio', mst.offen && mst.ks, mst);
+        await foto(s.p, 'mac-1280-hell-studio');
         await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
-        const esc1 = await s.p.evaluate(() => ({ blatt: !document.getElementById('tBlatt').hidden, offen: document.getElementById('teilen').open }));
-        await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
-        const esc2 = await s.p.evaluate(() => document.getElementById('teilen').open);
-        pruefe('Esc schließt erst das Blatt „Infos", dann das Teilen-Fenster', !esc1.blatt && esc1.offen && !esc2, { esc1, esc2 });
+        pruefe('Wetterfoto-Studio lässt sich mit Esc schließen', await s.p.evaluate(() => document.getElementById('studio').hidden));
         // Neue Kacheln anderer Pakete landen rechts, in DOM-Reihenfolge
         await s.p.evaluate(() => { const k = document.createElement('section'); k.className = 'kachel'; k.id = 'testKachel'; k.textContent = 'Neue Kachel'; document.getElementById('tab-wetter').appendChild(k); });
         await s.p.waitForTimeout(50);
