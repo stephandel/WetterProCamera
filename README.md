@@ -87,7 +87,7 @@ Test-App einer Wetter-App im Apple-Stil (Liquid Glass), **gestaltet mit dem Desi
 - **Regen und „Was heute geht":** Der Satz unter dem Regenradar nennt Beginn und Dauer („Regen ab 14:30 Uhr für 45 Minuten"); die 8 Balken sind je 15 Minuten. Die Tipps betrachten nur den Rest des Tages ab jetzt. Strand und Kiten erscheinen nur an Küstenorten.
 - **Modelle vergleichen** (Tab Graphs, Kurve): 2 bis 3 Wettermodelle als Linien mit eigener Farbe und Strichart, Temperatur und Regensumme, Tabelle darunter. Abrufe nur, wenn der Schalter an ist, 30 Minuten Zwischenspeicher.
 - **Tagesdetail:** Klick oder Tipp auf einen Tag öffnet ein Blatt (am Mac ein Fenster) mit Nacht davor / Tag / Nacht danach, Stundenwerten, Sonne und Mond.
-- **Sonne und Mond:** eigene Kachel und Blatt mit Mondphase, Auf- und Untergang, Sonnenbogen, goldener Stunde und drei Dämmerungen. Alles wird auf dem Gerät gerechnet, kein neuer Netzdienst.
+- **Sonne und Mond** (seit 22.10.2026 zwei getrennte Kacheln mit je einem Blatt): „Sonne“ mit Sonnenbogen, Auf- und Untergang, goldener Stunde und drei Dämmerungen, „Mond“ mit Phase, Auf- und Untergang, Voll- und Neumond. Alles wird auf dem Gerät gerechnet, kein neuer Netzdienst.
 - **Meer** (nur Küstenorte): Wellenhöhe, Periode, Richtung, Wassertemperatur und Tide-Kurve von Open-Meteo Marine; der Meerespunkt aus der Antwort wird je Ort gemerkt (`wpc-meerpunkt`).
 - **Calima:** Hinweiskachel bei Saharastaub über der Schwelle (Open-Meteo Luftqualität, `dust`). Schwelle 25 / 50 / 100 µg/m³ in „Mehr", Standard 50 (EU-Tagesgrenzwert für PM10).
 - **Kartensteuerung:** Zoom-Knöpfe mit 44 px, Zeitleiste und Film-Tempo 0,5× / 1× / 2×, Pfeiltasten für die Ebenen.
