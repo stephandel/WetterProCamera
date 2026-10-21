@@ -20,8 +20,9 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
       else { const [f2] = await Promise.all([s.p.waitForEvent('filechooser', { timeout: 4000 }), s.p.click('#ksWurzel button:has-text("Foto wählen")')]); await f2.setFiles(FOTO); }
       await s.p.waitForFunction(() => { const r = document.querySelector('#ksWurzel .ks'); return r && r._ksInst && r._ksInst.quelle; }, null, { timeout: 10000 });
       await s.p.waitForTimeout(800);
-      const f = await s.p.evaluate(() => { const a = document.activeElement; return { imStudio: !!a.closest('#studio'), tag: a.tagName, text: (a.textContent || '').trim().slice(0, 20) }; });
-      pruefe('Studio ' + name + ': nach dem Laden des Fotos liegt der Fokus auf „Teilen“ (nicht auf dem Seitenkörper, nicht „Fertig“)', f.imStudio && f.text === 'Teilen', f);
+      // Hauptknopf (ks-primaer) heißt „Teilen“, ohne navigator.share (Linux, GitHub-Lauf) „Sichern“
+      const f = await s.p.evaluate(() => { const a = document.activeElement; return { imStudio: !!a.closest('#studio'), tag: a.tagName, text: (a.textContent || '').trim().slice(0, 20), haupt: a.classList.contains('ks-primaer') }; });
+      pruefe('Studio ' + name + ': nach dem Laden des Fotos liegt der Fokus auf dem Hauptknopf „Teilen“/„Sichern“ (nicht auf dem Seitenkörper, nicht „Fertig“)', f.imStudio && f.haupt && /^(Teilen|Sichern)$/.test(f.text), f);
       await s.ctx.close();
     }
     // Fund N2 (zweite Meinung): Warnblatt per Antippen/Klick (Safari fokussiert den Knopf nicht), dann Esc: Fokus zurück auf die Warnkachel
@@ -97,9 +98,9 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
       await s.p.waitForFunction(() => { const q = document.querySelector('#ksWurzel .ks')._ksInst.quelle; return q && !q.__alt; }, null, { timeout: 10000 });
       for (const ms of [300, 1000, 2500]) {
         await s.p.waitForTimeout(ms === 300 ? 300 : ms === 1000 ? 700 : 1500);
-        const f = await s.p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, text: (a.textContent || '').trim().slice(0, 12), verbunden: a.isConnected }; });
-        // nach 300 ms zeichnet das Studio noch ohne „Teilen“: dann vorläufig „Fertig“, nie der Seitenkörper
-        pruefe('Fotowechsel bei offenem Studio: nach ' + ms + ' ms liegt der Fokus ' + (ms === 300 ? 'im Studio (nicht BODY)' : 'auf „Teilen“'), ms === 300 ? f.tag === 'BUTTON' && f.verbunden : f.tag === 'BUTTON' && f.text === 'Teilen', f);
+        const f = await s.p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, text: (a.textContent || '').trim().slice(0, 12), verbunden: a.isConnected, haupt: a.classList.contains('ks-primaer') }; });
+        // nach 300 ms zeichnet das Studio noch ohne Hauptknopf: dann vorläufig „Fertig“, nie der Seitenkörper; Hauptknopf heißt „Teilen“, ohne navigator.share „Sichern“
+        pruefe('Fotowechsel bei offenem Studio: nach ' + ms + ' ms liegt der Fokus ' + (ms === 300 ? 'im Studio (nicht BODY)' : 'auf dem Hauptknopf „Teilen“/„Sichern“'), ms === 300 ? f.tag === 'BUTTON' && f.verbunden : f.tag === 'BUTTON' && f.haupt && /^(Teilen|Sichern)$/.test(f.text), f);
       }
       await s.ctx.close();
     }

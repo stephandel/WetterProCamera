@@ -2799,7 +2799,8 @@
     if (!d || d.typ !== 'foto-geladen') return;
     if (studioFokusStopp) studioFokusStopp();
     var obs = null, aus = null;
-    var teilen = function () { return $$('#ksWurzel button').filter(function (b) { return b.textContent.trim() === 'Teilen' && b.getClientRects().length; })[0]; };
+    // Hauptknopf der Ein-Tipp-Karte (ks-primaer): heißt „Teilen“, ohne navigator.share (Linux, GitHub-Lauf) „Sichern“; deshalb nicht nach dem Wortlaut suchen
+    var teilen = function () { return $$('#ksWurzel button.ks-primaer').filter(function (b) { return b.getClientRects().length && !b.disabled; })[0]; };
     var stop = function () { if (obs) obs.disconnect(); clearTimeout(aus); clearTimeout(anfang); };
     var halten = function (t) {
       var s = $('#studio'); if (!s || s.hidden) return stop();
