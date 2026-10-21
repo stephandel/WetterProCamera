@@ -131,7 +131,8 @@ async function rsVollbild(s, name, w, h) {
       quelle: getComputedStyle(document.getElementById('ebeneQuelle')).display, kartenHoehe: m.getBoundingClientRect().height, pane: (() => { const t = m.querySelector('.leaflet-tile-pane'); return !!t; })() };
   });
   const drin = b => !!b && b[0] >= 0 && b[1] >= 0 && b[2] <= k.vw && b[3] <= k.vh;
-  pruefe(name + ': Karte füllt den Platz zwischen Ebenen und Abspielen, Zoom und Abspielen im Bild', k.karte[1] >= k.chips[3] && k.karte[3] <= k.fuss[1] + 1 && k.kartenHoehe > k.vh * (h < 500 ? 0.35 : 0.6) && drin(k.plus) && drin(k.play) && drin(k.chips), k);
+  // Bei 130 % Schrift bricht die Fußzeile (Abspielen, Uhrzeit, Vollbild) mit der breiteren Linux-Ersatzschrift auf GitHub in zwei Zeilen um (Fuß 108 statt 52 px hoch, Karte 491 statt 547): darum nur mind. die Hälfte des Bildschirms, dafür muss die Karte bis an den Fuß reichen
+  pruefe(name + ': Karte füllt den Platz zwischen Ebenen und Abspielen, Zoom und Abspielen im Bild', k.karte[1] >= k.chips[3] && k.karte[3] <= k.fuss[1] + 1 && k.karte[3] >= k.fuss[1] - 12 && k.kartenHoehe > k.vh * (h < 500 ? 0.35 : /130/.test(name) ? 0.5 : 0.6) && drin(k.plus) && drin(k.play) && drin(k.chips), k);
   const m = await p.evaluate(MASSE_BLATT, { sel: '#tab-radsat', min: w >= 1024 ? 27.5 : 43.5 });
   pruefe(name + ': im Rad/Sat-Blatt Knöpfe groß genug, kein Text unter 11 px, nichts ragt heraus', !m.klein.filter(x => !/^(\+|−|Zoom|Leaflet|OpenTopoMap|OpenStreetMap)/.test(x)).length && !m.schrift.length, m);
   const kk = await p.evaluate(KONTRAST, '#radsatFertig');
