@@ -2759,7 +2759,7 @@
 
   /* === Startseite nach dem Design-Link vom 20.10.2026 ===
      Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond"), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
-     Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Luftqualität und Warnung sind im Link an, in der App aber noch nicht gebaut (Wunschliste). */
+     Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Warnung (ganz oben, nur bei Warnlage) und Luftqualität (nach der Tagesliste) sind seit 21.10.2026 (A9) gebaut. */
   var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '#a9Luft', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
   function startseiteOrdnen() {
     var s = $('#tab-wetter'); if (!s || !s.querySelector('.akt')) return;
