@@ -2,7 +2,7 @@
    Start:  PORT=8946 node tests/warnung-luft.test.js   (Exit-Code 0 = grün). Alle fremden Dienste sind auf Antworten aus tests/fixtures umgeleitet (tests/hilfe.js). */
 'use strict';
 const { webkit } = require('playwright');
-const { neu } = require('./hilfe.js');
+const { neu, JETZT } = require('./hilfe.js');
 const H = neu(+process.env.PORT || 8946);
 const { pruefe } = H;
 
@@ -58,6 +58,19 @@ async function start(b, modus, opt) {
     s = await start(b, { warnung: 'fehler' });
     pruefe('Warnung-Abruf scheitert (offline/Fehler): still ausgeblendet, Startseite lädt normal', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && !(await s.p.$('.leer-zustand')));
     await s.ctx.close();
+    s = await start(b, { warnung: 'format' });
+    pruefe('Warnung-Antwort im falschen Format (alerts ist kein Array): keine Kachel, keine Konsolenfehler', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && s.konsole.length === 0, s.konsole);
+    await s.ctx.close();
+    s = await start(b, { warnung: 'test' });
+    const ft = await s.p.evaluate(() => { const k = document.getElementById('a9Warnung'); return k ? k.textContent : ''; });
+    pruefe('Testwarnungen (status „test“) und Entwarnungen (response_type „allclear“) werden nicht gezeigt, echte Warnung schon', /NEBEL/.test(ft) && !/TESTWARNUNG/.test(ft) && !/ENTWARNUNG/.test(ft), ft);
+    await s.ctx.close();
+    s = await H.neueSeite(b, {}, { warnung: 'ja' });
+    s.anfragen = []; s.p.on('request', r => { if (/brightsky\.dev\/alerts/.test(r.url())) s.anfragen.push(r.url()); });
+    await s.p.addInitScript(() => { if (!localStorage.getItem('wpgt-ort')) localStorage.setItem('wpgt-ort', JSON.stringify({ name: 'Corralejo', land: 'Spanien', lat: 28.73, lon: -13.867 })); });
+    await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 }); await s.p.waitForTimeout(900);
+    pruefe('Ort außerhalb Deutschlands (Corralejo): kein Warnungs-Abruf, keine Kachel', s.anfragen.length === 0 && !(await s.p.$('#a9Warnung')) && /Corralejo/.test(await s.p.textContent('#titelzeile')), s.anfragen);
+    await s.ctx.close();
     s = await start(b, { warnung: 'ja' }, { viewport: { width: 1280, height: 800 } });
     const mac = await s.p.evaluate(() => { const k = document.getElementById('a9Warnung'), l = document.querySelector('.mac-links'); return k ? { oben: k.parentNode.id === 'tab-wetter' && k.getBoundingClientRect().bottom <= l.getBoundingClientRect().top, b: k.getBoundingClientRect().width, h: document.documentElement.scrollWidth - innerWidth } : null; });
     pruefe('Mac 1280: Warnung über beiden Spalten, volle Breite, kein seitliches Scrollen', !!mac && mac.oben && mac.b > 600 && mac.h <= 0, mac);
@@ -80,12 +93,17 @@ async function start(b, modus, opt) {
     pruefe('Klein: Schadstoffe zugeklappt, Knopf mind. 44 px hoch', !!l && !l.offen && !l.balkenSichtbar && l.sumH >= 43.5, l && [l.offen, l.sumH]);
     await s.p.click('#a9Luft summary'); await s.p.waitForTimeout(200);
     const l2 = await s.p.evaluate(() => { const k = document.getElementById('a9Luft'); return { sicht: k.querySelector('.a9-stoffe').checkVisibility ? k.querySelector('.a9-stoffe').checkVisibility() : k.querySelector('.a9-balken').getBoundingClientRect().height > 0, text: k.querySelector('.a9-stoffe').textContent, n: k.querySelectorAll('.a9-stoffe li').length }; });
-    pruefe('Antippen zeigt vier Schadstoff-Balken mit Wert und Wort', l2.sicht && l2.n === 4 && /Feinstaub PM2,5[\s\S]*8,1 µg\/m³ · gut/.test(l2.text) && /Ozon[\s\S]*58,0 µg\/m³ · mäßig/.test(l2.text), l2.text);
+    pruefe('Antippen zeigt vier Schadstoff-Balken mit Wert und Wort', l2.sicht && l2.n === 4 && /Feinstaub PM2,5[\s\S]*8,1 µg\/m³ · mäßig/.test(l2.text) && /Ozon[\s\S]*58,0 µg\/m³ · gut/.test(l2.text), l2.text);
     await H.foto(s.p, 'a9-luft-390');
     pruefe('Ein einziger Aufruf bei Open-Meteo Luftqualität (Staub und aktuelle Werte zusammen)', s.anfragen.filter(u => /air-quality/.test(u)).length === 1 && /current=european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone/.test(s.anfragen.join(' ')) && /hourly=dust/.test(s.anfragen.join(' ')), s.anfragen);
     await s.p.click('#tb-mehr'); await s.p.waitForTimeout(300);
     pruefe('Quellen und Datenschutz nennen die Luftqualität', /Luftqualität: Open-Meteo Air Quality[\s\S]*CAMS/.test(await s.p.textContent('#quellen')) && /Für Luftqualität und Saharastaub sieht Open-Meteo deine IP-Adresse und den Ort/.test(await s.p.textContent('#tab-mehr')));
     pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+    await s.ctx.close();
+    s = await start(b, { luftSpaeter: true });
+    await s.p.clock.setFixedTime(new Date(JETZT.getTime() + 4 * 3600e3));
+    await s.p.click('[data-aktualisieren]'); await s.p.waitForTimeout(1500);
+    pruefe('Spätere Luft-Antwort ohne Messwert überschreibt den guten Wert nicht (Kachel zeigt weiter 43)', s.anfragen.filter(u => /air-quality/.test(u)).length >= 2 && (await s.p.textContent('#a9Luft .a9-ring-zahl').catch(() => '')) === '43', s.anfragen.length);
     await s.ctx.close();
     s = await start(b, { luftFehler: true });
     pruefe('Luftqualität-Abruf scheitert: Kachel fehlt still, Startseite lädt normal', !(await s.p.$('#a9Luft')) && !!(await s.p.$('.tage')) && !(await s.p.$('.leer-zustand')));
@@ -94,10 +112,6 @@ async function start(b, modus, opt) {
     const lm = await s.p.evaluate(() => { const k = document.getElementById('a9Luft'); return k ? { r: k.getBoundingClientRect().width, h: document.documentElement.scrollWidth - innerWidth } : null; });
     pruefe('Mac 1280: Luftqualität sichtbar, kein seitliches Scrollen', !!lm && lm.r > 200 && lm.h <= 0, lm);
     await H.foto(s.p, 'a9-luft-mac-1280');
-    await s.ctx.close();
-    s = await start(b, { warnung: 'ja' }, { viewport: { width: 390, height: 844 }, colorScheme: 'light' });
-    await s.p.evaluate(() => document.getElementById('a9Luft').scrollIntoView()); await s.p.waitForTimeout(300);
-    await H.foto(s.p, 'a9-luft-390-hell');
     await s.ctx.close();
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();

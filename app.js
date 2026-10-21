@@ -1982,7 +1982,7 @@
     if (m && (m.laedt || Date.now() - m.zeit < 3 * 3600e3)) return;
     w3Staub[k] = { laedt: true, zeit: 0, d: m && m.d, c: m && m.c };
     holeJson('https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + o.lat + '&longitude=' + o.lon + '&current=european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone&hourly=dust&forecast_days=3&timezone=auto').then(function (r) {
-      var h = r && r.hourly; w3Staub[k] = { zeit: Date.now(), d: h && h.dust && h.time ? h : null, c: r && r.current && r.current.european_aqi != null ? r.current : null }; w3ZusatzNeu(); a9LuftNeu();
+      var h = r && r.hourly; w3Staub[k] = { zeit: Date.now(), d: h && h.dust && h.time ? h : null, c: r && r.current && r.current.european_aqi != null ? r.current : m && m.c }; w3ZusatzNeu(); a9LuftNeu();   // ohne neuen Messwert bleibt der alte
     }, function () { w3Staub[k] = { zeit: Date.now() - 2.5 * 3600e3, d: m && m.d, c: m && m.c }; });
   }
   var w3StaubWort = function (v) { return v < 50 ? 'klare Luft' : v < 150 ? 'leichter Dunst' : v < 300 ? 'Calima' : 'starke Calima'; };
@@ -2654,12 +2654,12 @@
     if (!a9InDeutschland(o) || (m && (m.laedt || Date.now() - m.zeit < 15 * 60e3))) return;
     a9WarnD[k] = { laedt: true, zeit: 0, d: m && m.d };
     holeJson(BRIGHTSKY + 'alerts?lat=' + o.lat + '&lon=' + o.lon + '&tz=Europe/Berlin').then(function (r) {
-      a9WarnD[k] = { zeit: Date.now(), d: r && r.alerts ? r.alerts : [] }; a9WarnNeu();
+      a9WarnD[k] = { zeit: Date.now(), d: r && Array.isArray(r.alerts) ? r.alerts : [] }; a9WarnNeu();
     }, function () { a9WarnD[k] = { zeit: Date.now() - 10 * 60e3, d: m && m.d }; });   // nach 5 Minuten neuer Versuch
   }
   function a9WarnListe() {
     var m = a9WarnD[a5PosKey(ort)], jetzt = w3Jetzt(); if (!m || !m.d) return [];
-    return m.d.filter(function (a) { return a && A9_WARN[a.severity] && a.headline_de && (!a.expires || String(a.expires).slice(0, 16) > jetzt); })
+    return m.d.filter(function (a) { return a && a.status !== 'test' && a.response_type !== 'allclear' && A9_WARN[a.severity] && a.headline_de && (!a.expires || String(a.expires).slice(0, 16) > jetzt); })
       .sort(function (x, y) { return A9_WARN[y.severity][1] - A9_WARN[x.severity][1] || String(x.onset).localeCompare(String(y.onset)); }).slice(0, 4);
   }
   // „heute 18:00 bis morgen 08:00 Uhr“; läuft die Warnung schon, steht „jetzt bis …“
@@ -2727,8 +2727,8 @@
   var A9_LUFT_GROESSE = 'klein';
   var A9_LUFT = [['gut', 20], ['mäßig', 40], ['mittel', 60], ['schlecht', 80], ['sehr schlecht', 100], ['extrem', Infinity]];
   var a9LuftStufe = function (v) { for (var i = 0; i < A9_LUFT.length; i++) if (v <= A9_LUFT[i][1]) return i; return 5; };
-  // Grenzen je Schadstoff (µg/m³) nach EEA: Obergrenzen von gut, mäßig, mittel, schlecht, sehr schlecht
-  var A9_STOFFE = [['pm2_5', 'Feinstaub PM2,5', [10, 20, 25, 50, 75]], ['pm10', 'Feinstaub PM10', [20, 40, 50, 100, 150]], ['nitrogen_dioxide', 'Stickstoffdioxid', [40, 90, 120, 230, 340]], ['ozone', 'Ozon', [50, 100, 130, 240, 380]]];
+  // Grenzen je Schadstoff (µg/m³) nach EEA (Stand 2024, laut Open-Meteo): Obergrenzen von gut, mäßig, mittel, schlecht, sehr schlecht
+  var A9_STOFFE = [['pm2_5', 'Feinstaub PM2,5', [5, 15, 50, 90, 140]], ['pm10', 'Feinstaub PM10', [15, 45, 120, 195, 270]], ['nitrogen_dioxide', 'Stickstoffdioxid', [10, 25, 60, 100, 150]], ['ozone', 'Ozon', [60, 100, 120, 160, 180]]];
   function a9LuftHtml() {
     var m = w3Staub[a5PosKey(ort)], c = m && m.c; if (!c || c.european_aqi == null) return '';
     var v = Math.round(c.european_aqi), st = a9LuftStufe(v), wort = A9_LUFT[st][0], R = 28, U = 2 * Math.PI * R, anteil = Math.max(.04, Math.min(1, v / 100));
