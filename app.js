@@ -2793,21 +2793,27 @@
   function hintergrundSperren(an) {
     $$('#titelzeile, .inhalt, #tabbar, #hinweis, #macLeiste, .zugang-schwebend').forEach(function (e) { if (an) e.setAttribute('inert', ''); else e.removeAttribute('inert'); });
   }
-  // Nach dem Laden eines Fotos zeichnet das Studio neu und der Fokus fiele auf den Seitenkörper: auf „Teilen“ setzen, sobald der Knopf da ist (höchstens 1 s), sonst auf „Fertig“
+  // Nach dem Laden eines Fotos zeichnet das Studio (auch später noch einmal) neu und der Fokus fiele auf den Seitenkörper: auf „Teilen“ setzen und 2 s lang nachführen, solange der Fokus verloren ist (fehlt „Teilen“ gerade, vorläufig „Fertig“)
+  var studioFokusStopp = null;   // beendet das Nachführen eines früheren Fotos
   function studioEreignis(d) {
     if (!d || d.typ !== 'foto-geladen') return;
-    var wurzel = $('#ksWurzel'), obs = null, ende = null;
+    if (studioFokusStopp) studioFokusStopp();
+    var obs = null, aus = null;
     var teilen = function () { return $$('#ksWurzel button').filter(function (b) { return b.textContent.trim() === 'Teilen' && b.getClientRects().length; })[0]; };
-    var fertig = function (t) {
-      if (obs) obs.disconnect(); clearTimeout(ende);
-      var s = $('#studio'); if (!s || s.hidden) return;
-      if (s.contains(document.activeElement) && document.activeElement !== document.body && document.activeElement !== $('#studioZu')) return;
-      (t || $('#studioZu')).focus();
+    var stop = function () { if (obs) obs.disconnect(); clearTimeout(aus); clearTimeout(anfang); };
+    var halten = function (t) {
+      var s = $('#studio'); if (!s || s.hidden) return stop();
+      var a = document.activeElement, frei = !a || a === document.body || !a.isConnected || a === $('#studioZu') || !s.contains(a);   // Fokus verloren oder entfernt
+      t = t || teilen(); if (frei) (t || $('#studioZu')).focus();   // solange „Teilen“ fehlt (Studio zeichnet gerade neu), vorläufig „Fertig“
     };
-    var t0 = teilen(); if (t0) return fertig(t0);
-    obs = new MutationObserver(function () { var t = teilen(); if (t) fertig(t); });
-    obs.observe(wurzel, { childList: true, subtree: true });
-    ende = setTimeout(function () { fertig(null); }, 1000);
+    // „foto-geladen“ kommt vor dem Neuzeichnen: erst danach suchen, sonst findet man den alten, gleich ersetzten Knopf
+    studioFokusStopp = stop;
+    var anfang = setTimeout(function () {
+      halten();
+      obs = new MutationObserver(function () { halten(); });
+      obs.observe($('#ksWurzel'), { childList: true, subtree: true });
+      aus = setTimeout(stop, 2000);
+    }, 0);
   }
   function studioMount() {
     $('#ksWurzel').innerHTML = '';
@@ -2833,7 +2839,7 @@
     $('#ksWurzel').innerHTML = '';
     $('#studio').hidden = true; document.body.style.overflow = ''; hintergrundSperren(false);
     // Wurde der Knopf inzwischen neu gezeichnet (neue Wetterdaten, anderer Ort der Einstellung), den sichtbaren Wetterfoto-Knopf nehmen
-    var f = studioZuletztFokus && studioZuletztFokus.isConnected ? studioZuletztFokus : null;
+    var f = studioZuletztFokus && studioZuletztFokus.isConnected && studioZuletztFokus !== document.body ? studioZuletztFokus : null;   // Seitenkörper (Direktlink ?kamera=1) ist kein Ziel
     if (!f) f = $$('[data-zugang], [data-kamera]').filter(function (e) { return e.getClientRects().length; })[0] || $('#btnTeilen');
     if (f && f.focus) f.focus();
   }

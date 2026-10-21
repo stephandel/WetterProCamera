@@ -86,6 +86,32 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
       }
       await s.ctx.close();
     }
+    // Nachbesserung 1: Fotowechsel bei offenem Studio (Datei über die Dateiauswahl des Studios): Fokus wieder auf „Teilen“, nicht BODY
+    {
+      const s = await H.neueSeite(b, {}, {});
+      await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 }); await s.p.waitForFunction(() => window.KSStudio, null, { timeout: 8000 });
+      const [fc] = await Promise.all([s.p.waitForEvent('filechooser', { timeout: 4000 }), s.p.click('#tb-kamera')]); await fc.setFiles(FOTO);
+      await s.p.waitForFunction(() => { const r = document.querySelector('#ksWurzel .ks'); return r && r._ksInst && r._ksInst.quelle; }, null, { timeout: 10000 }); await s.p.waitForTimeout(800);
+      await s.p.evaluate(() => { document.querySelector('#ksWurzel .ks')._ksInst.quelle.__alt = 1; });
+      await s.p.setInputFiles('#ksWurzel .ks-datei', FOTO);
+      await s.p.waitForFunction(() => { const q = document.querySelector('#ksWurzel .ks')._ksInst.quelle; return q && !q.__alt; }, null, { timeout: 10000 });
+      for (const ms of [300, 1000, 2500]) {
+        await s.p.waitForTimeout(ms === 300 ? 300 : ms === 1000 ? 700 : 1500);
+        const f = await s.p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, text: (a.textContent || '').trim().slice(0, 12), verbunden: a.isConnected }; });
+        // nach 300 ms zeichnet das Studio noch ohne „Teilen“: dann vorläufig „Fertig“, nie der Seitenkörper
+        pruefe('Fotowechsel bei offenem Studio: nach ' + ms + ' ms liegt der Fokus ' + (ms === 300 ? 'im Studio (nicht BODY)' : 'auf „Teilen“'), ms === 300 ? f.tag === 'BUTTON' && f.verbunden : f.tag === 'BUTTON' && f.text === 'Teilen', f);
+      }
+      await s.ctx.close();
+    }
+    // Nachbesserung 2: Direktlink ?kamera=1 öffnet das Studio; Esc lässt den Fokus nicht auf dem Seitenkörper
+    {
+      const s = await H.neueSeite(b, {}, {});
+      await s.p.goto(H.BASIS + '?kamera=1'); await s.p.waitForFunction(() => !document.getElementById('studio').hidden, null, { timeout: 15000 }); await s.p.waitForTimeout(600);
+      await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(500);
+      const f = await s.p.evaluate(() => { const a = document.activeElement; return { offen: !document.getElementById('studio').hidden, tag: a.tagName, id: a.id }; });
+      pruefe('?kamera=1: Esc schließt das Studio, Fokus nicht auf dem Seitenkörper', !f.offen && f.tag !== 'BODY', f);
+      await s.ctx.close();
+    }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis(); console.log('\n' + e.ok + ' bestanden, ' + e.fehler + ' fehlgeschlagen'); process.exit(e.fehler ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
