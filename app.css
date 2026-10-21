@@ -8,7 +8,7 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .wsym { display: block; }
 
 /* ---------- Kopfzeile (Leiste über die ganze Breite, Glas) ---------- */
-.titelzeile { background: color-mix(in srgb, var(--bg) 90%, transparent); }   /* deckender als --glas-bg, damit gescrollter Text nicht durchscheint (A6) */
+.titelzeile { background: color-mix(in srgb, var(--bg) 96%, transparent); }   /* deckender als --glas-bg, damit gescrollter Text nicht durchscheint (A6) */
 .titelzeile { min-height: calc(var(--safe-top) + var(--kopf-hoehe)); padding-top: var(--safe-top); padding-bottom: 0; gap: var(--s1); border-width: 0 0 1px; border-radius: 0; box-shadow: none; }
 .ikonknopf { width: var(--tap); height: var(--tap); display: grid; place-items: center; border-radius: var(--r-button); color: var(--akzent); flex: none; }
 .ort-block { flex: 1; min-width: 0; text-align: center; }
@@ -752,8 +752,8 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .a9-stoff-wert { color: var(--label-2); text-align: right; }
 .a9-balken { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: rgba(255,255,255,.22); overflow: hidden; }
 .a9-balken i { display: block; height: 100%; border-radius: 4px; background: var(--luft); }
-/* Tab-Leiste deckend wie die Kopfleiste, damit gescrollter Text nicht durchscheint (Nutzertest 19.10.) */
-.tabbar.pille.glas { background: color-mix(in srgb, var(--bg) 92%, transparent); }
+/* Tab-Leiste voll deckend, damit gescrollter Text nicht durchscheint (Nutzertest 19.10.; zweite Meinung 21.10.) */
+.tabbar.pille.glas { background: var(--bg); }
 @media (prefers-reduced-transparency: reduce) { .tabbar.pille.glas { background: var(--bg-2); } }
 /* Tab „Mehr“: Zwischenüberschriften der Gruppen */
 .mehr-gruppe { font-size: var(--fs-title3); font-weight: 700; margin: var(--s6) var(--s4) calc(-1 * var(--s2)); color: var(--label); }
