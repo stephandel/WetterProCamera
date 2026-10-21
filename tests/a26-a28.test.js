@@ -65,6 +65,48 @@ async function start(b, opt, modus) {
       pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }
+
+    console.log('3) Karten-Ebenen Wind, Wolken, Isobaren (A26)');
+    {
+      const s = await start(b);
+      const gitter = [];
+      s.p.on('request', r => { if (/api\.open-meteo\.com/.test(r.url()) && /pressure_msl/.test(r.url())) gitter.push(r.url()); });
+      await s.p.click('#tb-radsat'); await s.p.waitForSelector('#ebenenWahl [data-ebene]'); await s.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached' }); await s.p.waitForTimeout(500);
+      const pillen = await s.p.$$eval('#ebenenWahl [data-ebene]', bs => bs.map(x => ({ id: x.dataset.ebene, t: x.textContent.trim(), h: x.getBoundingClientRect().height })));
+      pruefe('Pillen: Radar, Satellit, Infrarot, Karte, Wind, Wolken, Isobaren', pillen.map(x => x.t).join(',') === 'Radar,Satellit,Infrarot,Karte,Wind,Wolken,Isobaren', pillen);
+      pruefe('Alle Pillen mind. 44 px hoch', pillen.every(x => x.h >= 43.5), pillen.map(x => x.h));
+      const flaeche = () => s.p.evaluate(async () => {
+        const i = document.querySelector('#radarKarte img.a26-flaeche'); if (!i) return null;
+        if (!i.complete) await new Promise(r => { i.onload = r; });
+        const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0);
+        const d = x.getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < d.length; k += 4) if (d[k] > 40) n++;
+        return { n, gesamt: d.length / 4, breite: c.width };
+      });
+      for (const [id, name, saetze] of [['wind', 'Wind', /Pfeil/], ['wolken', 'Wolken', /Bewölkung|bedeckt/], ['druck', 'Isobaren', /Luftdruck|hPa/]]) {
+        await s.p.click('#ebenenWahl [data-ebene="' + id + '"]'); await s.p.waitForFunction(() => document.querySelector('#radarKarte img.a26-flaeche'), null, { timeout: 8000 }).catch(() => { });
+        await s.p.waitForTimeout(500);
+        const f = await flaeche(), ui = await s.p.evaluate(() => ({ play: document.getElementById('radarPlay').hidden, steuer: document.getElementById('w3Steuer').hidden, text: document.getElementById('ebeneQuelle').textContent, zeit: document.getElementById('radarZeit').textContent, checked: document.querySelector('#ebenenWahl [aria-checked="true"]').dataset.ebene }));
+        pruefe(name + ': Fläche liegt über der Karte (Bild mit sichtbaren Pixeln)', !!f && f.n > 200, f);
+        pruefe(name + ': Abspielen und Zeitleiste ausgeblendet, Pille gewählt, Erklärung und Quelle Open-Meteo', ui.play && ui.steuer && ui.checked === id && saetze.test(ui.text) && /Open-Meteo/.test(ui.text), ui);
+        await H.foto(s.p, 'a26-390-karte-' + id);
+      }
+      pruefe('Ein Abruf an Open-Meteo für das Gitter (mind. 40 Punkte, Wind, Wolken, Druck), gleicher Ausschnitt wird nicht neu geholt', gitter.length === 1 && decodeURIComponent(gitter[0]).split('latitude=')[1].split('&')[0].split(',').length >= 40 && /wind_speed_10m/.test(gitter[0]) && /cloud_cover/.test(gitter[0]), gitter.length + ' ' + (gitter[0] || '').slice(0, 200));
+      await s.p.click('#ebenenWahl [data-ebene="radar"]'); await s.p.waitForTimeout(500);
+      pruefe('Zurück auf Radar: Fläche entfernt, Abspielen wieder da', !(await s.p.$('#radarKarte img.a26-flaeche')) && await s.p.evaluate(() => !document.getElementById('radarPlay').hidden));
+      await s.p.focus('#ebenenWahl [data-ebene="radar"]');
+      for (let i = 0; i < 6; i++) await s.p.keyboard.press('ArrowRight');
+      pruefe('Pfeiltaste wechselt bis „Isobaren“', await s.p.evaluate(() => document.querySelector('#ebenenWahl [aria-checked="true"]').dataset.ebene) === 'druck');
+      await s.p.click('#tb-mehr'); await s.p.waitForTimeout(300);
+      pruefe('Datenschutz nennt die Karten-Ebenen', /Wind, Wolken und Isobaren[\s\S]*Open-Meteo/.test(await s.p.textContent('#datenschutz')));
+      pruefe('Quellen nennen weiter nur bekannte Server (Open-Meteo, RainViewer, EUMETSAT, OpenTopoMap)', !/windy|openweathermap|mapbox/i.test(await s.p.textContent('#tab-mehr')));
+      pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+      const f = await start(b, {}, { gitterFehler: true });
+      await f.p.click('#tb-radsat'); await f.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached' }); await f.p.waitForTimeout(400);
+      await f.p.click('#ebenenWahl [data-ebene="wind"]'); await f.p.waitForTimeout(1200);
+      pruefe('Gitter nicht erreichbar: ruhiger Satz, keine Fläche, keine Seitenfehler', /nicht erreichbar/.test(await f.p.textContent('#radarZeit')) && !(await f.p.$('#radarKarte img.a26-flaeche')) && !f.konsole.some(k => /Seitenfehler/.test(k)), [await f.p.textContent('#radarZeit'), f.konsole]);
+      await f.ctx.close();
+    }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');

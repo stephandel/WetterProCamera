@@ -300,7 +300,9 @@
   /* ---------- Rad/Sat mit Ebenen: Radar, Satellit, Infrarot, Karte (Leaflet, erst beim Öffnen laden) ---------- */
   // Satellit: EUMETSAT (Meteosat, frei ohne Schlüssel, WMS wie in WetterPro Tool/gemeinsam/wpkarte.js), jeweils das neueste Bild
   var EUMETSAT_WMS = 'https://view.eumetsat.int/geoserver/wms';
-  var EBENEN = [['radar', 'Radar'], ['sat', 'Satellit'], ['ir', 'Infrarot'], ['karte', 'Karte']];
+  var EBENEN = [['radar', 'Radar'], ['sat', 'Satellit'], ['ir', 'Infrarot'], ['karte', 'Karte'], ['wind', 'Wind'], ['wolken', 'Wolken'], ['druck', 'Isobaren']];
+  var A26_NAMEN = { wind: 'Wind', wolken: 'Wolken', druck: 'Isobaren' };   // Gitter-Ebenen aus Open-Meteo (A26), ohne Film
+  function ohneFilm() { return ebene === 'karte' || !!A26_NAMEN[ebene]; }
   var ebene = speicher.lesen('wpc-ebene', 'radar'); if (!EBENEN.some(function (e) { return e[0] === ebene; })) ebene = 'radar';
   var radarKarte = null, radar = { frames: [], i: 0, ebene: null, timer: null, host: '' }, satEbenen = {}, marken = null, markenOrt = '';
   function leafletBereit(fn, n) { if (window.L) return fn(); if ((n || 0) > 50) return; setTimeout(function () { leafletBereit(fn, (n || 0) + 1); }, 100); }
@@ -314,7 +316,10 @@
     radar: ['Regenradar der letzten 2 Stunden. Regen erscheint als blaue bis rote Flecken.', 'RainViewer', 'https://www.rainviewer.com'],
     sat: ['Satellitenbild in Farbe (Meteosat). „Abspielen“ zeigt die letzten 2 Stunden. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
     ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts. „Abspielen“ zeigt die letzten 2 Stunden.', 'EUMETSAT', 'https://view.eumetsat.int'],
-    karte: ['Aktuelle Temperaturen an deinen Orten.', 'Open-Meteo', 'https://open-meteo.com']
+    karte: ['Aktuelle Temperaturen an deinen Orten.', 'Open-Meteo', 'https://open-meteo.com'],
+    wind: ['Aktueller Wind in 10 m Höhe. Der Pfeil zeigt, wohin der Wind weht, die Zahl ist die Geschwindigkeit. Regen zeigt das Radar.', 'Open-Meteo', 'https://open-meteo.com'],
+    wolken: ['Aktuelle Bewölkung: je weißer die Fläche, desto dichter die Wolken. Das Satellitenbild zeigt die echten Wolken.', 'Open-Meteo', 'https://open-meteo.com'],
+    druck: ['Linien gleichen Luftdrucks auf Meereshöhe, alle 4 hPa. Enge Linien bedeuten starken Wind.', 'Open-Meteo', 'https://open-meteo.com']
   };
   // Regnet es gerade oder in den nächsten 2 Stunden am Ort? (aus der Vorhersage, nicht aus dem Radarbild)
   function regenInSicht() {
@@ -336,7 +341,7 @@
       $('#ebenenWahl').addEventListener('click', function (e) { var b = e.target.closest('[data-ebene]'); if (!b) return; ebene = b.dataset.ebene; speicher.schreiben('wpc-ebene', ebene); ebeneZeigen(); });
     }
     leafletBereit(function () {
-      if (!radarKarte) radarKarte = grundKarte($('#radarKarte'), 7);
+      if (!radarKarte) { radarKarte = grundKarte($('#radarKarte'), 7); radarKarte.on('moveend', a26Bewegt); }
       radarKarte.invalidateSize(); radarKarte.setView([ort.lat, ort.lon], radarKarte.getZoom());
       ebeneZeigen();
     });
@@ -346,7 +351,7 @@
     $$('#ebenenWahl [data-ebene]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.ebene === ebene)); });
     var eq = EBENEN_QUELLE[ebene];
     $('#ebeneQuelle').innerHTML = '<p class="info">' + eq[0] + '</p><div class="liste quellen-liste"><a class="tippbar" href="' + eq[2] + '" target="_blank" rel="noopener"><span>Quelle: ' + eq[1] + '</span><span aria-hidden="true">↗</span></a></div>';
-    $('#radarPlay').hidden = ebene === 'karte';   // Paket C: auch Satellit und Infrarot spielen ab
+    $('#radarPlay').hidden = ohneFilm();   // Paket C: auch Satellit und Infrarot spielen ab
     var rs = $('#radarSatz'); rs.hidden = ebene !== 'radar' || regenInSicht();
     rs.textContent = 'Kein Regen in Sicht um ' + ort.name + '. Deshalb zeigt das Radar dort gerade keine Flecken.';
     if (!radarKarte) return;
@@ -355,6 +360,7 @@
     // Satellit
     ['sat', 'ir'].forEach(function (k) { if (satEbenen[k] && k !== ebene) radarKarte.removeLayer(satEbenen[k]); });
     if (marken && ebene !== 'karte') radarKarte.removeLayer(marken);
+    if (!A26_NAMEN[ebene]) a26Weg();
     var z = $('#radarZeit'); z.textContent = '';
     if (ebene === 'radar') {
       holeJson('https://api.rainviewer.com/public/weather-maps.json').then(function (m) {
@@ -370,11 +376,127 @@
       satEbenen[ebene].addTo(radarKarte);
       z.textContent = ebene === 'sat' ? 'Satellit · neuestes Bild' : 'Infrarot · neuestes Bild';
       satHinweis();
-    } else {
+    } else if (ebene === 'karte') {
       if (!marken) marken = L.layerGroup();
       marken.addTo(radarKarte);
       if (markenOrt !== ortKey(ort)) temperaturMarken();
+    } else a26Zeigen();
+  }
+
+  /* ---------- A26: Karten-Ebenen Wind, Wolken, Isobaren ----------
+     Kostenlose Quelle ohne Schlüssel: Open-Meteo, aktuelle Werte für ein Gitter (8 × 7 Punkte, eine Anfrage) rund um den Kartenausschnitt.
+     Die Fläche wird auf ein Bild gezeichnet und über die Karte gelegt (wie im Baustein wpkarte.js, Isobaren per Marching Squares); neu gezeichnet nach dem Verschieben oder Zoomen.
+     Nicht gebaut: Regen als eigene Ebene (das Radar zeigt Regen), Zeitleiste für Vorhersage-Bilder, Wind als Strömungs-Animation (brauchen Dienste mit Schlüssel oder viel mehr Daten). */
+  var A26_NX = 8, A26_NY = 7, a26 = { g: null, schluessel: '', bild: null, nr: 0, uhr: null };
+  function a26Weg() { if (a26.bild && radarKarte) radarKarte.removeLayer(a26.bild); a26.bild = null; a26.nr++; }
+  function a26Bewegt() { clearTimeout(a26.uhr); if (A26_NAMEN[ebene]) a26.uhr = setTimeout(a26Zeigen, 400); }
+  function a26Holen() {
+    var b = radarKarte.getBounds(), dLat = (b.getNorth() - b.getSouth()) * .15, dLon = (b.getEast() - b.getWest()) * .15;
+    var sued = Math.max(-85, b.getSouth() - dLat), nord = Math.min(85, b.getNorth() + dLat), west = Math.max(-180, b.getWest() - dLon), ost = Math.min(180, b.getEast() + dLon);
+    var key = [sued, nord, west, ost].map(function (v) { return v.toFixed(1); }).join('|');
+    if (a26.g && key === a26.schluessel) return Promise.resolve(a26.g);
+    var lats = [], lons = [], la = [], lo = [], i, j;
+    for (j = 0; j < A26_NY; j++) lats.push(+(sued + (nord - sued) * j / (A26_NY - 1)).toFixed(3));
+    for (i = 0; i < A26_NX; i++) lons.push(+(west + (ost - west) * i / (A26_NX - 1)).toFixed(3));
+    for (j = 0; j < A26_NY; j++) for (i = 0; i < A26_NX; i++) { la.push(lats[j]); lo.push(lons[i]); }
+    return holeJson('https://api.open-meteo.com/v1/forecast?latitude=' + la.join(',') + '&longitude=' + lo.join(',') + '&current=wind_speed_10m,wind_direction_10m,cloud_cover,pressure_msl&timezone=GMT').then(function (antw) {
+      var liste = [].concat(antw), f = { wind: [], dir: [], wolken: [], druck: [] };
+      if (liste.length < A26_NX * A26_NY) throw new Error('Gitter unvollständig');
+      liste.forEach(function (a) { var c = a.current || {}; f.wind.push(c.wind_speed_10m); f.dir.push(c.wind_direction_10m); f.wolken.push(c.cloud_cover); f.druck.push(c.pressure_msl); });
+      a26.g = { lats: lats, lons: lons, f: f }; a26.schluessel = key;
+      return a26.g;
+    });
+  }
+  // Wert an einer Stelle: bilinear zwischen den vier Gitterpunkten, null außerhalb oder bei Lücken
+  function a26Wert(g, feld, lat, lon) {
+    var fx = (lon - g.lons[0]) / (g.lons[A26_NX - 1] - g.lons[0]) * (A26_NX - 1), fy = (lat - g.lats[0]) / (g.lats[A26_NY - 1] - g.lats[0]) * (A26_NY - 1);
+    if (!(fx >= 0 && fy >= 0 && fx <= A26_NX - 1 && fy <= A26_NY - 1)) return null;
+    var i = Math.min(A26_NX - 2, Math.floor(fx)), j = Math.min(A26_NY - 2, Math.floor(fy)), dx = fx - i, dy = fy - j, w = g.f[feld], k = j * A26_NX + i;
+    var a = w[k], b = w[k + 1], c = w[k + A26_NX], d = w[k + A26_NX + 1];
+    if ([a, b, c, d].some(function (v) { return v == null; })) return null;
+    return (a * (1 - dx) + b * dx) * (1 - dy) + (c * (1 - dx) + d * dx) * dy;
+  }
+  // Wind: Richtung über die Komponenten mitteln, sonst springt 350°/10° auf 180°
+  function a26Wind(g, lat, lon) {
+    var s = a26Wert(g, 'wind', lat, lon);
+    if (s == null) return null;
+    var fx = (lon - g.lons[0]) / (g.lons[A26_NX - 1] - g.lons[0]) * (A26_NX - 1), fy = (lat - g.lats[0]) / (g.lats[A26_NY - 1] - g.lats[0]) * (A26_NY - 1);
+    var i = Math.min(A26_NX - 2, Math.floor(fx)), j = Math.min(A26_NY - 2, Math.floor(fy)), dx = fx - i, dy = fy - j, x = 0, y = 0;
+    [[i, j, (1 - dx) * (1 - dy)], [i + 1, j, dx * (1 - dy)], [i, j + 1, (1 - dx) * dy], [i + 1, j + 1, dx * dy]].forEach(function (e) {
+      var k = e[1] * A26_NX + e[0], r = g.f.dir[k] * Math.PI / 180; x += Math.sin(r) * g.f.wind[k] * e[2]; y += Math.cos(r) * g.f.wind[k] * e[2];
+    });
+    return { v: s, dir: (Math.atan2(x, y) * 180 / Math.PI + 360) % 360 };
+  }
+  // Linien gleichen Werts (Marching Squares) auf einem Raster; Ergebnis je Stufe: Liste von Strecken [[x1,y1],[x2,y2]]
+  function a26Linien(feld, w, h, stufe) {
+    var min = Infinity, max = -Infinity, i, aus = [];
+    for (i = 0; i < feld.length; i++) { var v = feld[i]; if (v != null && !isNaN(v)) { if (v < min) min = v; if (v > max) max = v; } }
+    if (!isFinite(min)) return aus;
+    for (var lv = Math.ceil(min / stufe) * stufe; lv <= max; lv += stufe) {
+      var seg = [];
+      for (var y = 0; y < h - 1; y++) for (var x = 0; x < w - 1; x++) {
+        var a = feld[y * w + x], b = feld[y * w + x + 1], c = feld[(y + 1) * w + x + 1], d = feld[(y + 1) * w + x];
+        if ([a, b, c, d].some(function (q) { return q == null || isNaN(q); })) continue;
+        var idx = (a >= lv ? 8 : 0) | (b >= lv ? 4 : 0) | (c >= lv ? 2 : 0) | (d >= lv ? 1 : 0); if (idx === 0 || idx === 15) continue;
+        var t = function (p, q) { return (lv - p) / (q - p); };
+        var o = [x + t(a, b), y], re = [x + 1, y + t(b, c)], un = [x + t(d, c), y + 1], li = [x, y + t(a, d)], paare;
+        switch (idx) {
+          case 1: case 14: paare = [[li, un]]; break; case 2: case 13: paare = [[un, re]]; break; case 3: case 12: paare = [[li, re]]; break;
+          case 4: case 11: paare = [[o, re]]; break; case 5: paare = [[o, li], [un, re]]; break; case 6: case 9: paare = [[o, un]]; break;
+          case 7: case 8: paare = [[o, li]]; break; default: paare = [[o, re], [li, un]];
+        }
+        paare.forEach(function (p) { seg.push(p); });
+      }
+      if (seg.length) aus.push({ wert: lv, seg: seg });
     }
+    return aus;
+  }
+  function a26Zeichnen(g) {
+    var gr = radarKarte.getSize(), W = gr.x, H = gr.y, dpr = Math.min(2, window.devicePixelRatio || 1), cv = document.createElement('canvas');
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    var ctx = cv.getContext('2d'), css = getComputedStyle(document.documentElement), hell = css.getPropertyValue('--label').trim(), dunkel = css.getPropertyValue('--bg').trim();
+    var latBei = function (y) { return radarKarte.containerPointToLatLng([0, y]).lat; }, lonBei = function (x) { return radarKarte.containerPointToLatLng([x, 0]).lng; };
+    ctx.scale(dpr, dpr); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 12px -apple-system, "SF Pro Text", system-ui, sans-serif';
+    var x, y;
+    if (ebene === 'wolken') {
+      var w = Math.ceil(W / 8), h = Math.ceil(H / 8), kl = document.createElement('canvas'); kl.width = w; kl.height = h;
+      var kc = kl.getContext('2d'); kc.fillStyle = hell;
+      for (y = 0; y < h; y++) for (x = 0; x < w; x++) { var c = a26Wert(g, 'wolken', latBei(y * 8 + 4), lonBei(x * 8 + 4)); if (c != null) { kc.globalAlpha = Math.max(0, Math.min(1, c / 100)) * .8; kc.fillRect(x, y, 1, 1); } }
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(kl, 0, 0, w * 8, h * 8);
+    } else if (ebene === 'wind') {
+      for (y = 40; y < H; y += 80) for (x = 40; x < W; x += 80) {
+        var wi = a26Wind(g, latBei(y), lonBei(x)); if (!wi) continue;
+        var len = Math.min(36, 14 + wi.v * .6), r = (wi.dir + 180) * Math.PI / 180, dx = Math.sin(r), dy = -Math.cos(r);
+        var x1 = x - dx * len / 2, y1 = y - dy * len / 2, x2 = x + dx * len / 2, y2 = y + dy * len / 2, kopf = function () { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.moveTo(x2 - dx * 8 - dy * 5, y2 - dy * 8 + dx * 5); ctx.lineTo(x2, y2); ctx.lineTo(x2 - dx * 8 + dy * 5, y2 - dy * 8 - dx * 5); ctx.stroke(); };
+        ctx.strokeStyle = dunkel; ctx.lineWidth = 5.5; kopf(); ctx.strokeStyle = hell; ctx.lineWidth = 2.5; kopf();
+        var zahl = String(windWert(wi.v)), ty = y + Math.max(len / 2, 12) + 10; ctx.lineWidth = 4; ctx.strokeStyle = dunkel; ctx.strokeText(zahl, x, ty); ctx.fillStyle = hell; ctx.fillText(zahl, x, ty);
+      }
+    } else {
+      var rw = Math.max(24, Math.round(W / 6)), rh = Math.max(18, Math.round(H / 6)), feld = [];
+      for (y = 0; y < rh; y++) for (x = 0; x < rw; x++) feld.push(a26Wert(g, 'druck', latBei(y / (rh - 1) * H), lonBei(x / (rw - 1) * W)));
+      var linien = a26Linien(feld, rw, rh, 4), sx = W / (rw - 1), sy = H / (rh - 1);
+      var strecken = function (l) { ctx.beginPath(); l.seg.forEach(function (sg) { ctx.moveTo(sg[0][0] * sx, sg[0][1] * sy); ctx.lineTo(sg[1][0] * sx, sg[1][1] * sy); }); ctx.stroke(); };
+      linien.forEach(function (l) { ctx.strokeStyle = dunkel; ctx.lineWidth = 5; strecken(l); ctx.strokeStyle = hell; ctx.lineWidth = 2; strecken(l); });
+      linien.forEach(function (l) {
+        var n = l.seg.length, k = Math.max(1, Math.floor(n / 2));
+        for (var q = Math.floor(k / 2); q < n; q += k) {
+          var sg = l.seg[q], mx = (sg[0][0] + sg[1][0]) / 2 * sx, my = (sg[0][1] + sg[1][1]) / 2 * sy, txt = String(Math.round(l.wert));
+          ctx.fillStyle = dunkel; ctx.fillRect(mx - 20, my - 10, 40, 20); ctx.fillStyle = hell; ctx.fillText(txt, mx, my);
+        }
+      });
+    }
+    var mb = radarKarte.getBounds(), bounds = [[mb.getSouth(), mb.getWest()], [mb.getNorth(), mb.getEast()]], url = cv.toDataURL('image/png');
+    if (a26.bild) radarKarte.removeLayer(a26.bild);
+    a26.bild = L.imageOverlay(url, bounds, { interactive: false, className: 'a26-flaeche', zIndex: 5 }).addTo(radarKarte);
+  }
+  function a26Zeigen() {
+    if (!A26_NAMEN[ebene] || !radarKarte) return;
+    var nr = ++a26.nr, z = $('#radarZeit'), name = A26_NAMEN[ebene];
+    z.textContent = name + ' · wird geladen …';
+    a26Holen().then(function (g) {
+      if (nr !== a26.nr || !A26_NAMEN[ebene]) return;
+      a26Zeichnen(g); z.textContent = name + ' · aktuell';
+    }).catch(function () { if (nr !== a26.nr) return; if (a26.bild) { radarKarte.removeLayer(a26.bild); a26.bild = null; } z.textContent = name + ': Wetterdaten für die Karte gerade nicht erreichbar.'; });
   }
   function temperaturMarken() {
     var orte = favoriten.concat(STANDARDORTE).concat([ort]).filter(function (o, i, a) { return a.findIndex(function (x) { return ortKey(x) === ortKey(o); }) === i; });
@@ -2390,10 +2512,10 @@
   })(grundKarte);
   function w3SteuerStand() {
     var st = $('#w3Steuer'); if (!st) return;
-    var spar = w3Spar(), film = ebene === 'radar' ? radar.frames : ebene === 'karte' ? [] : satFilm.frames, z = $('#w3Zeit'), n = film.length;
-    st.hidden = ebene === 'karte' || spar;
-    var hinweis = $('#w3SparHinweis'); if (hinweis) hinweis.hidden = !spar || ebene === 'karte';
-    var p = $('#radarPlay'); if (p && (spar || ebene === 'karte')) p.hidden = true;   // Standbild statt Film
+    var spar = w3Spar(), film = ebene === 'radar' ? radar.frames : ohneFilm() ? [] : satFilm.frames, z = $('#w3Zeit'), n = film.length;
+    st.hidden = ohneFilm() || spar;
+    var hinweis = $('#w3SparHinweis'); if (hinweis) hinweis.hidden = !spar || ohneFilm();
+    var p = $('#radarPlay'); if (p && (spar || ohneFilm())) p.hidden = true;   // Standbild statt Film
     z.max = Math.max(0, n - 1); z.disabled = n < 2; z.value = ebene === 'radar' ? radar.i : satFilm.i;
     var zeit = $('#radarZeit'); z.setAttribute('aria-valuetext', zeit && zeit.textContent ? zeit.textContent : 'Bild ' + (+z.value + 1) + ' von ' + n);
     $('#w3ZeitHilfe').textContent = ebene === 'radar' ? (n > 1 ? 'Ziehe den Regler oder nutze die Pfeiltasten, um Bild für Bild durch die letzten 2 Stunden zu gehen.' : 'Das Radar lädt noch.') :
@@ -2451,7 +2573,7 @@
       '<p class="info">Vorschlag 50: Das ist der EU-Grenzwert für Feinstaub (PM10) im Tagesmittel, ab hier ist der Himmel meist merklich milchig. 25 meldet früher, 100 nur bei deutlicher Calima.</p></div>';
     var vor = $('#a5StartTitel', s) || $$('h2.abschnitt-titel', s).filter(function (h) { return /^Aktuell-Kachel/.test(h.textContent.trim()); })[0];
     if (vor) vor.insertAdjacentHTML('beforebegin', html); else s.insertAdjacentHTML('beforeend', html);
-    var ds = $('#datenschutz', s); if (ds && !$('.w3-datenschutz', ds)) ds.insertAdjacentHTML('beforeend', '<p class="w3-datenschutz">Meer-, Staub- und Modellvergleichsdaten holt die App ebenfalls bei Open-Meteo (Marine, Luftqualität, Vorhersage); Open-Meteo sieht dabei deine IP-Adresse und die Koordinaten des Orts. Sonne und Mond rechnet die App auf deinem Gerät aus.</p>');
+    var ds = $('#datenschutz', s); if (ds && !$('.w3-datenschutz', ds)) ds.insertAdjacentHTML('beforeend', '<p class="w3-datenschutz">Meer-, Staub- und Modellvergleichsdaten holt die App ebenfalls bei Open-Meteo (Marine, Luftqualität, Vorhersage); Open-Meteo sieht dabei deine IP-Adresse und die Koordinaten des Orts. Sonne und Mond rechnet die App auf deinem Gerät aus. Für die Karten-Ebenen Wind, Wolken und Isobaren holt die App bei Open-Meteo Werte für ein Gitter von Punkten rund um den Kartenausschnitt; Open-Meteo sieht dabei deine IP-Adresse und diese Koordinaten.</p>');
     $('#w3Liste').addEventListener('change', function (e) {
       var k = e.target.dataset.w3; if (!k) return;
       if (k === 'spar') w3SparSetzen(e.target.checked);
