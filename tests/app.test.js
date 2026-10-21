@@ -405,13 +405,13 @@ async function tabsPruefen(p, name, bilder) {
         pruefe(name + ': Zeitzone Atlantic/Canary, „Aktuell (Vorhersage) 13:00" (14:40 in Berlin = 13:40 auf den Kanaren)', c.tz === 'Atlantic/Canary' && c.kopf === 'Aktuell (Vorhersage) 13:00' && c.temp === '26°C', c);
         pruefe(name + ': Stunden in Ortszeit (erste Stunde 01:00 statt 02:00)', c.erste === '2026-10-15T01:00', c.erste);
         pruefe(name + ': Sonnenaufgang 08:0x, Sonnenuntergang 19:1x–19:3x Ortszeit', /^2026-10-15T0(7:5|8:0|8:1)\d$/.test(c.auf) && /^2026-10-15T19:[1-3]\d$/.test(c.unter), c);
-        pruefe(name + ': Tipps Strand, Ebbe/Flut, goldene Stunde', t && t.arten.join() === 'strand,gezeiten,gold', t);
+        pruefe(name + ': Tipps Strand und Ebbe/Flut (höchstens 2, goldene Stunde fällt weg)', t && t.arten.join() === 'strand,gezeiten', t);
         pruefe(name + ': „Strandwetter" (Küstenort), Wind bis 18 km/h', t && /^Strandwetter: bis 26 °C, kaum Regen, Wind bis 18 km\/h\.$/.test(t.saetze[0]), t && t.saetze[0]);
         pruefe(name + ': nächste Flut gegen 16:25, danach Ebbe gegen 22:20 Uhr', t && t.saetze[1] === 'Nächste Flut gegen 16:25 Uhr, danach Ebbe gegen 22:20 Uhr.', t && t.saetze[1]);
         pruefe(name + ': Küstenort gemerkt', await s.p.evaluate(() => JSON.parse(localStorage.getItem('wpc-kueste'))['28.73,-13.87'] === true));
         await s.p.$eval('#a5Tipps', e => e.scrollIntoView({ block: 'center' })); await foto(s.p, 'hell-390-a5-corralejo');
       } else {
-        pruefe(name + ': Tipps Strand, Kiten, Ebbe/Flut (höchstens 3)', t && t.arten.join() === 'strand,kiten,gezeiten', t);
+        pruefe(name + ': Tipps Strand und Kiten (höchstens 2, Ebbe/Flut fällt weg)', t && t.arten.join() === 'strand,kiten', t);
         pruefe(name + ': Kiten-Satz mit Wind und Richtung', t && /^Gut zum Kiten: Wind bis 27 km\/h aus (N|NO)\.$/.test(t.saetze[1]), t && t.saetze[1]);
       }
       const ck = s.konsole.filter(x => !/status of 404/.test(x));   // Bright Sky: keine Station für Corralejo, gewollt

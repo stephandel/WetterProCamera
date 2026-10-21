@@ -1567,7 +1567,8 @@
   }
 
   var uvWort = function (u) { return u == null ? '' : u < 3 ? 'niedrig' : u < 6 ? 'mäßig' : u < 8 ? 'hoch' : u < 11 ? 'sehr hoch' : 'extrem'; };
-  /* --- „Was heute geht": feste Regeln, höchstens 3 Tipps in der Reihenfolge von A5_ARTEN --- */
+  /* --- „Was heute geht": feste Regeln, höchstens A5_MAX_TIPPS (laut Design-Link 2) Tipps in der Reihenfolge von A5_ARTEN --- */
+  var A5_MAX_TIPPS = 2;   // design.json tippsModul.hoechstens
   function a5Tipps(d, meer, kueste, arten) {
     var c = d.current || {}, t = d.daily, h = d.hourly || {}, jetzt = (c.time || '').slice(0, 16), heute = jetzt.slice(0, 10), liste = [];
     if (!t || !t.time) return liste;
@@ -1610,7 +1611,7 @@
   }
   function a5TippsHtml() {
     var st = startLesen(), k = a5PosKey(ort), m = a5Meer[k];
-    var tipps = a5Tipps(daten, m && m.d, a5Kueste[k] === true, st.arten).slice(0, 3);
+    var tipps = a5Tipps(daten, m && m.d, a5Kueste[k] === true, st.arten).slice(0, A5_MAX_TIPPS);
     return '<section class="kachel a5-tipps" id="a5Tipps" aria-labelledby="a5TippsTitel"><h2 class="kachel-titel" id="a5TippsTitel">' + Ikon('sun') + 'Was heute geht</h2>' +
       (tipps.length ? '<ul class="a5-tipp-liste">' + tipps.map(function (x) { return '<li data-tipp="' + x.art + '"><span class="a5-tipp-sym" aria-hidden="true">' + x.sym + '</span><span class="a5-tipp-satz">' + esc(x.satz) + '</span></li>'; }).join('') + '</ul>'
         : '<div class="a5-leer"><p>Heute nichts Besonderes.</p><button type="button" class="button leise tippbar" data-a5-zu-start="1">Tipps auswählen</button></div>') + '</section>';
@@ -1690,7 +1691,7 @@
     var s = $('#tab-mehr'), st = startLesen();
     var schalter = function (k, titel, text, an) { return '<label class="tippbar"><span class="modell-text"><span>' + titel + '</span><small class="leise">' + text + '</small></span><input type="checkbox" role="switch" data-a5="' + k + '"' + (an ? ' checked' : '') + '></label>'; };
     var html = '<h2 class="abschnitt-titel" id="a5StartTitel">Startseite</h2><div class="liste a5-liste" id="a5Start">' +
-      schalter('tipps', 'Was heute geht', 'Bis zu 3 Tipps für heute, nach festen Regeln', st.tipps) +
+      schalter('tipps', 'Was heute geht', 'Bis zu ' + A5_MAX_TIPPS + ' Tipps für heute, nach festen Regeln', st.tipps) +
       schalter('radar', 'Regenradar-Kachel', 'Regen der nächsten 2 Stunden auf der Startseite, im Link vom 20.10.2026 aus', st.radar) +
       schalter('meteo', 'Meteogramm auf der Startseite', 'Zeilen wie im Tab „Graphs“, ganz unten auf der Startseite', st.meteo) + '</div>' +
       '<div class="kachel a5-groesse" id="a5Groesse"' + (st.meteo ? '' : ' hidden') + '><p class="a5-groesse-titel" id="a5GroesseTitel">Größe des Meteogramms</p>' +
@@ -1699,7 +1700,7 @@
       '<h2 class="abschnitt-titel" id="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>Welche Tipps dürfen erscheinen?</h2>' +
       '<div class="liste a5-liste" id="a5Arten" role="group" aria-labelledby="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>' +
       A5_ARTEN.map(function (a) { return '<label class="tippbar"><span class="modell-text"><span>' + a[1] + '</span><small class="leise">' + a[2] + '</small></span><input type="checkbox" value="' + a[0] + '"' + (st.arten.indexOf(a[0]) >= 0 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
-      '<p class="info hilfe" id="a5ArtenHilfe"' + (st.tipps ? '' : ' hidden') + '>Die App zeigt höchstens 3 Tipps, in dieser Reihenfolge, und betrachtet nur den Rest des Tages ab jetzt. Strand, Kiten sowie Ebbe und Flut kommen von Open-Meteo Marine und erscheinen nur an Orten am Meer.</p>';
+      '<p class="info hilfe" id="a5ArtenHilfe"' + (st.tipps ? '' : ' hidden') + '>Die App zeigt höchstens ' + A5_MAX_TIPPS + ' Tipps, in dieser Reihenfolge, und betrachtet nur den Rest des Tages ab jetzt. Strand, Kiten sowie Ebbe und Flut kommen von Open-Meteo Marine und erscheinen nur an Orten am Meer.</p>';
     var vor = $$('h2.abschnitt-titel', s).filter(function (h) { return /^Aktuell-Kachel/.test(h.textContent.trim()); })[0];
     if (vor) vor.insertAdjacentHTML('beforebegin', html); else s.insertAdjacentHTML('beforeend', html);
     var sichtbar = function () { var x = startLesen(); $('#a5Groesse').hidden = !x.meteo; ['#a5ArtenTitel', '#a5Arten', '#a5ArtenHilfe'].forEach(function (id) { $(id).hidden = !x.tipps; }); };
