@@ -45,3 +45,15 @@ Bildschirmfotos (WebKit, 390 px und Mac 1280 × 800; die App hat keinen Hellmodu
 **Neue Prüfungen** (jeweils vorher rot): falsches Format (keine Kachel, keine Konsolenfehler), Test-/Entwarnung gefiltert, Ort außerhalb Deutschlands (Corralejo: kein Aufruf, keine Kachel; war schon grün), neue Schadstoffstufen, Messwert bleibt, Deckkraft und Pixelvergleich.
 **Zahlen nach der Behebung:** `npm test` = 185 + 40 + 77 + 30 + 10 = 342 Prüfungen, alle grün. Zusätzlich getrennt: w3-g2 115, w3-g3 105, beide grün.
 **Offen:** Echte Bright-Sky- und Open-Meteo-Antworten bleiben ungeprüft (Attrappen). Die Ringfarben und der Ablauf auf dem echten iPhone sind nicht geprüft.
+
+## Nutzer-Durchgang (Fable) und Behebung
+Grundlage: `DURCHGANG-2026-10-21.md` (15 Funde, 0 schwer, 6 stört, 9 klein). Gearbeitet direkt auf `main`.
+**Behoben (je Prüfung vorher rot, dann grün):**
+- **Fund 1, Warnblatt:** Schrift auf Orange, Rot und Gelb ist jetzt dunkel (auf Dunkelrot weiß), Kontrast ≥ 4,5:1 bei allen vier Schweregraden gemessen. Beim Prüfen fiel auf, dass die Gelb-Stufe im Blatt gar keinen gelben Hintergrund hatte (blaue Kachel); das ist mit behoben.
+- **Fund 3, Graphs:** Die Zoom-Knöpfe (−, Lupe, +) stehen in einer eigenen Zeile unter dem Diagramm, mindestens 44 px (am Mac 28 px). Geprüft bei 390 und 1280: Rechtecke überlappen nicht. Einschränkung: Auf dem iPhone liegt die Zeile unter dem Diagramm und ist erst nach etwa 270 px Rollen sichtbar, vorher verdeckt sie die schwebende Knopfleiste. Zwei-Finger-Zoom bleibt der Hauptweg.
+- **Fund 2, Luft-Stufenwörter:** gut / noch gut / mäßig / schlecht / sehr schlecht / extrem schlecht (0–20 / 20–40 / 40–60 / 60–80 / 80–100 / über 100); „mittel“ gibt es nicht mehr. Gilt für den Ring und die Schadstoffe (die Schadstoffgrenzen bleiben).
+- **Fund 10, Tab „Mehr“:** Die fünf Gruppen klappen ein (Knopf mit Pfeil, 44 px). Beim ersten Öffnen ist nur „Orte“ offen, der Zustand wird in `wpc-mehr-offen` gemerkt. Der Orte-Knopf oben und ⌘K öffnen „Orte“ wieder. Am Mac bleibt alles offen. Höhe beim Start 7926 px (im Test gemessen), vorher mehr; die genannten 15.700 px habe ich nicht nachgemessen.
+- **Fund 13 (klein):** gerade Schlusszeichen in sichtbaren Texten von `app.js` zu „…“ geändert (12 Zeilen); dafür gibt es keine eigene Prüfung, nur die vorhandenen Tests blieben grün.
+**Als offen gelassen:** 4 (11-px-Beschriftungen im Meteogramm), 5, 7, 8, 9 und 11 (alles im Kamera-Studio, `lib/kamera-studio/` gehört dem Konfigurator), 6 (Knopf „Motiv aus Fotos wählen“, ebenfalls Studio), 12 (Fokus im Warn- und Tagesblatt), 14 (Tagesdetail-Zusammenfassung), 15 (Leaflet-Hinweis 11 px).
+**Prüfhilfe:** Die älteren Tests öffnen alle Mehr-Gruppen vorab (`wpc-mehr-offen`), sonst scheitern sie an zugeklappten Gruppen; `tests/nutzertest-funde.test.js` prüft den Standard (nur „Orte“ offen).
+**Zahlen:** `npm test` = 185 + 40 + 77 + 32 + 20 = 354 Prüfungen, grün. Getrennt: w3-g2 115, w3-g3 105, grün.
