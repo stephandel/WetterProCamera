@@ -249,7 +249,7 @@
     $('#tab-wetter').innerHTML = updateZeile() + akt + std + regen + tage;
     bindUmschalter(ansicht);
     // Einmaliger Hinweis, dass die linke Hälfte umschaltet (UX-Prüfung A5)
-    if (ansichten().length > 1 && !speicher.lesen('wpc-tipp-akt', false)) { speicher.schreiben('wpc-tipp-akt', true); hinweisKurz('Tipp: ' + tippe() + ' links auf „Aktuell", dann zeigt die rechte Hälfte ' + ansichten().map(function (x) { return ANSICHT_NAMEN[x]; }).join(' oder ') + '.'); }
+    if (ansichten().length > 1 && !speicher.lesen('wpc-tipp-akt', false)) { speicher.schreiben('wpc-tipp-akt', true); hinweisKurz('Tipp: ' + tippe() + ' links auf „Aktuell“, dann zeigt die rechte Hälfte ' + ansichten().map(function (x) { return ANSICHT_NAMEN[x]; }).join(' oder ') + '.'); }
   }
 
   /* ---------- Graphs: Temperatur und Regen, 48 Stunden ---------- */
@@ -312,8 +312,8 @@
   // Erklärung und Quelle je Ebene; die Quelle als eigene Zeile mit 44 px Tippfläche statt Inline-Link
   var EBENEN_QUELLE = {
     radar: ['Regenradar der letzten 2 Stunden. Regen erscheint als blaue bis rote Flecken.', 'RainViewer', 'https://www.rainviewer.com'],
-    sat: ['Satellitenbild in Farbe (Meteosat). „Abspielen" zeigt die letzten 2 Stunden. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
-    ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts. „Abspielen" zeigt die letzten 2 Stunden.', 'EUMETSAT', 'https://view.eumetsat.int'],
+    sat: ['Satellitenbild in Farbe (Meteosat). „Abspielen“ zeigt die letzten 2 Stunden. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
+    ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts. „Abspielen“ zeigt die letzten 2 Stunden.', 'EUMETSAT', 'https://view.eumetsat.int'],
     karte: ['Aktuelle Temperaturen an deinen Orten.', 'Open-Meteo', 'https://open-meteo.com']
   };
   // Regnet es gerade oder in den nächsten 2 Stunden am Ort? (aus der Vorhersage, nicht aus dem Radarbild)
@@ -435,7 +435,7 @@
       zeile('Karte: OpenTopoMap', '© OpenStreetMap-Mitwirkende', 'https://opentopomap.org') +
       zeile('Ortssuche: Open-Meteo Geocoding', 'GeoNames, CC BY 4.0', 'https://open-meteo.com/en/docs/geocoding-api') +
       zeile('Saharastaub (Calima): Open-Meteo Air Quality', 'CAMS', 'https://open-meteo.com/en/docs/air-quality-api') +
-      zeile('Wettersymbole und Beispielfoto', 'Eigene Zeichnung „Klassisch", eigene Aufnahme aus Mannheim');
+      zeile('Wettersymbole und Beispielfoto', 'Eigene Zeichnung „Klassisch“, eigene Aufnahme aus Mannheim');
   }
   function renderMehr() {
     var s = $('#tab-mehr');
@@ -451,7 +451,7 @@
       '<button class="tippbar" id="btnStandort"><span>' + Ikon('pin') + ' Mein Standort</span><span class="leise">fragt einmal nach</span></button></div>' +
       '<h2 class="abschnitt-titel">Wettermodell</h2><div class="liste" id="modellListe">' +
       MODELLE.map(function (m) { return '<label class="tippbar"><span class="modell-text"><span>' + m[1] + '</span><small class="leise">' + m[2] + '</small></span><input type="radio" name="modell" value="' + m[0] + '"' + (m[0] === modell ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
-      '<p class="info hilfe">Das Modell steht oben unter dem Ort. „Beste Mischung" passt fast immer; andere Modelle zum Vergleichen.</p>' +
+      '<p class="info hilfe">Das Modell steht oben unter dem Ort. „Beste Mischung“ passt fast immer; andere Modelle zum Vergleichen.</p>' +
       '<h2 class="abschnitt-titel">Einheit für Wind</h2><div class="kachel">' + seg('wind', windEinheit, [['kmh', 'km/h'], ['ms', 'm/s'], ['kn', 'Knoten'], ['bft', 'Beaufort']], 'Einheit für Wind') + '</div>' +
       '<h2 class="abschnitt-titel">Aktuell-Kachel: links ' + (tippe() === 'Klicke' ? 'anklicken' : 'antippen') + ' wechselt rechts zu</h2><div class="liste" id="ansichtListe">' +
       Object.keys(ANSICHT_NAMEN).map(function (k) {
@@ -735,7 +735,7 @@
     // Datenquelle vor dem Abschnitt „Wettermodell"
     var quelleHtml = '<h2 class="abschnitt-titel" id="quelleTitel">Datenquelle</h2><div class="liste" id="quelleListe" role="radiogroup" aria-labelledby="quelleTitel">' +
       QUELLEN.map(function (q) { return '<label class="tippbar"><span class="modell-text"><span>' + q[1] + '</span><small class="leise">' + q[2] + '</small></span><input type="radio" name="quelle" value="' + q[0] + '"' + (q[0] === quelle ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
-      '<p class="info hilfe">Beim DWD fehlen UV-Index und Luftqualität (dort steht „–"). Sonnenauf- und -untergang rechnet die App selbst aus. Die Wahl „Wettermodell" darunter gilt nur für Open-Meteo.</p>';
+      '<p class="info hilfe">Beim DWD fehlen UV-Index und Luftqualität (dort steht „–“). Sonnenauf- und -untergang rechnet die App selbst aus. Die Wahl „Wettermodell“ darunter gilt nur für Open-Meteo.</p>';
     var wm = titel('Wettermodell'); if (wm) vor(wm, quelleHtml); else s.insertAdjacentHTML('beforeend', quelleHtml);
     // Datenschutz-Satz: unter „Datenschutz" (falls vorhanden), sonst unter den Quellen
     var satz = '<p class="info hilfe" id="datenschutzDwd">Bei Datenquelle DWD sieht brightsky.dev deine IP-Adresse und den Ort.</p>';
@@ -946,7 +946,7 @@
       '<div class="rm-inhalt"><p class="rm-woche" id="rmWoche"></p>' +
       RM_FRAGEN.map(function (f) { return '<label class="rm-feld" for="' + f[0] + '">' + f[1] + '</label><textarea id="' + f[0] + '" rows="3"></textarea>'; }).join('') +
       '<label class="rm-feld" for="rmName">Dein Name (freiwillig)</label><input id="rmName" type="text" autocomplete="given-name" enterkeyhint="done">' +
-      '<p class="info">Nichts wird automatisch gesendet. Mit „Teilen" wählst du selbst, wohin der Text geht, zum Beispiel WhatsApp oder Mail. Mitgeschickt werden die Woche, die Zahl der Nutzungstage, das Gerät (z. B. iPhone, iOS-Version) und die App-Version.</p>' +
+      '<p class="info">Nichts wird automatisch gesendet. Mit „Teilen“ wählst du selbst, wohin der Text geht, zum Beispiel WhatsApp oder Mail. Mitgeschickt werden die Woche, die Zahl der Nutzungstage, das Gerät (z. B. iPhone, iOS-Version) und die App-Version.</p>' +
       '<div class="rm-knoepfe"><button type="button" class="button tippbar" id="rmTeilen">Teilen</button><button type="button" class="button leise tippbar" id="rmKopieren">Text kopieren</button></div>' +
       '<p class="rm-status" id="rmStatus" role="status" aria-live="polite"></p>' +
       '<textarea class="rm-ersatz" id="rmErsatz" readonly hidden aria-label="Text der Rückmeldung zum Kopieren"></textarea></div>';
@@ -1036,7 +1036,7 @@
   /* --- (2) Satellit und Infrarot abspielen: 12 Bilder der letzten 2 Stunden (EUMETSAT-WMS mit time=) ---
      GetCapabilities am 15.10.2026, 12:52 UTC geprüft (je Ebene: /geoserver/mtg_fd/<ebene>/wms?request=GetCapabilities, CORS offen):
      <Dimension name="time" default="2026-10-15T12:30:00Z" units="ISO8601" nearestValue="1">2024-09-23T00:00:00.000Z/2026-10-15T12:30:00.000Z/PT10M</Dimension>
-     Also ein Bereich „Anfang/Ende/Schritt" mit 10 Minuten Schritt; das neueste Bild ist etwa 20–25 Minuten alt.
+     Also ein Bereich „Anfang/Ende/Schritt“ mit 10 Minuten Schritt; das neueste Bild ist etwa 20–25 Minuten alt.
      Gleich für mtg_fd:rgb_geocolour und mtg_fd:ir105_hrfi. Eine Liste mit Kommas wird ebenfalls verstanden. */
   var SAT_LAYER = { sat: ['mtg_fd:rgb_geocolour', ''], ir: ['mtg_fd:ir105_hrfi', 'mtg_fd:mtg_fd_ir105_hrfi_grayscale'] };
   var SAT_BILDER = 12;
@@ -1249,7 +1249,7 @@
   }
 
   /* --- (4) Meteogramm im Tab „Graphs" (Baustein meteogramm.js/.css unverändert aus WetterPro Tool/gemeinsam) ---
-     Wahl „Kurve | Meteogramm" in wpc-graphs, Zeilen in wpc-meteo (Reihenfolge = Reihenfolge im Meteogramm). */
+     Wahl „Kurve | Meteogramm“ in wpc-graphs, Zeilen in wpc-meteo (Reihenfolge = Reihenfolge im Meteogramm). */
   var METEO_STANDARD = ['sonne', 'temp', 'wind', 'regen'];
   var mg = { instanz: null, schluessel: '' };
   var graphsModus = function () { return speicher.lesen('wpc-graphs', 'meteo') === 'kurve' ? 'kurve' : 'meteo'; };   // Link vom 20.10.2026: Tab Graphs beginnt mit dem Meteogramm
@@ -1448,12 +1448,12 @@
 
   /* --- Tastaturkürzel: ⌘1–⌘5 Bereiche, ⌘K Ortssuche, ⌘R Aktualisieren, Esc schließt --- */
   function ortSucheOeffnen() {
-    zeigeTab('mehr');
+    zeigeTab('mehr'); a9MehrOeffnen(0);
     setTimeout(function () { var f = $('#sucheFeld'); if (f) { f.focus(); f.select(); } }, 50);
   }
   function dialogOffen() { var st = $('#studio'); return (st && !st.hidden) || $$('dialog').some(function (d) { return d.open; }); }   // das Studio ist kein <dialog>
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') return;   // Fenster (<dialog>) schließt der Browser selbst mit Esc, siehe „cancel" unten
+    if (e.key === 'Escape') return;   // Fenster (<dialog>) schließt der Browser selbst mit Esc, siehe „cancel“ unten
     if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
     var k = (e.key || '').toLowerCase();
     if (/^[1-5]$/.test(k)) {
@@ -1888,7 +1888,7 @@
         alt();
         var s = $('#tab-mehr'), t = $$('h2.abschnitt-titel', s).filter(function (h) { return h.textContent.trim() === 'Webcam'; })[0];
         var p = t && t.nextElementSibling && $('p', t.nextElementSibling);
-        if (p) p.innerHTML = '<b>Mit Erlaubnis der Betreiber.</b> Auf der Startseite gibt es die Kachel „Webcam". Die Bilder gehören den Betreibern; diese Kameras sind dabei:';
+        if (p) p.innerHTML = '<b>Mit Erlaubnis der Betreiber.</b> Auf der Startseite gibt es die Kachel „Webcam“. Die Bilder gehören den Betreibern; diese Kameras sind dabei:';
         var d = $('#datenschutz p', s);
         if (d && !$('#wcDatenschutz', s)) d.insertAdjacentHTML('afterend', '<p id="wcDatenschutz"><b>Webcam:</b> ' + (WEBCAM_WORKER ? 'Die Bilder holt die App über einen Zwischenspeicher bei Cloudflare (' + esc(WEBCAM_WORKER.replace(/^https?:\/\//, '')) + '). Der sieht deine IP-Adresse, und der Betreiber der Kamera sieht sie nicht.' : 'Die Bilder holt die App direkt beim Betreiber der Kamera. Der sieht deine IP-Adresse.') + ' Die App selbst speichert keine Webcam-Bilder.</p>');
       };
@@ -2710,9 +2710,28 @@
     if (pt && pk) { if (ueber) { s.insertBefore(pt, ueber); s.insertBefore(pk, ueber); } else { s.appendChild(pt); s.appendChild(pk); } }
     var quellen = $$('h2.abschnitt-titel', s).filter(function (h) { return h.textContent.trim() === 'Quellen'; })[0];
     [['Orte', s.firstElementChild], ['Wetterdaten', $('#quelleTitel', s)], ['Startseite und Ansicht', $('#a5StartTitel', s)], ['Kamera und Webcam', $('#wfTitel', s)], ['Quellen und Info', quellen]].forEach(function (g, i) {
-      if (g[1]) g[1].insertAdjacentHTML('beforebegin', '<h2 class="mehr-gruppe" id="mehrGruppe' + i + '">' + g[0] + '</h2>');
+      if (g[1]) g[1].insertAdjacentHTML('beforebegin', '<h2 class="mehr-gruppe" id="mehrGruppe' + i + '"><button type="button" class="mehr-gruppe-knopf" aria-expanded="true"><span>' + g[0] + '</span>' + Ikon('chevdown') + '</button></h2>');
+    });
+    a9MehrAnwenden();
+  }
+  // Gruppen einklappbar (nur iPhone und iPad; am Mac stehen alle offen): beim Start nur „Orte“ offen, Zustand in wpc-mehr-offen
+  var A9_MEHR_OFFEN = 'wpc-mehr-offen';
+  function a9MehrOffenListe() { var v = speicher.lesen(A9_MEHR_OFFEN, null); return Array.isArray(v) ? v : [0]; }
+  function a9MehrAnwenden() {
+    var s = $('#tab-mehr'), offen = a9MehrOffenListe(); if (!s) return;
+    $$('.mehr-gruppe', s).forEach(function (h) {
+      var an = offen.indexOf(+h.id.replace('mehrGruppe', '')) >= 0, e = h.nextElementSibling;
+      $('button', h).setAttribute('aria-expanded', String(an));
+      while (e && !e.classList.contains('mehr-gruppe')) { e.classList.toggle('mehr-zu', !an); e = e.nextElementSibling; }
     });
   }
+  function a9MehrOeffnen(i) { var l = a9MehrOffenListe(); if (l.indexOf(i) < 0) { l.push(i); speicher.schreiben(A9_MEHR_OFFEN, l); } a9MehrAnwenden(); }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.mehr-gruppe-knopf'); if (!b) return;
+    var i = +b.parentNode.id.replace('mehrGruppe', ''), l = a9MehrOffenListe(), p = l.indexOf(i);
+    if (p >= 0) l.splice(p, 1); else l.push(i);
+    speicher.schreiben(A9_MEHR_OFFEN, l); a9MehrAnwenden();
+  });
   renderMehr = (function (alt) {
     return function () {
       alt();
@@ -2725,7 +2744,7 @@
   /* === A9: Modul „Luftqualität“ (Ampel-Ring nach dem Europäischen Luftqualitätsindex, Open-Meteo/CAMS, CC BY 4.0) ===
      Größe laut Design-Link „klein“: Ring mit Zahl und Wort; die Schadstoff-Balken klappen auf („groß“ zeigt sie gleich offen). */
   var A9_LUFT_GROESSE = 'klein';
-  var A9_LUFT = [['gut', 20], ['mäßig', 40], ['mittel', 60], ['schlecht', 80], ['sehr schlecht', 100], ['extrem', Infinity]];
+  var A9_LUFT = [['gut', 20], ['noch gut', 40], ['mäßig', 60], ['schlecht', 80], ['sehr schlecht', 100], ['extrem schlecht', Infinity]];   // Wörter nach UBA-Sprachgebrauch
   var a9LuftStufe = function (v) { for (var i = 0; i < A9_LUFT.length; i++) if (v <= A9_LUFT[i][1]) return i; return 5; };
   // Grenzen je Schadstoff (µg/m³) nach EEA (Stand 2024, laut Open-Meteo): Obergrenzen von gut, mäßig, mittel, schlecht, sehr schlecht
   var A9_STOFFE = [['pm2_5', 'Feinstaub PM2,5', [5, 15, 50, 90, 140]], ['pm10', 'Feinstaub PM10', [15, 45, 120, 195, 270]], ['nitrogen_dioxide', 'Stickstoffdioxid', [10, 25, 60, 100, 150]], ['ozone', 'Ozon', [60, 100, 120, 160, 180]]];
@@ -2758,7 +2777,7 @@
   })(quellenHtml);
 
   /* === Startseite nach dem Design-Link vom 20.10.2026 ===
-     Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond"), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
+     Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond“), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
      Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Warnung (ganz oben, nur bei Warnlage) und Luftqualität (nach der Tagesliste) sind seit 21.10.2026 (A9) gebaut. */
   var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '#a9Luft', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
   function startseiteOrdnen() {
@@ -2772,7 +2791,7 @@
   /* ---------- Start ---------- */
   $('#btnMenue').innerHTML = Ikon('pin'); $('#btnTeilen').innerHTML = Ikon('share'); $('#btnSuche').innerHTML = Ikon('search');
   // Orte-Symbol (Pin) statt Menü-Symbol, führt direkt zu „Meine Orte" (UX-Prüfung A10)
-  $('#btnMenue').addEventListener('click', function () { zeigeTab('mehr'); var l = $('#orteListe'); if (l) { var t = l.previousElementSibling || l; window.scrollTo(0, Math.max(0, t.getBoundingClientRect().top + window.scrollY - $('#titelzeile').offsetHeight - 16)); var e = $('#orteListe [aria-current="true"]') || $('#orteListe button'); if (e) e.focus({ preventScroll: true }); } });
+  $('#btnMenue').addEventListener('click', function () { zeigeTab('mehr'); a9MehrOeffnen(0); var l = $('#orteListe'); if (l) { var t = l.previousElementSibling || l; window.scrollTo(0, Math.max(0, t.getBoundingClientRect().top + window.scrollY - $('#titelzeile').offsetHeight - 16)); var e = $('#orteListe [aria-current="true"]') || $('#orteListe button'); if (e) e.focus({ preventScroll: true }); } });
   $('#btnSuche').addEventListener('click', function () { zeigeTab('mehr'); setTimeout(function () { var f = $('#sucheFeld'); if (f) f.focus(); }, 50); });
   $('#btnTeilen').addEventListener('click', function () { studioAuf(false); });
   bindTabs(); zugangAnwenden(true); kopfModell(); paketCStart();

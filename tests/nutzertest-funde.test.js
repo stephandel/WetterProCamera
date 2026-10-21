@@ -11,7 +11,7 @@ const { pruefe } = H;
   const srv = await H.server();
   const b = await webkit.launch();
   try {
-    let s = await H.neueSeite(b, {}, {});
+    let s = await H.neueSeite(b, {}, { mehrZu: true });
     await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 }); await s.p.waitForTimeout(800);
     const leiste = await s.p.evaluate(() => {
       const t = document.getElementById('tabbar'), c = getComputedStyle(t).backgroundColor, a = (c.match(/[\d.]+/g) || []).map(Number)[3];
@@ -48,15 +48,47 @@ const { pruefe } = H;
     pruefe('Mehr: Einstellungen in Gruppen mit Zwischenüberschriften (Orte, Wetterdaten, Startseite, Kamera und Webcam, Info)', ['Orte', 'Wetterdaten', 'Startseite und Ansicht', 'Kamera und Webcam', 'Quellen und Info'].every(t => m.gruppen.includes(t)), m.gruppen);
     pruefe('Zwischenüberschriften mind. 20 px groß, Mehr beginnt mit „Orte“', m.schrift >= 20 && m.erste === 'mehr-gruppe:Orte', m);
     await H.foto(s.p, 'a9-mehr-390');
+    const sicht = sel => s.p.evaluate(x => { const e = document.querySelector(x); return !!e && e.checkVisibility(); }, sel);
+    const gr = await s.p.evaluate(() => [...document.querySelectorAll('.mehr-gruppe button')].map(b => ({ auf: b.getAttribute('aria-expanded'), h: Math.round(b.getBoundingClientRect().height) })));
+    pruefe('Mehr einklappbar: fünf Gruppen-Knöpfe, beim Start nur „Orte“ offen, Tippflächen ≥ 44 px', gr.length === 5 && gr[0].auf === 'true' && gr.slice(1).every(g => g.auf === 'false') && gr.every(g => g.h >= 44), gr);
+    pruefe('Zugeklappte Gruppen verbergen ihren Inhalt, „Orte“ zeigt ihn', (await sicht('#orteListe')) && !(await sicht('#quelleListe')) && !(await sicht('#btnRueckmeldung')));
+    const hoehe = await s.p.evaluate(() => document.documentElement.scrollHeight);
+    pruefe('Tab „Mehr“ ist beim Start deutlich kürzer (unter 5000 px statt rund 15700)', hoehe < 5000, hoehe);
+    await s.p.click('#mehrGruppe1 button'); await s.p.waitForTimeout(200);
+    pruefe('Antippen klappt „Wetterdaten“ auf (aria-expanded, Inhalt sichtbar)', (await s.p.getAttribute('#mehrGruppe1 button', 'aria-expanded')) === 'true' && (await sicht('#quelleListe')));
+    await s.p.goto(H.BASIS); await s.p.waitForSelector('#tab-mehr .mehr-gruppe', { state: 'attached', timeout: 15000 }); await s.p.click('#tb-mehr'); await s.p.waitForTimeout(500);
+    pruefe('Der Zustand wird gemerkt: nach dem Neuladen sind „Orte“ und „Wetterdaten“ offen, der Rest zu', (await sicht('#quelleListe')) && !(await sicht('#btnRueckmeldung')) && (await s.p.getAttribute('#mehrGruppe4 button', 'aria-expanded')) === 'false');
+    await s.p.click('#mehrGruppe0 button'); await s.p.waitForTimeout(150);
+    await s.p.click('#btnMenue'); await s.p.waitForTimeout(500);
+    pruefe('Der Orte-Knopf oben öffnet „Orte“ wieder, auch wenn sie zugeklappt war', await sicht('#orteListe'));
+    await s.p.click('#mehrGruppe4 button'); await s.p.waitForTimeout(200);
     pruefe('Rückmeldung-Knopf funktioniert weiter (Blatt öffnet)', await (async () => { await s.p.click('#btnRueckmeldung'); await s.p.waitForTimeout(300); const o = await s.p.evaluate(() => !!document.querySelector('dialog[open]')); return o; })());
     await s.ctx.close();
-    s = await H.neueSeite(b, { viewport: { width: 1280, height: 800 } }, {});
+    s = await H.neueSeite(b, { viewport: { width: 1280, height: 800 } }, { mehrZu: true });
     await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
     await s.p.click('#macLeiste [data-ml-tab="mehr"]'); await s.p.waitForTimeout(500);
     const mac = await s.p.evaluate(() => ({ versteckt: [...document.querySelectorAll('.mehr-gruppe')].every(e => e.getBoundingClientRect().height === 0), seitlich: document.documentElement.scrollWidth - innerWidth, gruppiert: document.getElementById('tab-mehr').classList.contains('mac-gruppiert') }));
-    pruefe('Mac 1280: Mehr bleibt zweispaltig gruppiert, ohne die Zwischenüberschriften, ohne seitliches Scrollen', mac.versteckt && mac.gruppiert && mac.seitlich <= 0, mac);
+    const macSicht = await s.p.evaluate(() => ['#quelleListe', '#btnRueckmeldung'].every(x => document.querySelector(x).checkVisibility()));
+    pruefe('Mac 1280: Mehr bleibt zweispaltig gruppiert, ohne die Zwischenüberschriften und ohne Einklappen (alles sichtbar), ohne seitliches Scrollen', mac.versteckt && mac.gruppiert && mac.seitlich <= 0 && macSicht, [mac, macSicht]);
     await H.foto(s.p, 'a9-mehr-mac-1280');
     await s.ctx.close();
+    for (const [name, opt, tab] of [['390', {}, '#tb-graphs'], ['1280', { viewport: { width: 1280, height: 800 } }, '#macLeiste [data-ml-tab="graphs"]']]) {
+      s = await H.neueSeite(b, opt, {});
+      await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
+      await s.p.click(tab); await s.p.waitForSelector('#tab-graphs .mg-svg text', { timeout: 15000 }); await s.p.waitForTimeout(500);
+      const z = await s.p.evaluate(() => {
+        const e = document.querySelector('#tab-graphs .mg-ecke'); if (!e) return null;
+        const r = e.getBoundingClientRect(), tr = (a, c) => a.left < c.right && a.right > c.left && a.top < c.bottom && a.bottom > c.top;
+        const ziele = [...document.querySelectorAll('#tab-graphs .mg-svg, #tab-graphs [class*="mg-ax"], #tab-graphs .mg-punkte, #tab-graphs .mg-flaeche')].filter(x => !x.contains(e) && x.getBoundingClientRect().height > 0);
+        const treffer = ziele.filter(x => tr(r, x.getBoundingClientRect())).map(x => x.className.baseVal || x.className);
+        return { treffer, knoepfe: [...e.querySelectorAll('button')].map(x => { const q = x.getBoundingClientRect(); return Math.round(q.width) + 'x' + Math.round(q.height); }), sichtbar: r.height > 0 && r.bottom <= innerHeight + 4000 };
+      });
+      pruefe('Graphs ' + name + ': Zoom-Knöpfe (−, Lupe, +) überdecken weder Diagramm noch Zeitachse', !!z && z.treffer.length === 0, z);
+      const minG = name === '1280' ? 27.5 : 43.5;   // Mac mit Maus: 28 px (Paket A6)
+      pruefe('Graphs ' + name + ': Zoom-Knöpfe mind. ' + (name === '1280' ? 28 : 44) + ' px', !!z && z.knoepfe.every(k => { const [w, h] = k.split('x').map(Number); return w >= minG && h >= minG; }), z && z.knoepfe);
+      await H.foto(s.p, 'a9-graphs-' + name);
+      await s.ctx.close();
+    }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');

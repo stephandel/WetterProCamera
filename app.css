@@ -730,6 +730,9 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .a9-warn-zeit { font-size: var(--fs-subhead); }
 .a9-warn:focus-visible { outline: 3px solid var(--label); outline-offset: 2px; }
 .a9-blatt.a9-warn-minor, .a9-blatt.a9-warn-moderate, .a9-blatt.a9-warn-severe, .a9-blatt.a9-warn-extreme { display: block; border-radius: var(--r-kachel); }
+.a9-blatt.a9-warn-minor, .a9-blatt.a9-warn-moderate, .a9-blatt.a9-warn-severe { color: var(--warn-auf); }   /* dunkle Schrift wie auf der Kachel */
+.a9-blatt.a9-warn-extreme { color: var(--warn-auf-extreme); }
+.a9-blatt.a9-warn-minor { background: var(--warn-minor); }   /* Gelb gehört nur der Kachel-Klasse .a9-warn, im Blatt fehlte es */
 .a9-blatt .w3-h3 { margin-top: var(--s1); }
 .a9-blatt p { margin: 0 0 var(--s1); }
 #tab-wetter > .a9-warnung { grid-column: 1 / -1; }
@@ -756,6 +759,14 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .tabbar.pille.glas { background: var(--bg); }
 @media (prefers-reduced-transparency: reduce) { .tabbar.pille.glas { background: var(--bg-2); } }
 /* Tab „Mehr“: Zwischenüberschriften der Gruppen */
-.mehr-gruppe { font-size: var(--fs-title3); font-weight: 700; margin: var(--s6) var(--s4) calc(-1 * var(--s2)); color: var(--label); }
+.mehr-gruppe { font-size: var(--fs-title3); font-weight: 700; margin: var(--s4) var(--s4) calc(-1 * var(--s2)); color: var(--label); }
 .mehr-gruppe:first-child { margin-top: var(--s2); }
 .mac-gruppiert .mehr-gruppe { display: none; }
+/* Tab „Mehr“: Gruppen einklappbar (nicht am Mac, dort stehen alle Gruppen zweispaltig offen) */
+.mehr-gruppe { display: block; }
+.mehr-gruppe-knopf { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); width: 100%; min-height: var(--tap); padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.mehr-gruppe-knopf .ikon { flex: none; width: 20px; height: 20px; transition: transform .2s; }
+.mehr-gruppe-knopf[aria-expanded="true"] .ikon { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .mehr-gruppe-knopf .ikon { transition: none; } }
+.mehr-gruppe-knopf:focus-visible { outline: 3px solid var(--akzent-text); outline-offset: 2px; border-radius: var(--r-button); }
+@media not all and (min-width: 1024px) and (hover: hover) { .mehr-zu { display: none !important; } }

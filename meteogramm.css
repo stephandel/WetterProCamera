@@ -225,12 +225,12 @@
 /* Zoom-Ecke: − 🔍 + rechts unten über der Zeitachse, halb durchsichtig */
 /* Der Halter steht am Ende des Diagramm-Blocks und haftet am unteren Bildrand (über der Knopfleiste),
    solange das Diagramm nach unten über den Bildschirm hinausragt. */
-.mg-ecke-halter { position: sticky; bottom: calc(var(--mg-haft-unten) + 64px); z-index: 3; height: 0; }
-.mg-ecke { position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: stretch; border: 1px solid var(--mg-rand); border-radius: var(--mg-r); overflow: hidden;
+.mg-ecke-halter { display: flex; justify-content: flex-end; padding: 6px 8px 0; }   /* eigene Zeile unter dem Diagramm (A9) */
+.mg-ecke { display: inline-flex; align-items: stretch; border: 1px solid var(--mg-rand); border-radius: var(--mg-r); overflow: hidden;
   background: rgba(27,33,36,0.5); background: color-mix(in srgb, var(--mg-flaeche) 50%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
-.mg-ecke .mg-btn { min-height: 30px; min-width: 32px; padding: 0 7px; border: 0; border-radius: 0; background: transparent; }
+.mg-ecke .mg-btn { min-height: 44px; min-width: 44px; padding: 0 7px; border: 0; border-radius: 0; background: transparent; }
 .mg-ecke .mg-btn .mg-i { width: 15px; height: 15px; }
-.mg-ecke-lupe { display: inline-flex; align-items: center; padding: 0 5px; color: var(--mg-text-still); }
+.mg-ecke-lupe { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 5px; color: var(--mg-text-still); }
 .mg-ecke-lupe .mg-i { width: 13px; height: 13px; }
 .mg-ecke > * + * { border-left: 1px solid var(--mg-rand); }
 /* Rand-Pfeil zurück zu jetzt: erscheint nur, wenn "jetzt" aus dem Bild gewischt ist */

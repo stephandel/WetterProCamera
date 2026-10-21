@@ -58,6 +58,15 @@ async function start(b, modus, opt) {
     s = await start(b, { warnung: 'fehler' });
     pruefe('Warnung-Abruf scheitert (offline/Fehler): still ausgeblendet, Startseite lädt normal', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && !(await s.p.$('.leer-zustand')));
     await s.ctx.close();
+    s = await start(b, { warnung: 'vier' });
+    const blaetter = [];
+    for (let i = 0; i < 4; i++) {
+      await s.p.click('#a9Warnung [data-a9-warn="' + i + '"]'); await s.p.waitForTimeout(250);
+      blaetter.push(await s.p.evaluate(() => { const k = document.querySelector('dialog[open] .a9-blatt'); if (!k) return null; const c = getComputedStyle(k); return { klasse: k.className, bg: c.backgroundColor, farbe: c.color, texte: [...k.querySelectorAll('p, h3')].map(e => getComputedStyle(e).color) }; }));
+      await s.p.click('dialog[open] [data-zu]'); await s.p.waitForTimeout(150);
+    }
+    pruefe('Warnblatt: Schrift auf der Warnfarbe mind. 4,5:1 bei allen vier Schweregraden', blaetter.length === 4 && blaetter.every(x => x && x.texte.every(c => kontrast(c, x.bg) >= 4.5)), blaetter);
+    await s.ctx.close();
     s = await start(b, { warnung: 'format' });
     pruefe('Warnung-Antwort im falschen Format (alerts ist kein Array): keine Kachel, keine Konsolenfehler', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && s.konsole.length === 0, s.konsole);
     await s.ctx.close();
@@ -87,14 +96,15 @@ async function start(b, modus, opt) {
       return { reihe: w, text: k.textContent, zahl: k.querySelector('.a9-ring-zahl').textContent, bg: cs.backgroundColor, bogen: bogen.stroke, textfarben: tx, sumH: sum.height, offen: k.querySelector('details').open, balkenSichtbar: k.querySelector('.a9-stoffe').checkVisibility ? k.querySelector('.a9-stoffe').checkVisibility() : k.querySelector('.a9-balken').getBoundingClientRect().height > 0, anz: k.querySelectorAll('.a9-stoffe li').length, stoffe: k.querySelector('.a9-stoffe').textContent };
     });
     pruefe('Kachel Luftqualität steht nach der Tagesliste, vor Sonne und Mond', !!l && l.reihe.indexOf('a9Luft') === l.reihe.indexOf('tage') + 1 && l.reihe.indexOf('w3-mond-kachel') === l.reihe.indexOf('a9Luft') + 1, l && l.reihe);
-    pruefe('Ring zeigt Zahl 43 und das Wort „Mittel“ (Europäischer AQI 40–60)', !!l && l.zahl === '43' && /Mittel/.test(l.text) && /Luftqualitätsindex 43/.test(l.text), l && l.text);
-    pruefe('Ring-Farbe: Stufe „mittel“ = Gelb #FFD633', !!l && l.bogen === 'rgb(255, 214, 51)', l && l.bogen);
+    pruefe('Ring zeigt Zahl 43 und das Wort „Mäßig“ (Europäischer AQI 40–60)', !!l && l.zahl === '43' && /Mäßig/.test(l.text) && /Luftqualitätsindex 43/.test(l.text), l && l.text);
+    pruefe('Ring-Farbe: Stufe „mäßig“ = Gelb #FFD633', !!l && l.bogen === 'rgb(255, 214, 51)', l && l.bogen);
     pruefe('Text auf der Kachel mind. 4,5:1, Ringfarbe mind. 3:1', !!l && l.textfarben.every(c => kontrast(c, l.bg) >= 4.5) && kontrast(l.bogen, l.bg) >= 3, l && [l.textfarben, l.bg, l.bogen]);
     pruefe('Klein: Schadstoffe zugeklappt, Knopf mind. 44 px hoch', !!l && !l.offen && !l.balkenSichtbar && l.sumH >= 43.5, l && [l.offen, l.sumH]);
     await s.p.click('#a9Luft summary'); await s.p.waitForTimeout(200);
     const l2 = await s.p.evaluate(() => { const k = document.getElementById('a9Luft'); return { sicht: k.querySelector('.a9-stoffe').checkVisibility ? k.querySelector('.a9-stoffe').checkVisibility() : k.querySelector('.a9-balken').getBoundingClientRect().height > 0, text: k.querySelector('.a9-stoffe').textContent, n: k.querySelectorAll('.a9-stoffe li').length }; });
-    pruefe('Antippen zeigt vier Schadstoff-Balken mit Wert und Wort', l2.sicht && l2.n === 4 && /Feinstaub PM2,5[\s\S]*8,1 µg\/m³ · mäßig/.test(l2.text) && /Ozon[\s\S]*58,0 µg\/m³ · gut/.test(l2.text), l2.text);
+    pruefe('Antippen zeigt vier Schadstoff-Balken mit Wert und Wort', l2.sicht && l2.n === 4 && /Feinstaub PM2,5[\s\S]*8,1 µg\/m³ · noch gut/.test(l2.text) && /Ozon[\s\S]*58,0 µg\/m³ · gut/.test(l2.text), l2.text);
     await H.foto(s.p, 'a9-luft-390');
+    pruefe('Stufenwörter nach UBA-Sprachgebrauch, ohne „mittel“ (gut, noch gut, mäßig, schlecht, sehr schlecht, extrem schlecht)', await s.p.evaluate(() => /noch gut/.test(document.querySelector('#a9Luft').textContent) && !/mittel/i.test(document.querySelector('#a9Luft').textContent)));
     pruefe('Ein einziger Aufruf bei Open-Meteo Luftqualität (Staub und aktuelle Werte zusammen)', s.anfragen.filter(u => /air-quality/.test(u)).length === 1 && /current=european_aqi,pm10,pm2_5,nitrogen_dioxide,ozone/.test(s.anfragen.join(' ')) && /hourly=dust/.test(s.anfragen.join(' ')), s.anfragen);
     await s.p.click('#tb-mehr'); await s.p.waitForTimeout(300);
     pruefe('Quellen und Datenschutz nennen die Luftqualität', /Luftqualität: Open-Meteo Air Quality[\s\S]*CAMS/.test(await s.p.textContent('#quellen')) && /Für Luftqualität und Saharastaub sieht Open-Meteo deine IP-Adresse und den Ort/.test(await s.p.textContent('#tab-mehr')));

@@ -54,7 +54,7 @@ async function umleiten(p, modus) {
     if (u.host === 'api.brightsky.dev') {
       const lat = +u.searchParams.get('lat'), nichts = fixture('brightsky-corralejo-current-404.json');
       // DWD-Warnungen (A9): modus.warnung = 'ja' (zwei Warnungen) | 'fehler' | sonst keine
-      if (u.pathname === '/alerts') return modus.warnung === 'fehler' ? route.abort('connectionfailed') : modus.warnung === 'format' ? json(route, '{"alerts":{"a":1}}') : json(route, fixture(modus.warnung === 'ja' ? 'brightsky-alerts-mannheim.json' : modus.warnung === 'test' ? 'brightsky-alerts-test.json' : 'brightsky-alerts-leer.json'));
+      if (u.pathname === '/alerts') return modus.warnung === 'fehler' ? route.abort('connectionfailed') : modus.warnung === 'format' ? json(route, '{"alerts":{"a":1}}') : json(route, fixture(modus.warnung === 'ja' ? 'brightsky-alerts-mannheim.json' : modus.warnung === 'test' ? 'brightsky-alerts-test.json' : modus.warnung === 'vier' ? 'brightsky-alerts-vier.json' : 'brightsky-alerts-leer.json'));
       if (modus.dwdAus) return json(route, nichts, 404);
       if (u.pathname === '/weather') return lat > 45 ? json(route, fixture('brightsky-mannheim.json')) : lat > 28 && lat < 29 ? json(route, modus.bsAendern ? JSON.stringify(modus.bsAendern(JSON.parse(fixture('brightsky-corralejo.json')))) : fixture('brightsky-corralejo.json')) : json(route, nichts, 404);
       if (u.pathname === '/current_weather') return lat > 45 ? json(route, fixture('brightsky-mannheim-current.json')) : json(route, nichts, 404);
@@ -80,6 +80,8 @@ const MESSEN = (minKlick) => {
 
 async function neueSeite(b, opt, modus) {
   const ctx = await b.newContext(Object.assign({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'de-DE', timezoneId: 'Europe/Berlin' }, opt));
+  // Tab „Mehr“: alle Gruppen offen, damit die Prüfungen an Einstellungen nicht an zugeklappten Gruppen scheitern (Standard ist nur „Orte“ offen, siehe nutzertest-funde.test.js)
+  if (!(modus && modus.mehrZu)) await ctx.addInitScript(() => { try { if (!localStorage.getItem('wpc-mehr-offen')) localStorage.setItem('wpc-mehr-offen', '[0,1,2,3,4]'); } catch (e) { } });
   const p = await ctx.newPage();
   const konsole = [];
   p.on('pageerror', e => konsole.push('Seitenfehler: ' + e.message));

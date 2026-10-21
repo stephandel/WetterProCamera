@@ -1532,15 +1532,15 @@
           // Rand-Pfeile: erscheinen, wenn "jetzt" aus dem Bild gewischt ist, und führen zurück
           '<button type="button" class="mg-randpfeil mg-randpfeil-l" id="' + kid('rpl') + '" aria-label="Zurück zu jetzt" title="Zurück zu jetzt">' + ico('chevl') + ico('ziel') + '</button>' +
           '<button type="button" class="mg-randpfeil mg-randpfeil-r" id="' + kid('rpr') + '" aria-label="Zurück zu jetzt" title="Zurück zu jetzt">' + ico('ziel') + ico('chevr') + '</button>' +
-          // Zoom: kleines − 🔍 + rechts unten (dazu Zwei-Finger-Geste und Strg+Mausrad). Der Halter haftet
-          // am unteren Bildrand über der Knopfleiste, solange das Diagramm länger ist als der Bildschirm.
+          // Zoom: −, Lupe, + (dazu Zwei-Finger-Geste und Strg+Mausrad), steht unter dem Diagramm
+          '<div class="mg-zoomhinweis" id="' + kid('zoomhinweis') + '" aria-live="polite"></div>' +
+        '</div>' +
+        // Eigene Zeile unter dem Diagramm, damit die Knöpfe weder Kurven noch Zeitachse verdecken (A9, Durchgang 21.10.2026)
           '<div class="mg-ecke-halter"><div class="mg-ecke">' +
             '<button type="button" class="mg-btn" id="' + kid('zoomraus') + '" aria-label="Herauszoomen: mehr Tage zeigen" title="Mehr Tage zeigen">' + ico('minus') + '</button>' +
             '<button type="button" class="mg-ecke-lupe" id="' + kid('lupe') + '" aria-label="Vollbild: zweimal tippen" title="Zweimal tippen: Vollbild an/aus">' + ico('lupe') + '</button>' +
             '<button type="button" class="mg-btn" id="' + kid('zoomrein') + '" aria-label="Hineinzoomen: weniger Stunden zeigen" title="Genauer zeigen">' + ico('plus') + '</button>' +
           '</div></div>' +
-          '<div class="mg-zoomhinweis" id="' + kid('zoomhinweis') + '" aria-live="polite"></div>' +
-        '</div>' +
         // Knopfleiste direkt unter dem Diagramm: ↻ links, ‹ Jetzt › als Gruppe in der Mitte, ☰ rechts.
         // Sie haftet unten am Bildschirm, solange das Tool im Bild ist (CSS: position sticky).
         '<div class="mg-knoepfe">' +
