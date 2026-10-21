@@ -254,6 +254,7 @@ const knopf = '#tabbar #tb-kamera';
       await r.p.waitForFunction(() => window.KSStudio);
       let [fc] = await Promise.all([r.p.waitForEvent('filechooser'), r.p.click('.zugang-kachel [data-zugang]')]); await fc.setFiles(FOTO);
       pruefe('Hintergrund gesperrt, solange das Wetterfoto offen ist', await r.p.evaluate(() => ['titelzeile', 'tabbar'].every(id => document.getElementById(id).hasAttribute('inert')) && document.querySelector('main.inhalt').hasAttribute('inert')));
+      await r.p.waitForFunction(() => { const k = document.querySelector('#ksWurzel .ks'); return k && k._ksInst && k._ksInst.quelle; }, null, { timeout: 8000 }).catch(() => { });   // erst warten, bis das Foto geladen ist (wackelte, 22.10.2026)
       const alt = await r.p.evaluate(() => { window.__alt = document.querySelector('.zugang-kachel [data-zugang]'); window.dispatchEvent(new Event('online')); return true; });
       await r.p.waitForFunction(() => !window.__alt.isConnected, null, { timeout: 8000 }).catch(() => { });
       pruefe('Neue Wetterdaten bei offenem Studio: Foto bleibt', alt && (await inst(r.p)).foto);
