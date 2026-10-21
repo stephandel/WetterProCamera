@@ -330,14 +330,18 @@
   function renderRadsat() {
     var s = $('#tab-radsat');
     if (!s.dataset.gebaut) {
-      s.innerHTML = '<div class="chips ebenen" id="ebenenWahl" role="radiogroup" aria-label="Ebene der Karte">' +
+      s.innerHTML = '<div class="pc-blatt-kopf rs-vb-kopf" hidden><h2>Rad/Sat</h2><button type="button" class="pc-kopf-knopf tippbar" id="radsatFertig">Fertig</button></div>' +
+        '<div class="chips ebenen" id="ebenenWahl" role="radiogroup" aria-label="Ebene der Karte">' +
         EBENEN.map(function (e) { return '<button class="chip tippbar" role="radio" data-ebene="' + e[0] + '">' + e[1] + '</button>'; }).join('') + '</div>' +
         '<div class="karte" id="radarKarte" role="region" aria-label="Karte"></div>' +
-        '<div class="karte-fuss"><button class="button tippbar" id="radarPlay" aria-pressed="false">' + Ikon('chevron') + '<span>Abspielen</span></button><span id="radarZeit" class="zahl" aria-live="polite"></span></div>' +
+        '<div class="karte-fuss"><button class="button tippbar" id="radarPlay" aria-pressed="false">' + Ikon('chevron') + '<span>Abspielen</span></button><span id="radarZeit" class="zahl" aria-live="polite"></span>' +
+        '<button type="button" class="button leise tippbar rs-voll" id="radsatVoll" aria-pressed="false">Vollbild</button></div>' +
         '<p class="regen-satz radar-satz" id="radarSatz" hidden></p>' +
         '<div id="ebeneQuelle"></div>';
       s.dataset.gebaut = '1';
       $('#radarPlay').addEventListener('click', radarAbspielen);
+      $('#radsatVoll').addEventListener('click', function () { radsatVollbild(!rsVoll.an); });
+      $('#radsatFertig').addEventListener('click', function () { radsatVollbild(false); });
       $('#ebenenWahl').addEventListener('click', function (e) { var b = e.target.closest('[data-ebene]'); if (!b) return; ebene = b.dataset.ebene; speicher.schreiben('wpc-ebene', ebene); ebeneZeigen(); });
     }
     leafletBereit(function () {
@@ -346,6 +350,41 @@
       ebeneZeigen();
     });
   }
+  /* A32 (21.10.2026): Vollbild-Blatt für Rad/Sat. Die Karte ist kein Baustein (nicht wpkarte.js), deshalb macht die App es selbst,
+     nach dem Muster von meteogramm.js: der ganze Reiter (Ebenen, Karte, Abspielen) liegt über dem Bildschirm, „Fertig“, Esc und
+     Zurück schließen, der Rest der Seite ist inert, ein Verlaufseintrag fängt die Zurück-Geste. Leaflet rechnet danach die neue Größe nach. */
+  var rsVoll = { an: false, gesperrt: [], overflow: '', gepusht: false };
+  function radsatVollbild(an, ausVerlauf) {
+    var s = $('#tab-radsat'), k = $('#radsatVoll'); an = !!an;
+    if (!s || !k || an === rsVoll.an) return;
+    rsVoll.an = an;
+    s.classList.toggle('rs-vollbild', an); $('.rs-vb-kopf', s).hidden = !an;
+    k.setAttribute('aria-pressed', String(an)); k.textContent = an ? 'Vollbild beenden' : 'Vollbild';
+    if (an) {
+      s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-label', 'Rad/Sat im Vollbild');
+      rsVoll.gesperrt = [];
+      for (var e = s; e && e !== document.body && e.parentNode; e = e.parentNode) {
+        Array.prototype.forEach.call(e.parentNode.children, function (g) { if (g === e || g.hasAttribute('inert') || /^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(g.tagName)) return; g.setAttribute('inert', ''); rsVoll.gesperrt.push(g); });
+      }
+      rsVoll.overflow = document.documentElement.style.overflow; document.documentElement.style.overflow = 'hidden';
+      try { if (history.state && history.state.wpVollbild === 'radsat') rsVoll.gepusht = true; else { history.pushState({ wpVollbild: 'radsat' }, ''); rsVoll.gepusht = true; } } catch (e2) { }
+      $('#radsatFertig').focus({ preventScroll: true });
+    } else {
+      s.removeAttribute('role'); s.removeAttribute('aria-modal'); s.removeAttribute('aria-label');
+      rsVoll.gesperrt.forEach(function (g) { g.removeAttribute('inert'); }); rsVoll.gesperrt = [];
+      document.documentElement.style.overflow = rsVoll.overflow || '';
+      if (rsVoll.gepusht) { rsVoll.gepusht = false; if (!ausVerlauf && history.state && history.state.wpVollbild === 'radsat') { try { history.back(); } catch (e3) { } } }
+      k.focus({ preventScroll: true });
+    }
+    var neu = function () { if (radarKarte) { radarKarte.invalidateSize({ animate: false }); a26Bewegt(); } };
+    neu(); setTimeout(neu, 280);
+    if (!an) radsatVollbildZu();
+  }
+  var radsatVollbildZu = function () { };   // Paket A32 P3 hängt hier den Rückweg zum vorherigen Reiter an
+  document.addEventListener('keydown', function (e) { if (rsVoll.an && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); radsatVollbild(false); } });
+  window.addEventListener('popstate', function () { if (rsVoll.an && rsVoll.gepusht) { rsVoll.gepusht = false; radsatVollbild(false, true); } });
+  try { if (history.state && history.state.wpVollbild === 'radsat') history.replaceState(null, ''); } catch (e) { }   // neu geladen im offenen Blatt
+
   function ebeneZeigen() {
     satStopp();   // Paket C: Satellitenfilm beenden
     $$('#ebenenWahl [data-ebene]').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.ebene === ebene)); });

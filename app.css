@@ -154,6 +154,31 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--akzent); color: var(--auf-akzent); }
 .ebenen { margin: 0 0 calc(-1 * var(--s2)); }
 .ebenen .chip { padding: 0 var(--s4); }
+/* A32: Rad/Sat als Vollbild-Blatt (radsatVollbild in app.js): ganzer Reiter über dem Bildschirm, Karte füllt den Rest */
+#tab-radsat.rs-vollbild { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; gap: var(--s2); margin: 0; max-width: none;
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left); background: var(--bg); overflow: hidden; overscroll-behavior: contain; animation: rs-vb-auf .25s var(--ease); }
+@keyframes rs-vb-auf { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #tab-radsat.rs-vollbild { animation: none; } }
+.rs-vb-kopf[hidden] { display: none; }
+.rs-vollbild .rs-vb-kopf { padding-top: calc(var(--safe-top) + var(--s1)); }
+.rs-vollbild .ebenen { flex: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0; padding: 0 var(--rand); }
+.rs-vollbild .ebenen::-webkit-scrollbar { display: none; }
+.rs-vollbild .ebenen .chip { flex: none; }
+.rs-vollbild .karte { flex: 1; min-height: 0; height: auto; border-radius: 0; }
+.rs-vollbild .karte-fuss { flex: none; padding: 0 var(--rand) var(--s2); }
+.rs-vollbild #radarSatz, .rs-vollbild #ebeneQuelle, .rs-vollbild #w3ZeitHilfe { display: none; }   /* Erklärungen und Quelle stehen nach „Fertig“ wieder unter der Karte */
+.rs-vollbild .w3-steuer, .rs-vollbild .w3-spar-hinweis { flex: none; padding: 0 var(--rand) var(--s2); }
+/* Quer auf dem iPhone: „Fertig“ schwebt rechts neben den Ebenen, Abspielen und Zeit-Regler teilen sich eine Zeile, Tempo erst nach „Fertig“ */
+@media (orientation: landscape) and (max-height: 500px) {
+  #tab-radsat.rs-vollbild { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .rs-vollbild .rs-vb-kopf { position: absolute; z-index: 2; top: 0; right: var(--safe-right); padding: var(--safe-top) var(--s2) 0 0; border: 0; background: var(--bg); }
+  .rs-vollbild .rs-vb-kopf h2 { display: none; }
+  .rs-vollbild .ebenen { grid-column: 1 / -1; padding-top: calc(var(--safe-top) + var(--s1)); padding-right: calc(var(--tap) * 2 + var(--s4)); }
+  .rs-vollbild .karte { grid-column: 1 / -1; }
+  .rs-vollbild .karte-fuss { grid-column: 1; }
+  .rs-vollbild .w3-steuer { grid-column: 2; align-self: center; }
+  .rs-vollbild .w3-zeile + .w3-zeile { display: none; }
+}
 .temp-marke { background: var(--bg-2); color: var(--label); border-radius: var(--r-chip); padding: 2px var(--s2); font-weight: 600; font-size: var(--fs-footnote); box-shadow: var(--glas-schatten); white-space: nowrap; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 2px; }
 .temp-marke .wsym { width: 22px; height: 22px; }
 .grund-ruhig { filter: saturate(.35); }   /* ruhigere Grundkarte, damit Radar und Satellit hervortreten (A9) */

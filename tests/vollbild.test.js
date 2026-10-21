@@ -20,9 +20,9 @@ async function graphs(s, mac) {
 }
 
 // Zustand des Blatts: Größe, wer oben liegt, Sperre, Fokus, Fertig-Knopf
-const ZUSTAND = (sel) => {
-  const w = document.querySelector(sel), r = w.getBoundingClientRect();
-  const fertig = w.querySelector('.mg-vb-fertig'), fr = fertig && fertig.getBoundingClientRect();
+const ZUSTAND = (a) => {
+  const sel = typeof a === 'string' ? a : a.sel, w = document.querySelector(sel), r = w.getBoundingClientRect();
+  const fertig = w.querySelector(typeof a === 'string' ? '.mg-vb-fertig' : a.fertig), fr = fertig && fertig.getBoundingClientRect();
   const oben = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && w.contains(e); };
   const fs2 = fertig && getComputedStyle(fertig);
   return {
@@ -55,7 +55,7 @@ const MASSE_BLATT = (a) => {
 // Kontrast zweier CSS-Farben (rgb/rgba, deckend angenommen)
 const KONTRAST = (sel) => {
   const e = document.querySelector(sel); if (!e) return 0;
-  const farbe = c => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+  const farbe = c => { const z = (c.replace(/^color\(srgb/, '').match(/[\d.]+/g) || []).slice(0, 3).map(Number); return /^color\(srgb/.test(c) ? z.map(v => v * 255) : z; };   // WebKit gibt color-mix als color(srgb 0…1) aus
   let g = e, bg = 'rgba(0, 0, 0, 0)';
   while (g && /rgba\(0, 0, 0, 0\)|transparent/.test(bg)) { bg = getComputedStyle(g).backgroundColor; g = g.parentElement; }
   const L = c => { const [r, gg, b] = farbe(c).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * gg + 0.0722 * b; };
@@ -109,6 +109,49 @@ async function mgVollbild(s, name, w, h) {
   pruefe(name + ': Zurück schließt das Blatt, Seite bleibt (Graphs sichtbar)', !voll(z4) && !z4.tabbarInert && await p.evaluate(() => !document.getElementById('tab-graphs').hidden), z4.r);
 }
 
+// Rad/Sat (eigene Leaflet-Karte der App): der ganze Reiter wird zum Blatt
+async function rsVollbild(s, name, w, h) {
+  const p = s.p, zs = { sel: '#tab-radsat', fertig: '#radsatFertig' };
+  const vorher = await p.evaluate(ZUSTAND, zs);
+  pruefe(name + ': Rad/Sat vor dem Öffnen kein Blatt', !voll(vorher), vorher.r);
+  await p.click('#radsatVoll'); await p.waitForTimeout(500);
+  const z = await p.evaluate(ZUSTAND, zs);
+  pruefe(name + ': „Vollbild“ legt Rad/Sat über den ganzen Bildschirm (' + w + ' × ' + h + ')', voll(z) && z.deckt, [z.r, z.deckt]);
+  pruefe(name + ': role="dialog", aria-modal, Name „Rad/Sat im Vollbild“', z.rolle === 'dialog' && z.modal === 'true' && z.label === 'Rad/Sat im Vollbild', [z.rolle, z.modal, z.label]);
+  pruefe(name + ': „Fertig“ oben rechts, mind. 44 px (Mac 28 px), Fokus darauf', !!z.fertig && z.fertig.t === 'Fertig' && z.fertig.h >= (w >= 1024 ? 28 : 44) && z.fertig.right < 40 && z.fokus === 'fertig', [z.fertig, z.fokus]);
+  if (!z.fertig) return;
+  pruefe(name + ': Rest der Seite gesperrt, Verlaufseintrag', z.gesperrt.length === 0 && z.tabbarInert && z.overflow === 'hidden' && z.zustand && z.zustand.wpVollbild === 'radsat' && z.laenge === vorher.laenge + 1, z);
+  const k = await p.evaluate(() => {
+    const r = s => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.right), Math.round(b.bottom)]; };
+    const m = document.querySelector('#radarKarte'), lf = m._leaflet_id && window.L ? null : null;
+    return { karte: r('#radarKarte'), chips: r('#ebenenWahl'), fuss: r('#tab-radsat .karte-fuss'), plus: r('#radarKarte [data-z="1"]'), play: r('#radarPlay'), vw: innerWidth, vh: innerHeight,
+      quelle: getComputedStyle(document.getElementById('ebeneQuelle')).display, kartenHoehe: m.getBoundingClientRect().height, pane: (() => { const t = m.querySelector('.leaflet-tile-pane'); return !!t; })() };
+  });
+  const drin = b => !!b && b[0] >= 0 && b[1] >= 0 && b[2] <= k.vw && b[3] <= k.vh;
+  pruefe(name + ': Karte füllt den Platz zwischen Ebenen und Abspielen, Zoom und Abspielen im Bild', k.karte[1] >= k.chips[3] && k.karte[3] <= k.fuss[1] + 1 && k.kartenHoehe > k.vh * (h < 500 ? 0.35 : 0.6) && drin(k.plus) && drin(k.play) && drin(k.chips), k);
+  const m = await p.evaluate(MASSE_BLATT, { sel: '#tab-radsat', min: w >= 1024 ? 27.5 : 43.5 });
+  pruefe(name + ': im Rad/Sat-Blatt Knöpfe groß genug, kein Text unter 11 px, nichts ragt heraus', !m.klein.filter(x => !/^(\+|−|Zoom|Leaflet|OpenTopoMap|OpenStreetMap)/.test(x)).length && !m.schrift.length, m);
+  const kk = await p.evaluate(KONTRAST, '#radsatFertig');
+  pruefe(name + ': Kontrast „Fertig“ mind. 4,5:1', kk >= 4.5, kk);
+  await p.click('#ebenenWahl [data-ebene="sat"]'); await p.waitForTimeout(300);
+  pruefe(name + ': Ebenen wechseln im Blatt', await p.evaluate(() => document.querySelector('#ebenenWahl [aria-checked="true"]').dataset.ebene) === 'sat');
+  await p.click('#ebenenWahl [data-ebene="radar"]'); await p.waitForTimeout(200);
+  await H.foto(p, 'vollbild-radsat-' + name + '-offen');
+  await p.click('#radsatFertig'); await p.waitForTimeout(400);
+  const zu = await p.evaluate(ZUSTAND, zs);
+  pruefe(name + ': „Fertig“ schließt, Fokus auf „Vollbild“, Verlauf zurück', !voll(zu) && !zu.tabbarInert && zu.overflow !== 'hidden' && /rs-voll/.test(zu.fokus || '') && !(zu.zustand && zu.zustand.wpVollbild), [zu.r, zu.fokus, zu.zustand]);
+  await H.foto(p, 'vollbild-radsat-' + name + '-zu');
+  await p.click('#radsatVoll'); await p.waitForTimeout(300); await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+  const z3 = await p.evaluate(ZUSTAND, zs);
+  await p.click('#radsatVoll'); await p.waitForTimeout(300); await p.evaluate(() => history.back()); await p.waitForTimeout(500);
+  const z4 = await p.evaluate(ZUSTAND, zs);
+  pruefe(name + ': Esc und Zurück schließen, Reiter Rad/Sat bleibt', !voll(z3) && !voll(z4) && !z4.tabbarInert && await p.evaluate(() => !document.getElementById('tab-radsat').hidden), [z3.r, z4.r]);
+}
+async function radsat(s, mac) {
+  await s.p.click(mac ? '#macLeiste [data-ml-tab="radsat"]' : '#tb-radsat');
+  await s.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached', timeout: 15000 }); await s.p.waitForTimeout(500);
+}
+
 (async () => {
   const srv = await H.server();
   const b = await webkit.launch();
@@ -140,6 +183,15 @@ async function mgVollbild(s, name, w, h) {
       await mgVollbild(s, 'mac-1280', 1280, 800);
       await s.ctx.close();
     }
+    console.log('5) Rad/Sat im Vollbild: 390, quer 844 × 390, 130 %, Mac 1280');
+    for (const [name, vp, schrift] of [['390', { width: 390, height: 844 }], ['844-quer', { width: 844, height: 390 }], ['390-130', { width: 390, height: 844 }, true], ['mac-1280', { width: 1280, height: 800 }]]) {
+      const s = await start(b, { viewport: vp });
+      if (schrift) await s.p.addStyleTag({ content: 'html { font-size: 130% !important; }' });
+      await radsat(s, vp.width >= 1024);
+      await rsVollbild(s, name, vp.width, vp.height);
+      pruefe(name + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+    }
     console.log('4) Reduzierte Bewegung: Blatt erscheint ohne Animation');
     {
       const s = await start(b, { reducedMotion: 'reduce' });
@@ -147,6 +199,9 @@ async function mgVollbild(s, name, w, h) {
       await s.p.click('#pcMg .mg-btn-voll');
       const a = await s.p.evaluate(() => { const st = getComputedStyle(document.getElementById('pcMg')); return { name: st.animationName, dauer: st.animationDuration }; });
       pruefe('prefers-reduced-motion: keine Wachs-Animation', a.name === 'none' || a.dauer === '0s', a);
+      await s.p.click('#pcMg .mg-vb-fertig'); await radsat(s); await s.p.click('#radsatVoll');
+      const k = await s.p.evaluate(() => { const st = getComputedStyle(document.getElementById('tab-radsat')); return { name: st.animationName, dauer: st.animationDuration }; });
+      pruefe('prefers-reduced-motion: Rad/Sat-Blatt ohne Wachs-Animation', k.name === 'none' || k.dauer === '0s', k);
       await s.ctx.close();
     }
   } finally { await b.close(); srv.close(); }
