@@ -1407,13 +1407,14 @@
     if (!links) { links = spalteNeu('mac-links'); rechts = spalteNeu('mac-rechts'); s.appendChild(links); s.appendChild(rechts); }
     var karte = false;
     Array.prototype.slice.call(s.children).forEach(function (k) {
-      if (k === links || k === rechts || k.classList.contains('update-zeile')) return;
+      if (k === links || k === rechts || k.classList.contains('update-zeile') || k.id === 'a9Warnung') return;   // Warnung steht über beiden Spalten
       if (k.querySelector('.leaflet-container')) karte = true;
       (k.classList.contains('akt') || k.classList.contains('std') ? links : rechts).appendChild(k);
     });
     // Reihenfolge links: Aktuell vor Stunden; Update-Zeile bleibt oben über beiden Spalten
     var akt = $(':scope > .akt', links); if (akt && akt !== links.firstChild) links.insertBefore(akt, links.firstChild);
     var upd = $(':scope > .update-zeile', s); if (upd && upd !== s.firstChild) s.insertBefore(upd, s.firstChild);
+    var wa = $(':scope > #a9Warnung', s); if (wa && upd) upd.insertAdjacentElement('afterend', wa);
     s.appendChild(links); s.appendChild(rechts);
     s.classList.add('mac-zwei');
     if (karte) setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 0);   // Mini-Radar misst sich neu
@@ -2642,10 +2643,77 @@
     if (z.platz === 'oben') s.insertBefore(k, (akt || s.firstChild)); else if (z.platz === 'mitte' && akt) akt.insertAdjacentElement('afterend', k);
   }
 
+  /* === A9: Modul „Warnung“ (DWD über Bright Sky, CC BY 4.0) ===
+     Nur für Orte in Deutschland. Keine Warnung, Fehler oder offline: Kachel fehlt still, nichts blockiert. */
+  var A9_WARN = { minor: ['Wetterwarnung', 1], moderate: ['Markante Wetterwarnung', 2], severe: ['Unwetterwarnung', 3], extreme: ['Extreme Unwetterwarnung', 4] };
+  var a9WarnD = {};
+  var a9InDeutschland = function (o) { return o.lat > 47.2 && o.lat < 55.1 && o.lon > 5.8 && o.lon < 15.1; };
+  function a9WarnHolen(o) {
+    var k = a5PosKey(o), m = a9WarnD[k];
+    if (!a9InDeutschland(o) || (m && (m.laedt || Date.now() - m.zeit < 15 * 60e3))) return;
+    a9WarnD[k] = { laedt: true, zeit: 0, d: m && m.d };
+    holeJson(BRIGHTSKY + 'alerts?lat=' + o.lat + '&lon=' + o.lon + '&tz=Europe/Berlin').then(function (r) {
+      a9WarnD[k] = { zeit: Date.now(), d: r && r.alerts ? r.alerts : [] }; a9WarnNeu();
+    }, function () { a9WarnD[k] = { zeit: Date.now() - 10 * 60e3, d: m && m.d }; });   // nach 5 Minuten neuer Versuch
+  }
+  function a9WarnListe() {
+    var m = a9WarnD[a5PosKey(ort)], jetzt = w3Jetzt(); if (!m || !m.d) return [];
+    return m.d.filter(function (a) { return a && A9_WARN[a.severity] && a.headline_de && (!a.expires || String(a.expires).slice(0, 16) > jetzt); })
+      .sort(function (x, y) { return A9_WARN[y.severity][1] - A9_WARN[x.severity][1] || String(x.onset).localeCompare(String(y.onset)); }).slice(0, 4);
+  }
+  // „heute 18:00 bis morgen 08:00 Uhr“; läuft die Warnung schon, steht „jetzt bis …“
+  function a9Zeitraum(a) {
+    var von = String(a.onset || '').slice(0, 16), bis = String(a.expires || '').slice(0, 16), jetzt = w3Jetzt(), tag = function (z) { return w3TagWort(z.slice(0, 10)); };
+    var anfang = !von || von <= jetzt ? 'jetzt' : tag(von) + ' ' + hm(von);
+    if (!bis) return anfang + (anfang === 'jetzt' ? '' : ' Uhr');
+    return anfang + ' bis ' + (von && von > jetzt && von.slice(0, 10) === bis.slice(0, 10) ? '' : tag(bis) + ' ') + hm(bis) + ' Uhr';
+  }
+  function a9WarnHtml() {
+    var l = a9WarnListe(); if (!l.length) return '';
+    return '<section class="a9-warnung" id="a9Warnung" aria-labelledby="a9WarnungT"><h2 class="nur-vorlesen" id="a9WarnungT">Wetterwarnungen</h2>' +
+      l.map(function (a, i) {
+        return '<button type="button" class="a9-warn a9-warn-' + a.severity + ' tippbar" data-a9-warn="' + i + '" aria-haspopup="dialog">' + Ikon('warn') +
+          '<span class="a9-warn-text"><small class="a9-warn-art">' + A9_WARN[a.severity][0] + '</small><b>' + esc(a.headline_de) + '</b><span class="a9-warn-zeit">' + esc(a9Zeitraum(a)) + '</span></span><span aria-hidden="true">›</span></button>';
+      }).join('') + '</section>';
+  }
+  function a9WarnNeu() {
+    if (aktiv !== 'wetter' || !daten) return;
+    var s = $('#tab-wetter'); if (!s) return;
+    var alt = $('#a9Warnung', s); if (alt) alt.remove();
+    var html = a9WarnHtml(); if (!html) return;
+    var z = $('.update-zeile', s);
+    if (z) z.insertAdjacentHTML('afterend', html); else s.insertAdjacentHTML('afterbegin', html);
+  }
+  function a9WarnBlatt(i) {
+    var a = a9WarnListe()[i]; if (!a) return;
+    var d = w3Blatt('a9WarnBlatt', 'Wetterwarnung');
+    if (!d.open) w3Fokus = document.activeElement;
+    var absatz = function (t) { return t ? '<p>' + esc(t) + '</p>' : ''; };
+    $('#a9WarnBlattInhalt').innerHTML = '<section class="kachel a9-blatt a9-warn-' + a.severity + '"><p class="a9-warn-art">' + A9_WARN[a.severity][0] + (a.event_de ? ': ' + esc(a.event_de) : '') + '</p><h3 class="w3-h3">' + esc(a.headline_de) + '</h3><p class="zahl">' + esc(a9Zeitraum(a)) + '</p></section>' +
+      '<section class="kachel">' + absatz(a.description_de) + (a.instruction_de ? '<h3 class="w3-h3">Verhaltenshinweise</h3>' + absatz(a.instruction_de) : '') +
+      '<p class="info">Quelle: Deutscher Wetterdienst (DWD), über Bright Sky (brightsky.dev), CC BY 4.0.</p></section>';
+    if (!d.open) d.showModal();
+    $('[data-zu]', d).focus();
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest('#a9Warnung [data-a9-warn]'); if (b) a9WarnBlatt(+b.dataset.a9Warn); });
+  renderWetter = (function (alt) { return function () { alt(); try { a9WarnHolen(ort); a9WarnNeu(); } catch (e) { console.error('Warnung', e); } }; })(renderWetter);
+  quellenHtml = (function (alt) {
+    return function () {
+      return alt() + '<a class="tippbar" href="https://brightsky.dev" target="_blank" rel="noopener"><span class="modell-text"><span>Warnungen: DWD über Bright Sky</span><small class="leise">Amtliche Wetterwarnungen des Deutschen Wetterdienstes, CC BY 4.0</small></span><span aria-hidden="true">↗</span></a>';
+    };
+  })(quellenHtml);
+  renderMehr = (function (alt) {
+    return function () {
+      alt();
+      var d = $('#tab-mehr #datenschutz');
+      if (d && !$('#datenschutzWarnung', d)) d.insertAdjacentHTML('beforeend', '<p id="datenschutzWarnung">Für Warnungen sieht brightsky.dev deine IP-Adresse und den Ort (nur bei Orten in Deutschland).</p>');
+    };
+  })(renderMehr);
+
   /* === Startseite nach dem Design-Link vom 20.10.2026 ===
      Reihenfolge: Aktuell, Stunden, Tagesliste, Mond („Sonne und Mond"), Was heute geht, danach Zusatzkacheln (Staub, Meer, Meteogramm, wenn eingeschaltet).
      Aus: Webcam (zusätzlich WEBCAMS_FREIGABE), Regenradar-Kachel. Luftqualität und Warnung sind im Link an, in der App aber noch nicht gebaut (Wunschliste). */
-  var STARTSEITE_REIHE = ['.akt', '.std', '#regenTitel', '.tage', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
+  var STARTSEITE_REIHE = ['#a9Warnung', '.akt', '.std', '#regenTitel', '.tage', '.w3-mond-kachel', '#a5Tipps', '#w3Calima', '#w3Meer', '.a5-mg-kachel'];   // Regenradar nur, wenn unter „Mehr“ eingeschaltet
   function startseiteOrdnen() {
     var s = $('#tab-wetter'); if (!s || !s.querySelector('.akt')) return;
     var regen = $('#regenTitel', s); if (regen && !startLesen().radar) regen.closest('section').remove();

@@ -712,3 +712,24 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 @media (hover: hover) and (pointer: fine) {
   .liste > *:hover, .kachel.tippbar:hover { background: color-mix(in srgb, var(--bg-2) 90%, #000); }
 }
+
+/* === Paket A9: Warnung (DWD) und Luftqualität (21.10.2026) === */
+:root {
+  --warn-minor: #FFD633; --warn-moderate: #FF9F0A; --warn-severe: #FF453A; --warn-extreme: #A8142E;   /* DWD-Stufen gelb, orange, rot, dunkelrot */
+  --warn-auf: #000000; --warn-auf-extreme: #FFFFFF;
+}
+.a9-warnung { display: grid; gap: var(--s2); margin-bottom: var(--s3); }
+.a9-warn { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: var(--tap); padding: var(--s3) var(--s4); border: 0; border-radius: var(--r-kachel); font: inherit; text-align: left; cursor: pointer; background: var(--warn-minor); color: var(--warn-auf); }
+.a9-warn-moderate { background: var(--warn-moderate); }
+.a9-warn-severe { background: var(--warn-severe); }
+.a9-warn-extreme { background: var(--warn-extreme); color: var(--warn-auf-extreme); }
+.a9-warn .ikon { flex: none; width: 24px; height: 24px; }
+.a9-warn-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.a9-warn-art { font-size: var(--fs-footnote); font-weight: 600; margin: 0; }
+.a9-warn b { font-size: var(--fs-body); line-height: 1.25; }
+.a9-warn-zeit { font-size: var(--fs-subhead); }
+.a9-warn:focus-visible { outline: 3px solid var(--label); outline-offset: 2px; }
+.a9-blatt.a9-warn-minor, .a9-blatt.a9-warn-moderate, .a9-blatt.a9-warn-severe, .a9-blatt.a9-warn-extreme { display: block; border-radius: var(--r-kachel); }
+.a9-blatt .w3-h3 { margin-top: var(--s1); }
+.a9-blatt p { margin: 0 0 var(--s1); }
+#tab-wetter > .a9-warnung { grid-column: 1 / -1; }

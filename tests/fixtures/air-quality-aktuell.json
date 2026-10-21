@@ -1,0 +1,1 @@
+{"latitude":49.5,"longitude":8.5,"timezone":"GMT","current_units":{"time":"iso8601","european_aqi":"EAQI","pm10":"μg/m³","pm2_5":"μg/m³","nitrogen_dioxide":"μg/m³","ozone":"μg/m³"},"current":{"time":"2026-10-15T12:00","interval":3600,"european_aqi":43,"pm10":14.2,"pm2_5":8.1,"nitrogen_dioxide":21.4,"ozone":58.0}}

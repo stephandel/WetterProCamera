@@ -47,10 +47,12 @@ async function umleiten(p, modus) {
     }
     // Open-Meteo Marine (Paket A5): echte Antworten vom 15.10.2026; Mannheim liefert nur leere Werte (kein Meer)
     if (u.host === 'marine-api.open-meteo.com') return json(route, fixture(+u.searchParams.get('latitude') < 40 ? 'marine-corralejo.json' : 'marine-mannheim.json'));
-    if (u.host === 'air-quality-api.open-meteo.com') return json(route, fixture('air-quality.json'));
+    if (u.host === 'air-quality-api.open-meteo.com') return modus.luftFehler ? route.abort('connectionfailed') : json(route, fixture(u.searchParams.has('current') ? 'air-quality-aktuell.json' : 'air-quality.json'));
     if (u.host === 'geocoding-api.open-meteo.com') return json(route, '{"results":[]}');
     if (u.host === 'api.brightsky.dev') {
       const lat = +u.searchParams.get('lat'), nichts = fixture('brightsky-corralejo-current-404.json');
+      // DWD-Warnungen (A9): modus.warnung = 'ja' (zwei Warnungen) | 'fehler' | sonst keine
+      if (u.pathname === '/alerts') return modus.warnung === 'fehler' ? route.abort('connectionfailed') : json(route, fixture(modus.warnung === 'ja' ? 'brightsky-alerts-mannheim.json' : 'brightsky-alerts-leer.json'));
       if (modus.dwdAus) return json(route, nichts, 404);
       if (u.pathname === '/weather') return lat > 45 ? json(route, fixture('brightsky-mannheim.json')) : lat > 28 && lat < 29 ? json(route, modus.bsAendern ? JSON.stringify(modus.bsAendern(JSON.parse(fixture('brightsky-corralejo.json')))) : fixture('brightsky-corralejo.json')) : json(route, nichts, 404);
       if (u.pathname === '/current_weather') return lat > 45 ? json(route, fixture('brightsky-mannheim-current.json')) : json(route, nichts, 404);
