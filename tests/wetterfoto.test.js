@@ -19,6 +19,8 @@ async function neueSeite(b, o) {
   if (o.engineSperren) await s.ctx.route('**/lib/kamera-studio/ks-engine.js', r => r.abort());
   if (o.fremderSpeicher) await s.ctx.addInitScript(() => { if (window.caches) caches.open('fremde-app-v1'); });   // Speicher einer anderen App unter derselben Adresse
   if (o.speicher) await s.ctx.addInitScript(sp => { Object.keys(sp).forEach(k => localStorage.setItem(k, sp[k])); }, o.speicher);
+  // Linux-WebKit (GitHub Actions) hat kein Web Share; ohne Attrappe zeigt das Studio „Sichern“ statt „Teilen“ und der Test war dort seit 20.10. rot
+  await s.ctx.addInitScript(() => { if (!navigator.share) { navigator.share = () => Promise.resolve(); navigator.canShare = () => true; } });
   await s.p.goto(BASIS + (o.adresse || ''));
   await s.p.waitForSelector(o.ohneDaten ? '#tabbar button' : '.tag', { timeout: 10000 });
   s.modus = modus;
