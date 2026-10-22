@@ -467,8 +467,8 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 .pc-mg .mg-svg .mg-nacht { fill: var(--fuellung); }
 .pc-mg .mg-wl, .pc-mg .mg-wz, .pc-mg .mg-wv small, .pc-mg small { font-size: var(--fs-caption); }        /* 12 px (Fund 4), nie unter 11 px */
 .pc-mg .mg-svg .mg-mark, .pc-mg .mg-svg .mg-sonne { font-size: var(--fs-caption); }
-/* 12 px; die Zeile kreuzt je nach Uhrzeit die Jetzt-Linie (Baustein, B7): ein Hof in Flächenfarbe hält sie lesbar, wie bei .mg-mark */
-.pc-mg .mg-svg .mg-tagesinfo { font-size: var(--fs-caption); paint-order: stroke; stroke: var(--mg-flaeche); stroke-width: 3px; stroke-linejoin: round; }
+/* 12 px; den Hof in Bandfarbe (--mg-flaeche2) gegen die Jetzt-Linie setzt der Baustein seit B7 selbst */
+.pc-mg .mg-svg .mg-tagesinfo { font-size: var(--fs-caption); }
 .pc-mg .mg-foot { padding-bottom: var(--s4); font-size: var(--fs-caption); color: var(--label-2); }
 /* Vollbild des Meteogramms: Kopfzeile und Tab-Leiste der App ausblenden */
 .pc-mg-voll .titelzeile, .pc-mg-voll .tabbar, .pc-mg-voll .pc-graphs-kopf { display: none; }
