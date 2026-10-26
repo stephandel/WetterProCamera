@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Warnung als Symbol</title>
+<meta name="description" content="Sechs Entwürfe, wie die Camera App eine amtliche Wetterwarnung zuerst nur als kleines Symbol zeigt. Klickbare Mockups, 26.10.2026.">
+<style>
+:root{--bg:#F2F2F7;--karte:#FFFFFF;--karte2:#F7F7FA;--text:#1C1C1E;--text2:#6C6C70;--text3:#8E8E93;--linie:#D1D1D6;--blau:#0062CC;--blau-f:#E3EEFC;--gelb-f:#FFF4D6;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--karte:#1C1C1E;--karte2:#2C2C2E;--text:#F2F2F7;--text2:#AEAEB2;--text3:#8E8E93;--linie:#38383A;--blau:#4DA3FF;--blau-f:#10243D;--gelb-f:#3A3010;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--karte:#1C1C1E;--karte2:#2C2C2E;--text:#F2F2F7;--text2:#AEAEB2;--text3:#8E8E93;--linie:#38383A;--blau:#4DA3FF;--blau-f:#10243D;--gelb-f:#3A3010;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:1040px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(64px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+h1{font-size:30px;line-height:1.15;margin:12px 0 6px}
+h2{font-size:22px;margin:0 0 4px}
+h3{font-size:17px;margin:14px 0 6px}
+.unter{color:var(--text2);margin:0 0 20px}
+.inhalt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 20px;padding:0;list-style:none}
+.inhalt a{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border-radius:22px;background:var(--karte);border:1px solid var(--linie);color:var(--text);text-decoration:none;font-weight:600;font-size:15px}
+section.e{background:var(--karte);border-radius:16px;padding:18px;margin:0 0 22px;scroll-margin-top:12px}
+.kopf{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.nr{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 6px;border-radius:15px;background:var(--blau);color:#fff;font-weight:700;flex:none;align-self:center}
+:root[data-theme="dark"] .nr{color:#000}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .nr{color:#000}}
+.idee{color:var(--text2);margin:6px 0 14px}
+.stand{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:760px){.stand{grid-template-columns:1fr}}
+.bewertung{display:grid;grid-template-columns:1fr;gap:10px;font-size:15px;margin:0;padding:12px;border-radius:12px;background:var(--karte2)}
+.bewertung b{display:block;color:var(--text2);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.02em}
+.bewertung .name{border-top:1px solid var(--linie);padding-top:10px}
+.note{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.n-gut{background:#D8F5DF;color:#0B5A20}.n-mittel{background:#FFF0C2;color:#6A4A00}.n-schwach{background:#FDE0DE;color:#8A1A12}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .n-gut{background:#103A1C;color:#7BE29A}:root:not([data-theme="light"]) .n-mittel{background:#3A2E08;color:#FFD66B}:root:not([data-theme="light"]) .n-schwach{background:#3F1512;color:#FF9C94}}
+:root[data-theme="dark"] .n-gut{background:#103A1C;color:#7BE29A}:root[data-theme="dark"] .n-mittel{background:#3A2E08;color:#FFD66B}:root[data-theme="dark"] .n-schwach{background:#3F1512;color:#FF9C94}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.chip{min-height:44px;padding:0 12px;border-radius:22px;border:1.5px solid var(--linie);background:var(--karte);font:inherit;font-size:15px;font-weight:600;color:var(--text);cursor:pointer}
+.chip[aria-checked="true"]{background:var(--blau);border-color:var(--blau);color:#fff}
+:root[data-theme="dark"] .chip[aria-checked="true"]{color:#000}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .chip[aria-checked="true"]{color:#000}}
+.reglerzeile{font-size:13px;font-weight:600;color:var(--text2);margin:0 0 4px}
+.tipp{font-size:13px;color:var(--text2);margin:8px 0 0;text-align:center}
+.empf{background:var(--gelb-f);border-radius:16px;padding:18px;margin:0 0 22px}
+.empf ol{margin:8px 0 0;padding-left:22px}
+.empf li{margin:4px 0}
+.ziele{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 0}
+.ziele div{background:var(--karte2);border-radius:12px;padding:12px;font-size:15px}
+.ziele b{display:block;font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.02em}
+@media (max-width:760px){.ziele{grid-template-columns:1fr}}
+.gestrichen{font-size:15px;color:var(--text2);margin:0 0 22px;padding:12px 16px;border:1px dashed var(--linie);border-radius:12px}
+button:focus-visible,a:focus-visible{outline:3px solid var(--blau);outline-offset:2px}
+
+/* ---------- iPhone-Mockup im Design der Camera App (immer dunkel, Gelb-Akzent) ---------- */
+.ph{--a-bg:#03428A;--a-bg2:#1158AD;--a-ak:#FFD633;--a-l:#fff;--a-l2:rgba(255,255,255,.8);--a-tr:rgba(255,255,255,.22);
+  --w-minor:#FFD633;--w-moderate:#FF9F0A;--w-severe:#FF453A;--w-extreme:#A8142E;
+  position:relative;width:100%;max-width:360px;height:680px;margin:0 auto;border-radius:44px;border:10px solid #0B0B0C;background:var(--a-bg);color:var(--a-l);overflow:hidden;font-size:15px;line-height:1.3;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.ph svg{display:block}
+.ph :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.ph button:focus-visible{outline:3px solid #fff;outline-offset:-3px;border-radius:10px}
+.ph-status{height:40px;display:flex;align-items:center;justify-content:space-between;padding:6px 26px 0;font-size:14px;font-weight:600}
+.ph-status i{width:90px;height:26px;border-radius:14px;background:#000;display:block}
+.ph-kopf{display:grid;grid-template-columns:44px minmax(0,1fr) 44px 44px;align-items:center;gap:2px;padding:0 6px 6px;border-bottom:1px solid var(--a-tr);background:color-mix(in srgb,var(--a-bg) 96%,transparent)}
+.ikn{width:44px;height:44px;display:grid;place-items:center;color:var(--a-ak);border-radius:12px;position:relative}
+.ikn svg{width:24px;height:24px}
+.ort-block{min-width:0;text-align:center}
+.ort-z{display:flex;align-items:center;justify-content:center;min-width:0}
+.ort{font-size:21px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.modell{font-size:12px;color:var(--a-l2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph-inhalt{padding:10px 12px 120px}
+.upd{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--a-l2);margin:0 0 10px}
+.upd span:last-child{background:rgba(255,255,255,.12);color:var(--a-ak);font-weight:600;border-radius:12px;padding:8px 12px}
+.kach{background:var(--a-bg2);border-radius:16px}
+.akt{display:grid;grid-template-columns:1fr 1fr;margin:0 0 12px;min-height:170px}
+.akt>div{padding:10px 12px}
+.akt>div:first-child{border-right:1px solid var(--a-tr)}
+.akt-t{font-size:13px;font-weight:600;color:var(--a-l2);display:flex;align-items:center;gap:6px}
+.akt-temp{font-size:34px;font-weight:600;color:var(--a-ak);letter-spacing:-.02em;line-height:1}
+.akt-wolke{width:84px;height:62px;margin:8px auto 6px}
+.werte{font-size:13px;display:grid;grid-template-columns:1fr auto;gap:6px 6px;margin-top:8px;white-space:nowrap}
+.werte dt{color:var(--a-l2)}.werte dd{margin:0;font-weight:600;text-align:right}
+.std{display:grid;grid-template-columns:repeat(3,1fr);height:96px}
+.std>div{border-right:1px solid var(--a-tr);padding:8px;font-size:13px;color:var(--a-l2)}
+.std>div:last-child{border:0}
+.std b{display:block;color:var(--a-ak);font-size:18px;margin-top:34px;text-align:right}
+.tag-andeut{height:60px;margin-top:12px;opacity:.75}
+.tabl{position:absolute;left:10px;right:10px;bottom:16px;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:4px;border-radius:999px;background:rgba(28,28,30,.6);border:1px solid rgba(255,255,255,.15);box-shadow:0 8px 32px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);z-index:3}
+.tabl button{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;border-radius:999px;color:var(--a-l2);position:relative}
+.tabl button.an{background:rgba(255,255,255,.14);color:var(--a-ak)}
+.tabl svg{width:22px;height:22px}
+.tabl .kam span.r{width:34px;height:34px;border-radius:50%;border:2px solid var(--a-ak);display:grid;place-items:center;background:rgba(255,214,51,.12)}
+.tabl .kam svg{width:18px;height:18px;color:var(--a-ak)}
+
+/* Warnfarben */
+.s-minor{--w:var(--w-minor);--wa:#000}.s-moderate{--w:var(--w-moderate);--wa:#000}.s-severe{--w:var(--w-severe);--wa:#000}.s-extreme{--w:var(--w-extreme);--wa:#fff}
+/* Heutiger Block */
+.blk{display:grid;gap:8px;margin:0 0 12px}
+.blk button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:10px 12px;border-radius:16px;text-align:left;background:var(--w);color:var(--wa)}
+.blk small{display:block;font-size:12px;font-weight:600}
+.blk b{display:block;font-size:15px;line-height:1.2}
+.blk em{display:block;font-style:normal;font-size:13px}
+.blk svg{width:22px;height:22px;flex:none}
+/* Gefülltes Warndreieck */
+.dreieck{width:24px;height:24px;flex:none}
+.dreieck .f{fill:var(--w);stroke:var(--w)}
+.s-extreme .dreieck .f{stroke:#fff}
+.dreieck .z{stroke:var(--wa);fill:none}
+.ruhig .dreieck .f{fill:none;stroke:var(--w)}
+.ruhig .dreieck .z{stroke:var(--w)}
+.ruhig.s-extreme .dreieck .f,.ruhig.s-extreme .dreieck .z{stroke:#fff}
+/* (b,f) Symbol neben dem Ortsnamen: 44 px Tippfläche, sichtbar 24 px */
+.sym-ort{flex:none;width:36px;height:44px;display:grid;place-items:center;margin-right:-8px;position:relative}
+.zahl{position:absolute;top:4px;right:-2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#fff;color:#03428A;font-size:11px;font-weight:700;line-height:16px;text-align:center}
+/* (a) Plakette an der Nadel */
+.plak{position:absolute;top:4px;right:3px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--w);color:var(--wa);font-size:12px;font-weight:800;line-height:18px;text-align:center;box-shadow:0 0 0 2px var(--a-bg)}
+.ruhig .plak,.plak.ruhig{background:var(--a-bg);color:var(--w);box-shadow:0 0 0 2px var(--a-bg),inset 0 0 0 2px var(--w)}
+/* (c) Punkt am Reiter */
+.tabpunkt{position:absolute;top:6px;left:calc(50% + 6px);width:12px;height:12px;border-radius:50%;background:var(--w);box-shadow:0 0 0 2px #1d2a3a}
+.s-extreme .tabpunkt,.tabpunkt.s-extreme{box-shadow:0 0 0 2px #fff}
+.tabpunkt.ruhig{background:transparent;box-shadow:inset 0 0 0 2px var(--w),0 0 0 2px #1d2a3a}
+/* (d) Streifen */
+.strf{display:block;width:100%;min-height:44px;background:var(--w);color:var(--wa);text-align:left}
+.strf .k{display:flex;align-items:center;gap:8px;padding:0 14px;min-height:44px;font-size:13px;font-weight:700}
+.strf .k svg{width:16px;height:16px}
+.strf .k .pf{margin-left:auto;font-size:15px;transition:transform .2s}
+.strf[aria-expanded="true"] .k .pf{transform:rotate(180deg)}
+.strf-zeile{display:flex;align-items:center;gap:8px;width:100%;padding:0 14px 10px;text-align:left;background:var(--w);color:var(--wa)}
+.strf-zeile b{display:block;font-size:15px;line-height:1.2}.strf-zeile em{display:block;font-style:normal;font-size:13px}
+.strf.ruhig{background:color-mix(in srgb,var(--w) 30%,var(--a-bg));color:#fff}
+.strf.ruhig .k svg path{stroke:#fff}
+/* (g) Zeile unter dem Ortsnamen */
+.pille{display:inline-flex;align-items:center;gap:4px;max-width:100%;height:24px;padding:0 8px;border-radius:12px;background:var(--w);color:var(--wa);font-size:12px;font-weight:700;white-space:nowrap;position:relative}
+.pille::after{content:"";position:absolute;inset:-10px -4px}
+.pille svg{width:13px;height:13px;flex:none}
+.pille span{overflow:hidden;text-overflow:ellipsis}
+.pille.ruhig{background:transparent;color:#fff;box-shadow:inset 0 0 0 1.5px var(--w)}
+.pille.ruhig.s-moderate,.pille.ruhig.s-minor{color:var(--w)}
+.pille-wrap{display:flex;justify-content:center;min-width:0;margin-top:1px}
+/* Detail-Blatt */
+.schleier{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:5}
+.blatt{position:absolute;left:0;right:0;bottom:0;max-height:82%;overflow:auto;background:#0B3A75;border-radius:22px 22px 0 0;padding:6px 14px 30px;z-index:6;box-shadow:0 -8px 32px rgba(0,0,0,.35)}
+@media (prefers-reduced-motion:no-preference){.blatt{animation:hoch .3s cubic-bezier(.32,.72,0,1)}@keyframes hoch{from{transform:translateY(40%);opacity:.4}}}
+.griff{width:36px;height:5px;border-radius:3px;background:rgba(255,255,255,.35);margin:2px auto 4px}
+.blatt-kopf{display:grid;grid-template-columns:60px 1fr 60px;align-items:center}
+.blatt-kopf h3{margin:0;text-align:center;font-size:17px}
+.blatt-kopf button{min-height:44px;color:var(--a-ak);font-weight:600;grid-column:3;text-align:right}
+.bw{border-radius:16px;padding:10px 12px;margin:8px 0;background:var(--w);color:var(--wa)}
+.bw p{margin:0}.bw .art{font-size:12px;font-weight:700}.bw h4{margin:2px 0;font-size:16px;line-height:1.2}.bw .zt{font-size:13px}
+.btext{background:var(--a-bg2);border-radius:16px;padding:10px 12px;font-size:13px;color:var(--a-l2);margin:0 0 8px}
+.btext p{margin:0 0 6px}
+.quelle{font-size:11px;color:var(--a-l2);margin:6px 2px 0}
+.ph[data-ansatz="heute"]{height:640px}
+</style>
+</head>
+<body>
+<main>
+<h1>Warnung zuerst nur als Symbol</h1>
+<p class="unter">Sechs Entwürfe für die Camera App: Wie zeigt der Startbildschirm eine amtliche Wetterwarnung des DWD erst einmal klein, als Symbol, und erst nach einem Tipp in voller Länge? Alles hier ist klickbar, aber nur ein Mockup. Es ändert nichts an der echten App. Stand 26.10.2026.</p>
+
+<ul class="inhalt">
+<li><a href="#ist">Ausgangslage</a></li>
+<li><a href="#a1">A Plakette an der Nadel</a></li>
+<li><a href="#a2">B Neben dem Ortsnamen</a></li>
+<li><a href="#a3">C Punkt am Reiter</a></li>
+<li><a href="#a4">D Schmaler Streifen</a></li>
+<li><a href="#a5">E Zeile unter dem Ort</a></li>
+<li><a href="#a6">F Symbol plus Block bei Extrem</a></li>
+<li><a href="#empf">Empfehlung</a></li>
+</ul>
+
+<section class="e" id="ist">
+<h2>Ausgangslage</h2>
+<div class="stand">
+<div>
+<div class="ph" data-ansatz="heute" data-fest="moderate" aria-label="Mockup: die Camera App heute mit Warnblock"></div>
+<p class="tipp">So sieht es heute aus (Stufe „markant“, zwei Warnungen).</p>
+</div>
+<div>
+<p>Heute steht jede Warnung als große farbige Kachel ganz oben im Reiter <b>Wetter</b>, über der Aktuell-Kachel. Bei zwei Warnungen schieben die Kacheln das eigentliche Wetter fast eine halbe Bildschirmhöhe nach unten. Ein Tipp öffnet das Blatt mit dem ganzen Warntext.</p>
+<div class="ziele">
+<div><b>Ziel</b>Zuerst nur ein kleines Warnsymbol. Der Text kommt per Tipp im vorhandenen Blatt.</div>
+<div><b>Nicht-Ziel</b>Die Warnung nie ganz verstecken. Sie bleibt auf dem Startbildschirm sichtbar, ohne dass man etwas einschalten muss.</div>
+<div><b>Ausnahme</b>Bei der DWD-Stufe „extrem“ darf es weiter laut sein, zum Beispiel mit dem heutigen Block.</div>
+</div>
+<h3>Was in allen Entwürfen gleich ist</h3>
+<ul style="margin:0;padding-left:20px;color:var(--text2);font-size:15px">
+<li>Das Symbol ist ein <b>gefülltes Dreieck</b> in der Farbe der höchsten Stufe: gelb (gering), orange (markant), rot (Unwetter), dunkelrot mit weißem Rand (extrem). Das Emoji ⚠️ sähe auf jedem Gerät anders aus und ist immer gelb, deshalb ein eigenes Symbol.</li>
+<li>Die übrigen Knöpfe in der Kopfzeile sind gelbe <b>Umrisse</b>. Das gefüllte Dreieck unterscheidet sich also durch Form und Füllung, nicht nur durch Farbe.</li>
+<li>Ein Tipp öffnet das Blatt, das es heute schon gibt. Nach dem Schließen wird das Symbol in diesen Mockups <b>ruhiger</b> (nur Umriss), außer bei „extrem“. Ob das gewünscht ist, ist Frage 3 am Ende.</li>
+<li>Eine Kopfzeile mit Zahnrad hat die Camera App nicht: Links sitzt die Nadel „Meine Orte“, rechts Teilen und Suche. Entwurf A setzt die Plakette deshalb an die Nadel.</li>
+</ul>
+</div>
+</div>
+</section>
+
+<section class="e" id="a1">
+<div class="kopf"><span class="nr">A</span><h2>Plakette an der Nadel „Meine Orte“</h2></div>
+<p class="idee">Wie die rote Zahl an einem App-Symbol: Die Nadel oben links bekommt eine kleine Plakette mit „!“ in der Warnfarbe. Ein Tipp auf die Nadel öffnet dann aber nicht mehr die Ortsliste, sondern die Warnung, solange eine gilt.</p>
+<div class="stand">
+<div><div class="regler"></div><div class="ph" data-ansatz="a"></div><p class="tipp">Tipp auf die Nadel öffnet das Blatt.</p></div>
+<div class="bewertung">
+<div><b>Sichtbarkeit <span class="note n-mittel">mittel</span></b>Klein in der Ecke. Fällt auf, wenn man weiß, wonach man sucht.</div>
+<div><b>Verwechslung <span class="note n-schwach">hoch</span></b>Eine Plakette heißt bei Apple „hier ist etwas Neues“. Man erwartet die Ortsliste, bekommt aber eine Warnung. Bei Stufe gering ist die Plakette gelb wie die Nadel selbst.</div>
+<div><b>Lange Ortsnamen <span class="note n-gut">gut</span></b>Braucht keinen Platz neben dem Namen.</div>
+<div><b>VoiceOver <span class="note n-schwach">schwach</span></b>Ein Knopf mit zwei Aufgaben: „Meine Orte, zwei Warnungen“. Was der Tipp tut, bleibt unklar.</div>
+<div><b>Apple-Regeln <span class="note n-schwach">eher nicht</span></b>Plaketten sind für Zähler ungelesener Dinge gedacht, nicht für Wetterlagen. Knöpfe sollen immer dasselbe tun.</div>
+<div><b>Aufwand <span class="note n-gut">klein</span></b>Eine Plakette und eine Weiche im Klick der Nadel.</div>
+<div class="name"><b>Name im Design-Konfigurator</b>„Warnung: Plakette am Orte-Knopf“</div>
+</div>
+</div>
+</section>
+
+<section class="e" id="a2">
+<div class="kopf"><span class="nr">B</span><h2>Symbol neben dem Ortsnamen</h2></div>
+<p class="idee">Direkt hinter „Mannheim“ steht ein gefülltes Warndreieck. Die Kopfzeile bleibt beim Scrollen und auf allen Reitern stehen, das Symbol ist also überall zu sehen. Ein Tipp öffnet das Blatt.</p>
+<div class="stand">
+<div><div class="regler"></div><div class="ph" data-ansatz="b"></div><p class="tipp">Tipp auf das Dreieck öffnet das Blatt.</p></div>
+<div class="bewertung">
+<div><b>Sichtbarkeit <span class="note n-gut">gut</span></b>Sitzt dort, wo der Blick zuerst hinfällt, und bleibt auf jedem Reiter sichtbar.</div>
+<div><b>Verwechslung <span class="note n-mittel">gering</span></b>Gefülltes Dreieck statt gelbem Umriss. Bei Stufe gering ist es gelb wie die Knöpfe, unterscheidet sich aber durch Form und Füllung.</div>
+<div><b>Lange Ortsnamen <span class="note n-mittel">mittel</span></b>Kostet rund 30 px. „Neustadt an der Weinstraße“ wird gekürzt, das Symbol bleibt immer stehen. Mit dem Umschalter „Langer Name“ ausprobieren.</div>
+<div><b>VoiceOver <span class="note n-gut">gut</span></b>Eigener Knopf: „2 Wetterwarnungen, höchste: Markante Wetterwarnung. Details“. Reihenfolge: Orte, Ortsname, Warnung, Teilen, Suche.</div>
+<div><b>Apple-Regeln <span class="note n-gut">passt</span></b>Ein Status-Symbol neben dem Titel ist üblich; der Knopf tut immer genau eines. Tippfläche 44 pt.</div>
+<div><b>Aufwand <span class="note n-gut">klein</span></b>Ein Knopf in der Kopfzeile, das Blatt gibt es schon.</div>
+<div class="name"><b>Name im Design-Konfigurator</b>„Warnung: Symbol neben dem Ortsnamen“</div>
+</div>
+</div>
+</section>
+
+<section class="e" id="a3">
+<div class="kopf"><span class="nr">C</span><h2>Punkt am Reiter „Wetter“</h2></div>
+<p class="idee">Unten in der Leiste bekommt das Symbol des Reiters „Wetter“ einen farbigen Punkt. Ein Tipp auf den Reiter, wenn man schon auf „Wetter“ ist, öffnet das Blatt.</p>
+<div class="stand">
+<div><div class="regler"></div><div class="ph" data-ansatz="c"></div><p class="tipp">Tipp auf „Wetter“ unten öffnet das Blatt.</p></div>
+<div class="bewertung">
+<div><b>Sichtbarkeit <span class="note n-schwach">schwach</span></b>Auf dem Reiter „Wetter“, wo man fast immer ist, geht der Punkt neben dem gelb hervorgehobenen Reiter unter.</div>
+<div><b>Verwechslung <span class="note n-mittel">mittel</span></b>Ein Punkt am Reiter heißt bei Apple „neu, ungelesen“, nicht „Gefahr“.</div>
+<div><b>Lange Ortsnamen <span class="note n-gut">gut</span></b>Kein Einfluss.</div>
+<div><b>VoiceOver <span class="note n-gut">gut</span></b>Plaketten-Text am Reiter („Wetter, 2 Warnungen“) ist ein bekanntes Apple-Muster.</div>
+<div><b>Apple-Regeln <span class="note n-schwach">eher nicht</span></b>Ein Tipp auf den aktiven Reiter scrollt bei Apple nach oben. Hier öffnete er ein Blatt; das widerspricht der Gewohnheit.</div>
+<div><b>Aufwand <span class="note n-gut">klein</span></b>Ein Punkt und eine Weiche im Reiter-Klick.</div>
+<div class="name"><b>Name im Design-Konfigurator</b>„Warnung: Punkt am Reiter Wetter“</div>
+</div>
+</div>
+</section>
+
+<section class="e" id="a4">
+<div class="kopf"><span class="nr">D</span><h2>Schmaler Streifen, der aufklappt</h2></div>
+<p class="idee">Unter der Kopfzeile liegt ein schmales Band in der Warnfarbe mit der Stufe in Worten. Ein Tipp klappt es zur Zeile mit Überschrift und Zeitraum auf, ein Tipp auf die Zeile öffnet das Blatt.</p>
+<div class="stand">
+<div><div class="regler"></div><div class="ph" data-ansatz="d"></div><p class="tipp">Erst aufklappen, dann auf die Zeile tippen.</p></div>
+<div class="bewertung">
+<div><b>Sichtbarkeit <span class="note n-gut">sehr gut</span></b>Ein Band über die ganze Breite, mit Worten. Man kann es kaum übersehen.</div>
+<div><b>Verwechslung <span class="note n-gut">keine</span></b>Der Text sagt, was es ist.</div>
+<div><b>Lange Ortsnamen <span class="note n-gut">gut</span></b>Eigene Zeile, kein Einfluss.</div>
+<div><b>VoiceOver <span class="note n-gut">gut</span></b>Knopf mit Text und „eingeklappt/ausgeklappt“.</div>
+<div><b>Apple-Regeln <span class="note n-mittel">mittel</span></b>Zwei Tipps bis zum Text sind einer zu viel. Das Band nimmt 44 pt Höhe; damit ist das Ziel „nur ein Symbol“ nur halb erreicht.</div>
+<div><b>Aufwand <span class="note n-mittel">mittel</span></b>Neues Bauteil mit Auf- und Zuklappen.</div>
+<div class="name"><b>Name im Design-Konfigurator</b>„Warnung: schmaler Streifen“</div>
+</div>
+</div>
+</section>
+
+<section class="e" id="a5">
+<div class="kopf"><span class="nr">E</span><h2>Zeile unter dem Ortsnamen <span style="font-weight:400;color:var(--text2);font-size:15px">(eigene Idee)</span></h2></div>
+<p class="idee">Unter „Mannheim“ steht heute „Modell: Beste Mischung“. Solange eine Warnung gilt, steht dort stattdessen eine kleine farbige Pille: „Frost ab 18 Uhr“. Das ist mehr als ein Symbol, aber nicht höher als heute die Modellzeile.</p>
+<div class="stand">
+<div><div class="regler"></div><div class="ph" data-ansatz="g"></div><p class="tipp">Tipp auf die Pille öffnet das Blatt.</p></div>
+<div class="bewertung">
+<div><b>Sichtbarkeit <span class="note n-gut">gut</span></b>Farbe plus ein Wort zum Wetter. Man weiß sofort, worum es geht, ohne zu tippen.</div>
+<div><b>Verwechslung <span class="note n-gut">keine</span></b>Text statt Symbol allein.</div>
+<div><b>Lange Ortsnamen <span class="note n-gut">gut</span></b>Eigene Zeile, der Ortsname behält seine volle Breite.</div>
+<div><b>VoiceOver <span class="note n-gut">sehr gut</span></b>Liest den Text vor: „Markante Wetterwarnung: Frost ab 18 Uhr. Details“.</div>
+<div><b>Apple-Regeln <span class="note n-mittel">mittel</span></b>Untertitel unter dem Titel ist üblich. Die Pille ist nur 24 pt hoch; die unsichtbare Tippfläche muss auf 44 pt wachsen. Solange eine Warnung gilt, fehlt die Modellanzeige (sie stünde dann im Blatt).</div>
+<div><b>Aufwand <span class="note n-mittel">mittel</span></b>Kurztext aus dem DWD-Ereignis bauen („FROST“ zu „Frost“), Modellzeile umschalten. Platz ist nur für eine Warnung, weitere stehen im Blatt; der Kurztext muss knapp sein, sonst wird er gekürzt.</div>
+<div class="name"><b>Name im Design-Konfigurator</b>„Warnung: Zeile unter dem Ortsnamen“</div>
+</div>
+</div>
+</section>
+
+<section class="e" id="a6">
+<div class="kopf"><span class="nr">F</span><h2>Symbol neben dem Ort, bei „extrem“ zusätzlich der Block</h2></div>
+<p class="idee">Wie Entwurf B. Nur bei der höchsten DWD-Stufe („Extreme Unwetterwarnung“, zum Beispiel Orkan oder extremer Starkregen) erscheint zusätzlich der heutige große Block oben im Reiter „Wetter“. Stufe „extrem“ wählen, um den Unterschied zu sehen.</p>
+<div class="stand">
+<div><div class="regler"></div><div class="ph" data-ansatz="f"></div><p class="tipp">Bei „extrem“ öffnen Symbol und Block dasselbe Blatt.</p></div>
+<div class="bewertung">
+<div><b>Sichtbarkeit <span class="note n-gut">gestaffelt</span></b>Leise bei gewöhnlichen Warnungen, laut bei echter Gefahr. Genau das, was Ziel und Ausnahme verlangen.</div>
+<div><b>Verwechslung <span class="note n-mittel">gering</span></b>Wie B.</div>
+<div><b>Lange Ortsnamen <span class="note n-mittel">mittel</span></b>Wie B: Name wird gekürzt, Symbol bleibt.</div>
+<div><b>VoiceOver <span class="note n-gut">gut</span></b>Wie B. Bei „extrem“ gibt es zwei Wege zum selben Blatt, das schadet nicht.</div>
+<div><b>Apple-Regeln <span class="note n-gut">passt</span></b>Apple Wetter zeigt schwere Warnungen auch als eigene Fläche im Inhalt.</div>
+<div><b>Aufwand <span class="note n-gut">klein</span></b>Wie B, dazu eine Bedingung im vorhandenen Code: Den Block nur noch bei „extreme“ einfügen.</div>
+<div class="name"><b>Name im Design-Konfigurator</b>Eine Auswahl „Warnung anzeigen“ mit drei Werten: „Großer Block“ (heute) · „Nur Symbol“ (B) · „Symbol, bei Extrem Block“ (F, Standard)</div>
+</div>
+</div>
+</section>
+
+<p class="gestrichen"><b>Gestrichen:</b> Symbol in der Aktuell-Kachel neben der Temperatur. Eine Warnung gilt meist für später (Frost heute Nacht), nicht für „jetzt“; das Symbol stünde am falschen Ort, und beim Scrollen wäre es weg. Dafür ist Entwurf E dazugekommen.</p>
+
+<section class="empf" id="empf">
+<h2>Meine Empfehlung: Entwurf F</h2>
+<p>Symbol neben dem Ortsnamen, bei Stufe „extrem“ zusätzlich der heutige Block. Begründung:</p>
+<ol>
+<li>Es erfüllt dein Ziel wörtlich: Im Alltag (Frost, Windböen, Glätte) sieht man nur ein kleines Dreieck. Das Wetter rückt wieder ganz nach oben.</li>
+<li>Die Kopfzeile bleibt immer stehen. Das Symbol ist also auch auf Graphs, Rad/Sat und beim Scrollen sichtbar. Heute sieht man die Warnung nur oben im Reiter Wetter.</li>
+<li>Der Knopf tut genau eines (Blatt öffnen) und liest sich mit VoiceOver sauber. A und C geben vorhandenen Knöpfen eine zweite Aufgabe; das verwirrt.</li>
+<li>Bei echter Lebensgefahr bleibt es laut. Das ist das Nicht-Ziel „nie verstecken“ in seiner stärksten Form.</li>
+<li>Kleiner Umbau: Das Blatt, die Farben und die Daten gibt es schon. Im Design-Konfigurator wird daraus eine Auswahl mit drei Werten, der heutige Block bleibt als Wahl erhalten.</li>
+</ol>
+<p style="margin:12px 0 0">Zweite Wahl: Entwurf E (Zeile unter dem Ortsnamen), falls dir ein Wort zum Wetter wichtiger ist als ein reines Symbol. Nicht empfohlen: A (Plakette an der Nadel) und C (Punkt am Reiter), weil beide einem vorhandenen Knopf eine zweite Bedeutung geben.</p>
+<h3>Drei Fragen an dich</h3>
+<ol>
+<li>Soll bei „extrem“ weiter der große Block erscheinen? Und auch schon bei „Unwetter“ (rot), oder dort nur das Symbol?</li>
+<li>Gelten mehrere Warnungen gleichzeitig: Soll das Symbol eine kleine Zahl tragen (wie in den Mockups bei „markant“), oder reicht die Farbe der höchsten Stufe?</li>
+<li>Soll das Symbol ruhiger werden, wenn du die Warnung einmal gelesen hast (nur Umriss statt gefüllt), bis eine neue Warnung kommt? In den Mockups ist das so eingebaut, außer bei „extrem“.</li>
+</ol>
+</section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // Beispielwarnungen je Stufe, Texte wie vom DWD über Bright Sky
+  var A = {
+    minor: ['Wetterwarnung', 'gering'], moderate: ['Markante Wetterwarnung', 'markant'],
+    severe: ['Unwetterwarnung', 'Unwetter'], extreme: ['Extreme Unwetterwarnung', 'extrem']
+  };
+  var WIND = { sev: 'minor', ev: 'WINDBÖEN', kurz: 'Windböen ab morgen 7 Uhr', head: 'Amtliche WARNUNG vor WINDBÖEN', zeit: 'morgen 07:00 bis 11:00 Uhr', text: 'Es treten Windböen mit Geschwindigkeiten um 55 km/h aus südwestlicher Richtung auf.', tun: '' };
+  var FROST = { sev: 'moderate', ev: 'FROST', kurz: 'Frost ab 18 Uhr', head: 'Amtliche WARNUNG vor FROST', zeit: 'heute 18:00 bis morgen 08:00 Uhr', text: 'Es tritt mäßiger Frost zwischen -5 °C und -9 °C auf.', tun: 'Pflanzen und Wasserleitungen im Freien schützen.' };
+  var GEW = { sev: 'severe', ev: 'SCHWERES GEWITTER', kurz: 'Gewitter 16–20 Uhr', head: 'Amtliche UNWETTERWARNUNG vor SCHWEREM GEWITTER mit HEFTIGEM STARKREGEN', zeit: 'heute 16:00 bis 20:00 Uhr', text: 'Es treten Gewitter mit heftigem Starkregen um 30 l/m² pro Stunde und Sturmböen um 85 km/h auf.', tun: 'Fenster und Türen schließen, Gegenstände im Freien sichern, Aufenthalt im Freien vermeiden.' };
+  var ORKAN = { sev: 'extreme', ev: 'EXTREME ORKANBÖEN', kurz: 'Orkan bis 22 Uhr', head: 'Amtliche UNWETTERWARNUNG vor EXTREMEN ORKANBÖEN', zeit: 'jetzt bis heute 22:00 Uhr', text: 'Es treten extreme Orkanböen um 140 km/h auf. Verbreitet schwere Schäden an Gebäuden, Bäume werden entwurzelt.', tun: 'Unbedingt in Gebäuden bleiben und Abstand zu Fenstern halten. Folgen Sie den Anweisungen der Behörden.' };
+  var LISTE = { keine: [], minor: [WIND], moderate: [FROST, WIND], severe: [GEW, FROST], extreme: [ORKAN] };
+  var STUFEN = [['keine', 'keine'], ['minor', 'gering'], ['moderate', 'markant'], ['severe', 'Unwetter'], ['extreme', 'extrem']];
+
+  function svg(inner, cls) { return '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>'; }
+  var I = {
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    teilen: '<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M8 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2"/>',
+    suche: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+    warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    wetter: '<circle cx="8" cy="7" r="3"/><path d="M8 1.5v1M2.5 7h1M3.8 2.8l.7.7M12.2 2.8l-.7.7"/><path d="M17 20H8a4 4 0 1 1 .9-7.9A5 5 0 0 1 18 13a3.5 3.5 0 0 1-1 7Z"/>',
+    graphs: '<path d="M3 3v18h18"/><path d="m7 15 4-5 4 3 5-6"/>',
+    kamera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+    radsat: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>',
+    mehr: '<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>'
+  };
+  // Gefülltes Dreieck: Fläche in Warnfarbe, Ausrufezeichen in der Schriftfarbe der Stufe
+  function dreieck() {
+    return '<svg class="dreieck" viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path class="z" stroke-width="2.2" d="M12 9v4M12 17h.01"/></svg>';
+  }
+  function wolke() {
+    return '<svg class="akt-wolke" viewBox="0 0 84 62" aria-hidden="true"><path d="M58 18a16 16 0 0 0-30-4 12 12 0 0 0-2 24h32a10 10 0 0 0 0-20Z" fill="#B9C4D0"/><path d="M62 30a15 15 0 0 0-28-5 13 13 0 0 0-3 26h31a11 11 0 0 0 0-21Z" fill="#fff"/></svg>';
+  }
+  function vorlesen(l) {
+    var top = l[0];
+    return (l.length === 1 ? '1 Wetterwarnung' : l.length + ' Wetterwarnungen') + ', höchste Stufe: ' + A[top.sev][0] + '. Details';
+  }
+  function cap(t) { return t.charAt(0) + t.slice(1).toLowerCase(); }
+
+  function blockHtml(l, ans) {
+    return '<div class="blk" role="group" aria-label="Wetterwarnungen">' + l.map(function (w) {
+      return '<button type="button" class="s-' + w.sev + '" data-auf="' + ans + '" aria-haspopup="dialog">' + svg(I.warn) +
+        '<span style="flex:1;min-width:0"><small>' + A[w.sev][0] + '</small><b>' + w.head + '</b><em>' + w.zeit + '</em></span><span aria-hidden="true">›</span></button>';
+    }).join('') + '</div>';
+  }
+  function blattHtml(l) {
+    return '<div class="schleier" data-zu></div><div class="blatt" role="dialog" aria-modal="true" aria-label="Wetterwarnung"><div class="griff"></div>' +
+      '<div class="blatt-kopf"><h3 style="grid-column:2">Wetterwarnung</h3><button type="button" data-zu>Fertig</button></div>' +
+      l.map(function (w) {
+        return '<div class="bw s-' + w.sev + '"><p class="art">' + A[w.sev][0] + ': ' + w.ev + '</p><h4>' + w.head + '</h4><p class="zt">' + w.zeit + '</p></div>' +
+          '<div class="btext"><p>' + w.text + '</p>' + (w.tun ? '<p><b style="color:#fff">Verhaltenshinweise:</b> ' + w.tun + '</p>' : '') + '</div>';
+      }).join('') +
+      '<p class="quelle">Quelle: Deutscher Wetterdienst (DWD), über Bright Sky, CC BY 4.0.</p></div>';
+  }
+
+  function telefon(ans, st) {
+    var l = LISTE[st.stufe], top = l[0], n = l.length;
+    var ruhig = st.gelesen && top && top.sev !== 'extreme' ? ' ruhig' : '';
+    var ort = st.lang ? 'Neustadt an der Weinstraße' : 'Mannheim';
+    var sk = top ? ' s-' + top.sev : '';
+    var h = '<div class="ph-status"><span>9:41</span><i></i><span>5G</span></div>';
+    // Kopfzeile
+    var nadel;
+    if (ans === 'a' && top) nadel = '<button type="button" class="ikn' + sk + ruhig + '" data-auf="a" aria-haspopup="dialog" aria-label="Meine Orte, ' + vorlesen(l) + '">' + svg(I.pin) + '<span class="plak">' + (n > 1 ? n : '!') + '</span></button>';
+    else nadel = '<button type="button" class="ikn" aria-label="Meine Orte">' + svg(I.pin) + '</button>';
+    var symOrt = (ans === 'b' || ans === 'f') && top ?
+      '<button type="button" class="sym-ort' + sk + ruhig + '" data-auf="' + ans + '" aria-haspopup="dialog" aria-label="' + vorlesen(l) + '">' + dreieck() + (n > 1 ? '<span class="zahl" aria-hidden="true">' + n + '</span>' : '') + '</button>' : '';
+    var zeile2 = ans === 'g' && top ?
+      '<div class="pille-wrap"><button type="button" class="pille' + sk + ruhig + '" data-auf="g" aria-haspopup="dialog" aria-label="' + A[top.sev][0] + ': ' + top.kurz + (n > 1 ? ', und ' + (n - 1) + ' weitere' : '') + '. Details">' + svg(I.warn) + '<span>' + top.kurz + '</span></button></div>' :
+      '<div class="modell">Modell: Beste Mischung</div>';
+    h += '<header class="ph-kopf">' + nadel + '<div class="ort-block"><div class="ort-z"><h4 class="ort">' + ort + '</h4>' + symOrt + '</div>' + zeile2 + '</div>' +
+      '<button type="button" class="ikn" aria-label="Wetter mit Foto teilen">' + svg(I.teilen) + '</button><button type="button" class="ikn" aria-label="Ort suchen">' + svg(I.suche) + '</button></header>';
+    // Streifen (D)
+    if (ans === 'd' && top) {
+      h += '<button type="button" class="strf' + sk + ruhig + '" data-klapp aria-expanded="' + (st.offen ? 'true' : 'false') + '"><span class="k">' + svg(I.warn) + A[top.sev][0] + (n > 1 ? ' · ' + n : '') + '<span class="pf" aria-hidden="true">⌄</span></span></button>';
+      if (st.offen) h += l.map(function (w) {
+        return '<button type="button" class="strf-zeile s-' + w.sev + '" data-auf="d" aria-haspopup="dialog"><span style="flex:1;min-width:0"><b>' + w.head + '</b><em>' + w.zeit + '</em></span><span aria-hidden="true">›</span></button>';
+      }).join('');
+    }
+    h += '<div class="ph-inhalt"><div class="upd"><span>Letztes Update 14:40 Uhr</span><span aria-hidden="true">Aktualisieren</span></div>';
+    if (top && (ans === 'heute' || (ans === 'f' && top.sev === 'extreme'))) h += blockHtml(l, ans);
+    h += '<div class="kach akt"><div><div class="akt-t">Aktuell <span style="font-weight:400">14:45</span></div>' + wolke() + '<div class="akt-temp">16°C</div></div>' +
+      '<div><div style="text-align:center;font-weight:600;margin-top:2px">Bedeckt</div><dl class="werte"><dt>Gefühlt</dt><dd>16°C</dd><dt>Feuchte</dt><dd>68 %</dd><dt>Luftdruck</dt><dd>1027 hPa</dd><dt>Wind</dt><dd>2 km/h</dd></dl></div></div>';
+    h += '<div class="kach std"><div>19:00<b>16°C</b></div><div>01:00<b>11°C</b></div><div>07:00<b>7°C</b></div></div><div class="kach tag-andeut" aria-hidden="true"></div></div>';
+    // Leiste
+    var punkt = ans === 'c' && top ? '<span class="tabpunkt s-' + top.sev + ruhig + '" aria-hidden="true"></span>' : '';
+    var wetterKnopf = ans === 'c' && top ?
+      '<button type="button" class="an" data-auf="c" aria-haspopup="dialog" aria-label="Wetter, ' + vorlesen(l) + '">' + svg(I.wetter) + punkt + 'Wetter</button>' :
+      '<button type="button" class="an" aria-current="page">' + svg(I.wetter) + 'Wetter</button>';
+    h += '<nav class="tabl" aria-label="Reiter">' + wetterKnopf + '<button type="button">' + svg(I.graphs) + 'Graphs</button>' +
+      '<button type="button" class="kam" aria-label="Kamera"><span class="r">' + svg(I.kamera) + '</span></button>' +
+      '<button type="button">' + svg(I.radsat) + 'Rad/Sat</button><button type="button">' + svg(I.mehr) + 'Mehr</button></nav>';
+    if (st.blatt && n) h += blattHtml(l);
+    return h;
+  }
+
+  function reglerHtml(st, id) {
+    return '<p class="reglerzeile" id="' + id + '-s">Warnstufe</p><div class="chips" role="radiogroup" aria-labelledby="' + id + '-s">' +
+      STUFEN.map(function (s) { return '<button type="button" class="chip" role="radio" data-stufe="' + s[0] + '" aria-checked="' + (st.stufe === s[0]) + '">' + s[1] + '</button>'; }).join('') + '</div>' +
+      '<p class="reglerzeile" id="' + id + '-o">Ortsname</p><div class="chips" role="radiogroup" aria-labelledby="' + id + '-o">' +
+      '<button type="button" class="chip" role="radio" data-lang="0" aria-checked="' + !st.lang + '">Mannheim</button><button type="button" class="chip" role="radio" data-lang="1" aria-checked="' + st.lang + '">Langer Name</button></div>';
+  }
+
+  var Z = [];
+  document.querySelectorAll('.ph').forEach(function (ph, i) {
+    var st = { ans: ph.dataset.ansatz, stufe: ph.dataset.fest || 'moderate', lang: false, gelesen: false, blatt: false, offen: false, ph: ph, i: i };
+    var r = ph.parentNode.querySelector('.regler'); st.regler = r;
+    ph.dataset.i = i; if (r) r.dataset.i = i;
+    Z.push(st); zeichne(st);
+  });
+  function zeichne(st) {
+    st.ph.innerHTML = telefon(st.ans, st);
+    st.ph.querySelectorAll('.tabl button, .ikn, .sym-ort, .pille, .strf, .strf-zeile, .blk button').forEach(function (b) { if (st.blatt) b.setAttribute('tabindex', '-1'); });
+    if (st.regler) st.regler.innerHTML = reglerHtml(st, 'r' + st.i);
+  }
+  function zuSt(el) { var w = el.closest('[data-i]'); if (!w) { var s = el.closest('.stand'); w = s && s.querySelector('[data-i]'); } return w ? Z[+w.dataset.i] : null; }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-stufe],[data-lang],[data-auf],[data-zu],[data-klapp]'); if (!b) return;
+    var st = zuSt(b); if (!st) return;
+    if (b.dataset.stufe) { st.stufe = b.dataset.stufe; st.gelesen = false; st.offen = false; zeichne(st); st.regler.querySelector('[data-stufe="' + st.stufe + '"]').focus(); return; }
+    if (b.dataset.lang) { st.lang = b.dataset.lang === '1'; zeichne(st); st.regler.querySelector('[data-lang="' + b.dataset.lang + '"]').focus(); return; }
+    if (b.hasAttribute('data-klapp')) { st.offen = !st.offen; zeichne(st); st.ph.querySelector('[data-klapp]').focus(); return; }
+    if (b.dataset.auf) { st.blatt = true; zeichne(st); st.ph.querySelector('.blatt [data-zu]').focus(); return; }
+    if (b.hasAttribute('data-zu')) { schliessen(st); }
+  });
+  function schliessen(st) {
+    st.blatt = false; if (st.ans !== 'heute') st.gelesen = true; zeichne(st);
+    var t = st.ph.querySelector('[data-auf]') || st.ph.querySelector('[data-klapp]'); if (t) t.focus();
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    Z.forEach(function (st) { if (st.blatt) schliessen(st); });
+  });
+})();
+</script>
+</body>
+</html>
