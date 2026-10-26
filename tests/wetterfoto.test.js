@@ -55,6 +55,7 @@ const knopf = '#tabbar #tb-kamera';
       pruefe('Nutzer darf: Auslöser und Sucher am Zahnrad, Galerie nicht', i && JSON.stringify(i.optionen.nutzerDarf) === JSON.stringify({ zugang: [], ausloeser: ['studio'], galerie: [], sucher: ['studio'] }), i && i.optionen.nutzerDarf);
       const w = i && i.wetter;
       pruefe('Wetter der App im Studio: Mannheim, 16,1 °C, Bedeckt, Wind SO, „Beste Mischung“ (echte Daten, kein Beispiel)', w && w.ort.stadt === 'Mannheim' && w.temp === 16.1 && w.lage === 'Bedeckt' && w.windRichtung === 'SO' && w.modell === 'Beste Mischung', w);
+      pruefe('F4: Ort mit Stadtteil im Studio (Mannheim-Quadrate), Stadt bleibt Mannheim', w && w.ort.stadt === 'Mannheim' && w.ort.stadtteil === 'Quadrate' && await p.evaluate(() => KSEngine.ortText({ daten: { ort: 'genau' } }, document.querySelector('#ksWurzel .ks')._ksInst.wetter) === 'Mannheim-Quadrate'), w && w.ort);
       pruefe('Wetter mit Ortszeit, Druck, UV, Sonnenzeiten', w && w.zeit === '2026-10-15T14:45:00+02:00' && w.druck === 1027 && w.uv === 3.05 && w.sonnenaufgang === '07:47' && w.sonnenuntergang === '18:35', w);
       await p.waitForFunction(() => [...document.querySelectorAll('#ksWurzel button')].some(x => x.textContent.trim() === 'Teilen'), null, { timeout: 8000 }).catch(() => { });
       const teilen = await p.$$eval('#ksWurzel button', bs => bs.filter(x => x.getClientRects().length).map(x => x.textContent.trim()));

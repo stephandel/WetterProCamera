@@ -15,7 +15,7 @@
 
   /* ---------- Orte ---------- */
   var STANDARDORTE = [
-    { name: 'Mannheim', land: 'Deutschland', lat: 49.4875, lon: 8.466 },
+    { name: 'Mannheim', land: 'Deutschland', lat: 49.4875, lon: 8.466, stadtteil: 'Quadrate' },
     { name: 'Mengerschied', land: 'Deutschland', lat: 49.97, lon: 7.56 },
     { name: 'Corralejo', land: 'Spanien', lat: 28.73, lon: -13.867 },
     { name: 'El Cotillo', land: 'Spanien', lat: 28.683, lon: -14.011 },
@@ -681,7 +681,7 @@
           var o = t[+b.dataset.treffer];
           // Stadtteil (PPLX): als Stadt die Gemeinde merken, damit das Teilen-Bild „nur Stadt" zeigen kann
           var stadt = /^PPLX/.test(o.feature_code || '') ? (o.admin4 || o.admin3 || o.name) : o.name;
-          ortSetzen({ name: o.name, land: o.country || '', lat: o.latitude, lon: o.longitude, stadt: stadt });
+          ortSetzen({ name: o.name, land: o.country || '', lat: o.latitude, lon: o.longitude, stadt: stadt, stadtteil: stadt !== o.name ? o.name : '' });
         });
       });
     }).catch(function () { ziel.innerHTML = '<div class="leise">Suche gerade nicht möglich. Bitte Internetverbindung prüfen.</div>'; });
@@ -2748,9 +2748,15 @@
   }
   // Wetter im Format des Studios aus den echten Daten der App (Open-Meteo oder DWD); ohne Daten nur Ort und Zeit, damit nie Beispielwerte auf dem Foto landen.
   // Gemerkte Daten gelten auch während eines Neuladens. Infos aufs Foto wählt das Studio selbst (Standard: Temperatur, Symbol, Wetterlage, Ort, Datum, Uhrzeit; Wind und Regen aus).
+  // Stadtteil des Orts; ältere gemerkte Orte (vor F4) haben ihn nicht, dann gilt der des gleichen Orts aus Favoriten oder Standardorten
+  function ortStadtteil(o) {
+    if (o.stadtteil) return o.stadtteil;
+    var g = favoriten.concat(STANDARDORTE).filter(function (x) { return ortKey(x) === ortKey(o) && x.stadtteil; })[0];
+    return g ? g.stadtteil : '';
+  }
   function studioWetter() {
     var gps = ort.name === 'Mein Standort';
-    var w = { ort: { stadt: gps ? '' : (ort.stadt || ort.name).split(',')[0], stadtteil: '', land: '', lat: ort.lat, lon: ort.lon }, zeit: ortszeitJetzt() };
+    var w = { ort: { stadt: gps ? '' : (ort.stadt || ort.name).split(',')[0], stadtteil: gps ? '' : ortStadtteil(ort), land: '', lat: ort.lat, lon: ort.lon }, zeit: ortszeitJetzt() };
     if (!daten || !daten.current || !daten.daily) return w;
     var c = daten.current, d = daten.daily, erst = function (a) { return a && a[0] != null ? a[0] : null; };
     w.temp = c.temperature_2m; w.gefuehlt = c.apparent_temperature; w.code = c.weather_code; w.lage = wText(c.weather_code, c.is_day);
