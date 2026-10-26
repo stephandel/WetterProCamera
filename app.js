@@ -681,7 +681,9 @@
           var o = t[+b.dataset.treffer];
           // Stadtteil (PPLX): als Stadt die Gemeinde merken, damit das Teilen-Bild „nur Stadt" zeigen kann
           var stadt = /^PPLX/.test(o.feature_code || '') ? (o.admin4 || o.admin3 || o.name) : o.name;
-          ortSetzen({ name: o.name, land: o.country || '', lat: o.latitude, lon: o.longitude, stadt: stadt, stadtteil: stadt !== o.name ? o.name : '' });
+          // Heißt der Treffer schon „Stadt-Stadtteil“ (Köln-Ehrenfeld), nur den Rest als Stadtteil nehmen
+          var tn = o.name, vor = stadt.split(/[\s-]/)[0]; if (tn.indexOf(vor + '-') === 0) tn = tn.slice(vor.length + 1);
+          ortSetzen({ name: o.name, land: o.country || '', lat: o.latitude, lon: o.longitude, stadt: stadt, stadtteil: stadt !== o.name ? tn : '' });
         });
       });
     }).catch(function () { ziel.innerHTML = '<div class="leise">Suche gerade nicht möglich. Bitte Internetverbindung prüfen.</div>'; });

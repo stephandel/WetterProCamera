@@ -305,6 +305,23 @@ const knopf = '#tabbar #tb-kamera';
       pruefe('„Erneut versuchen“ öffnet das Studio, jede Datei genau einmal', await studioDa(r.p) && await r.p.evaluate(() => document.querySelectorAll('head [src*="kamera-studio"], head [href*="kamera-studio"]').length === 4));
       await r.ctx.close();
     }
+    console.log('8) F4: Stadtteil aus der Ortssuche, ohne doppelte Stadt');
+    {
+      const treffer = [
+        { name: 'Köln-Ehrenfeld', admin4: 'Köln', stadt: 'Köln', teil: 'Ehrenfeld' },
+        { name: 'Frankfurt-Bockenheim', admin4: 'Frankfurt am Main', stadt: 'Frankfurt am Main', teil: 'Bockenheim' },
+        { name: 'Neckarstadt', admin4: 'Mannheim', stadt: 'Mannheim', teil: 'Neckarstadt' }
+      ];
+      for (const x of treffer) {
+        const r = await neueSeite(b);
+        await r.p.route('https://geocoding-api.open-meteo.com/**', rt => rt.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ results: [{ name: x.name, feature_code: 'PPLX', admin4: x.admin4, country: 'Deutschland', latitude: 50.9, longitude: 6.9 }] }) }));
+        await r.p.click('#tb-mehr'); await r.p.fill('#sucheFeld', 'Test'); await r.p.press('#sucheFeld', 'Enter');
+        await r.p.click('[data-treffer="0"]');
+        const o = await r.p.evaluate(() => JSON.parse(localStorage.getItem('wpgt-ort')));
+        pruefe('Suchtreffer „' + x.name + '“: Stadt ' + x.stadt + ', Stadtteil ' + x.teil, o.stadt === x.stadt && o.stadtteil === x.teil, o);
+        await r.ctx.close();
+      }
+    }
   } catch (e) { H.ergebnis(); console.log('  ✗ Abbruch: ' + (e && e.stack || e)); process.exitCode = 1; }
   await b.close(); srv.close();
   const e = H.ergebnis();
