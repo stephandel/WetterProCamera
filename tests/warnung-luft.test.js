@@ -57,6 +57,16 @@ async function start(b, modus, opt) {
     pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     await s.ctx.close();
 
+    // Zweite Meinung 04.11.: langer Name bei 320 und 390 px – Dreieck überdeckt den Teilen-Knopf nicht, Kopfzeile wird nicht höher
+    for (const breite of [320, 390]) {
+      s = await H.neueSeite(b, { viewport: { width: breite, height: 700 } }, { warnung: 'ja' });
+      await s.p.addInitScript(() => localStorage.setItem('wpgt-ort', JSON.stringify({ name: 'Garmisch-Partenkirchen', land: 'Deutschland', lat: 47.49, lon: 11.1 })));
+      await s.p.goto(H.BASIS); await s.p.waitForSelector('#a9Symbol:not([hidden])', { timeout: 15000 });
+      const g = await s.p.evaluate(() => { const k = document.getElementById('a9Symbol'), t = document.getElementById('btnTeilen'), kopf = document.getElementById('titelzeile'); const mit = kopf.getBoundingClientRect().height; k.hidden = true; const ohne = kopf.getBoundingClientRect().height; k.hidden = false; return { rechts: k.getBoundingClientRect().right, teilen: t.getBoundingClientRect().left, mit, ohne }; });
+      pruefe(breite + ' px, langer Name: Dreieck überdeckt den Teilen-Knopf nicht, Kopfzeile gleich hoch', g.rechts <= g.teilen + 0.5 && g.mit <= g.ohne + 0.5, g);
+      await s.ctx.close();
+    }
+
     s = await start(b, { warnung: 'vier' });
     const v = await s.p.evaluate(() => {
       const k = document.getElementById('a9Warnung'), e = [...document.getElementById('tab-wetter').children].filter(x => !x.classList.contains('update-zeile'));

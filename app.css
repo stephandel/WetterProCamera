@@ -16,14 +16,14 @@ body { font-family: var(--font); line-height: var(--lh); min-height: 100dvh; }
 .modell { font-size: var(--fs-footnote); color: var(--label-2); line-height: 1.2; }
 .ort-z { display: flex; align-items: center; justify-content: center; min-width: 0; }
 /* W1 (Ansatz F, 04.11.2026): Warnung als gefülltes Dreieck neben dem Ortsnamen; Tippfläche 44 × 44 px, die Ränder ragen in die Kopfzeile, damit sie nicht höher wird */
-.a9-symbol { flex: none; position: relative; width: var(--tap); height: var(--tap); margin: calc(var(--s2) * -1) calc(var(--s2) * -1) calc(var(--s2) * -1) 0; display: grid; place-items: center; border-radius: var(--r-button); cursor: pointer; --w: var(--warn-minor); --wa: var(--warn-auf); }
+.a9-symbol { flex: none; position: relative; width: var(--tap); height: var(--tap); margin: calc(var(--s3) * -1) 0; display: grid; place-items: center; border-radius: var(--r-button); cursor: pointer; --w: var(--warn-minor); --wa: var(--warn-auf); }
 .a9-symbol svg { width: 24px; height: 24px; }
 .a9-symbol .a9-f { fill: var(--w); stroke: var(--w); }
 .a9-symbol .a9-z { fill: none; stroke: var(--wa); }
 .a9-s-moderate { --w: var(--warn-moderate); }
 .a9-s-severe { --w: var(--warn-severe); }
 .a9-s-extreme { --w: var(--warn-extreme); --wa: var(--warn-auf-extreme); }
-.a9-s-extreme .a9-f { stroke: var(--warn-auf-extreme); }   /* dunkelrot braucht den weißen Rand, sonst verschwindet es auf dem dunklen Grund */
+.a9-s-severe .a9-f, .a9-s-extreme .a9-f { stroke: var(--warn-auf-extreme); }   /* rot (2,9:1) und dunkelrot brauchen den weißen Rand, sonst unter 3:1 auf dem blauen Kopf (zweite Meinung 04.11.) */
 .a9-symbol-zahl { position: absolute; top: 4px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--label); color: var(--bg); font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; }
 .a9-symbol:focus-visible { outline: 3px solid var(--label); outline-offset: -3px; }
 
