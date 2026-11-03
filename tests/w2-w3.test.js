@@ -48,6 +48,12 @@ const EBENE = () => {
       const e0 = await s.p.evaluate(EBENE);
       pruefe('Wind: Pfeile nach Stärke gefärbt (mind. 2 kräftige Farbtöne bei 10 bis 31 km/h)', !!e0 && e0.toene >= 2, e0);
       await H.foto(s.p, 'w2-390-wind');
+      const kontrast = await s.p.evaluate(() => {
+        const css = getComputedStyle(document.documentElement), hex = n => css.getPropertyValue(n).trim();
+        const lum = h => { const c = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(x => x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+        const bg = lum(hex('--bg')); return [0, 1, 2, 3, 4, 5, 6, 7].map(i => { const l = lum(hex('--wind-' + i)); return +((Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05)).toFixed(2); });
+      });
+      pruefe('Wind: jede Pfeilfarbe mind. 3:1 zum dunklen Rand', kontrast.every(k => k >= 3), kontrast);
       // Verschieben: noch während der Finger auf der Karte liegt, muss die Ebene die ganze Karte decken (vorher: leere Streifen bis zum Neuzeichnen)
       const box = await s.p.$eval('#radarKarte', e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
       await s.p.mouse.move(box.x, box.y); await s.p.mouse.down(); await s.p.mouse.move(box.x - 140, box.y - 90, { steps: 12 }); await s.p.waitForTimeout(80);
@@ -61,6 +67,31 @@ const EBENE = () => {
       await s.p.click('#radarKarte [data-z="1"]'); await s.p.waitForTimeout(600);
       const e3 = await s.p.evaluate(EBENE);
       pruefe('Wind: 600 ms nach dem Zoomen deckt die Ebene die Karte', !!e3 && e3.deckt, e3);
+      pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+      await s.ctx.close();
+    }
+
+    console.log('1b) W2 zweite Meinung: Größe der Zeichenfläche und Zwei-Finger-Zoom');
+    for (const [name, opt] of [['iPad 1376 × 1032 @2', { viewport: { width: 1376, height: 1032 }, deviceScaleFactor: 2 }], ['Mac 1920 × 1200 @2', { viewport: { width: 1920, height: 1200 }, deviceScaleFactor: 2 }]]) {
+      const s = await H.neueSeite(b, opt, {});
+      // Testzugang zur Karte (nur im Test): Leaflet-Karten beim Anlegen merken
+      await s.ctx.addInitScript(() => { window.__k = []; const t = setInterval(() => { if (window.L && L.Map) { L.Map.addInitHook(function () { window.__k.push(this); }); clearInterval(t); } }, 1); });
+      await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 }); await s.p.waitForTimeout(700);
+      await s.p.evaluate(() => document.getElementById('tb-radsat').click()); await s.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached' }); await s.p.waitForTimeout(400);
+      await s.p.click('#ebenenWahl [data-ebene="druck"]'); await s.p.waitForSelector('#radarKarte canvas.a26-flaeche', { timeout: 8000 }); await s.p.waitForTimeout(500);
+      const vb = await s.p.$('#radsatVoll'); if (vb && await vb.isVisible()) { await vb.click(); await s.p.waitForTimeout(900); }
+      const r = await s.p.evaluate(() => {
+        const k = window.__k.find(m => m._container && m._container.id === 'radarKarte'), ly = Object.values(k._layers).find(l => l._cv), c = ly._cv;
+        const groesse = { cv: [c.width, c.height], mpx: +(c.width * c.height / 1e6).toFixed(2), voll: !!document.querySelector('.rs-vollbild') };
+        // Zwei-Finger-Zoom nachstellen wie Leaflets TouchZoom: 20 Zwischenbilder mit gebrochenem Zoom, dann Ende
+        let n = 0; const orig = ly.neu; ly.neu = function () { n++; return orig.apply(this, arguments); };
+        const mitte = k.getCenter(), z = k.getZoom(); k._moveStart(true, false);
+        for (let i = 1; i <= 20; i++) { k._move(mitte, z + i * 0.04, { pinch: true, round: false }); if (ly._raf) { cancelAnimationFrame(ly._raf); ly._raf = 0; ly.neu(); } }
+        const skaliert = getComputedStyle(c).transform; ly.neu = orig; k._resetView(mitte, z);
+        return { groesse, neuZwischen: n, skaliert };
+      });
+      pruefe('W2 ' + name + ' im Vollbild: Zeichenfläche höchstens 12 Mio. Pixel', r.groesse.mpx <= 12, r.groesse);
+      pruefe('W2 ' + name + ': 20 Zwischenbilder beim Zwei-Finger-Zoom zeichnen höchstens 1-mal neu, Fläche wird skaliert', r.neuZwischen <= 1 && /matrix/.test(r.skaliert) && !/^matrix\(1, 0, 0, 1,/.test(r.skaliert), r);
       pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
       await s.ctx.close();
     }
@@ -87,6 +118,20 @@ const EBENE = () => {
       if (!voll && name === '390 px') pruefe('W3 ' + name + ': Wetterlage nicht abgeschnitten (auch „überwiegend klar“)', m.every(x => x.lageVoll), m.filter(x => !x.lageVoll).map(x => x.t));
       await H.foto(s.p, 'w3-' + name.replace(/\s+/g, '-'));
       await s.ctx.close();
+    }
+    console.log('3) W3 zweite Meinung: Vorab-Messung reicht auch für „in 15 Tagen“');
+    {
+      const zu = [];
+      for (let w = 404; w <= 416; w++) {
+        const s = await start(b, { viewport: { width: w, height: 800 } });
+        await s.p.evaluate(() => document.getElementById('tb-graphs').click()); await s.p.waitForSelector('#tab-graphs .mg-scroll', { timeout: 15000 }); await s.p.waitForTimeout(800);
+        const r = await s.p.evaluate(() => { const z = document.querySelector('#tab-graphs .mg-zeit'), min = parseFloat(z.style.minHeight) || 0;
+          z.children[0].innerHTML = '<b>28.10. · 22:58</b> <span class="mg-rel">in 15 Tagen</span>'; z.children[1].innerHTML = '<span class="mg-lage-i">🌤️</span>überwiegend klar';
+          return { min, h: Math.round(z.getBoundingClientRect().height) }; });
+        if (r.h > r.min + 1) zu.push([w, r]);
+        await s.ctx.close();
+      }
+      pruefe('W3: Kasten wächst bei „in 15 Tagen“ + „überwiegend klar“ nicht über die vorab gemessene Höhe (404–416 px, je 1 px)', !zu.length, zu);
     }
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();

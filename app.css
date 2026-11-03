@@ -804,6 +804,6 @@ dialog.pc-blatt[open] { display: grid; grid-template-rows: auto minmax(0, 1fr); 
 /* === W2: Windpfeile nach Stärke gefärbt (03.11.2026), Stufen in km/h wie WIND_STUFEN in app.js === */
 :root {
   --wind-0: #D8E2EC; --wind-1: #7FD3F5; --wind-2: #5BD68A; --wind-3: #FFD633;   /* still, unter 12, unter 20, unter 29 km/h */
-  --wind-4: #FF9F0A; --wind-5: #FF5A3C; --wind-6: #E040A0; --wind-7: #A55BFF;   /* unter 39, unter 50, unter 62, ab 62 km/h (Sturm) */
+  --wind-4: #FF7A1A; --wind-5: #FF5A4A; --wind-6: #FF6EC7; --wind-7: #C08CFF;   /* unter 39, unter 50, unter 62, ab 62 km/h (Sturm); seit zweiter Meinung 03.11.2026 alle mind. 3:1 zum dunklen Rand, Orange näher an Rot */
 }
 .a26-flaeche { pointer-events: none; }

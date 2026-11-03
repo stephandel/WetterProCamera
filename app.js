@@ -504,35 +504,43 @@
      Vorher deckte das Bild nur den alten Ausschnitt: beim Verschieben blieben leere Streifen, bis die Karte ganz stand (nach dem
      Nachgleiten auf dem iPhone mehrere Sekunden) plus 400 ms Wartezeit; jedes Neuzeichnen kodierte dazu ein PNG (Messung 03.11.2026).
      Jetzt wird ein Rand von 35 % rundum mitgezeichnet, beim Verschieben neu gezeichnet, sobald der Rand knapp wird, und die Windpfeile
-     hängen an festen Kartenpunkten (Raster in Weltpixeln), damit sie beim Neuzeichnen nicht springen. Während des Zoomens blendet
-     Leaflet die Ebene aus (Klasse leaflet-zoom-hide), danach ist sie sofort wieder da. */
-  var A26_RAND = .35, A26_RASTER = 84, a26Klasse = null;
+     hängen an festen Kartenpunkten (Raster in Weltpixeln), damit sie beim Neuzeichnen nicht springen. Beim Zoom mit Knopf blendet
+     Leaflet die Ebene aus (Klasse leaflet-zoom-hide); beim Zoom mit zwei Fingern wird sie nur skaliert und erst am Ende neu gezeichnet.
+     Große Karten (iPad, Mac): kleinerer Rand und höchstens A26_MAX_PX Pixel, sonst sprengt die Fläche den Speicher (zweite Meinung 03.11.2026). */
+  var A26_RAND = .35, A26_RAND_GROSS = .2, A26_MAX_PX = 12e6, A26_RASTER = 84, a26Klasse = null;
   var WIND_STUFEN = [6, 12, 20, 29, 39, 50, 62];   // km/h, Farben --wind-0 … --wind-7 in app.css
   function a26Ebene() {
     if (!a26Klasse) a26Klasse = L.Layer.extend({
       onAdd: function (k) {
         this._cv = L.DomUtil.create('canvas', 'a26-flaeche leaflet-zoom-hide', k.getPane('overlayPane'));
-        k.on('moveend resize', this.neu, this); k.on('move zoom', this._mit, this); this.neu();
+        k.on('moveend resize', this.neu, this); k.on('move zoom', this._mit, this); k.on('zoomstart', this._zoomAn, this); k.on('zoomend', this._zoomAus, this); this.neu();
       },
       onRemove: function (k) {
-        k.off('moveend resize', this.neu, this); k.off('move zoom', this._mit, this);
+        k.off('moveend resize', this.neu, this); k.off('move zoom', this._mit, this); k.off('zoomstart', this._zoomAn, this); k.off('zoomend', this._zoomAus, this); this._zoomt = false;
         if (this._raf) cancelAnimationFrame(this._raf); this._raf = 0; L.DomUtil.remove(this._cv); this._cv = null; this._o = null;
       },
       gitter: function (g) { this._g = g; this.neu(); return this; },
-      // beim Verschieben: erst neu zeichnen, wenn mehr als 60 % des Rands aufgebraucht sind (höchstens einmal je Bild)
-      _mit: function (e) {
-        if (!this._o || this._raf) return;
-        var o = this._map.containerPointToLayerPoint([0, 0]), self = this;
-        if (e.type === 'zoom' || Math.abs(o.x - this._o.x) > this._p.x * .6 || Math.abs(o.y - this._o.y) > this._p.y * .6) this._raf = requestAnimationFrame(function () { self._raf = 0; self.neu(); });
+      _zoomAn: function () { this._zoomt = true; },
+      _zoomAus: function () { this._zoomt = false; },
+      // beim Verschieben: erst neu zeichnen, wenn mehr als 60 % des Rands aufgebraucht sind (höchstens einmal je Bild);
+      // während eines Zooms nur verschieben und skalieren (wie Leaflets eigene Zeichenebene), neu gezeichnet wird bei moveend
+      _mit: function () {
+        if (!this._o) return;
+        var k = this._map, self = this;
+        if (this._zoomt) { L.DomUtil.setTransform(this._cv, k.latLngToLayerPoint(this._ecke), k.getZoomScale(k.getZoom(), this._z)); return; }
+        if (this._raf) return;
+        var o = k.containerPointToLayerPoint([0, 0]);
+        if (Math.abs(o.x - this._o.x) > this._p.x * .6 || Math.abs(o.y - this._o.y) > this._p.y * .6) this._raf = requestAnimationFrame(function () { self._raf = 0; self.neu(); });
       },
       neu: function () {
         var k = this._map, cv = this._cv; if (!k || !cv || !this._g) return;
         var gr = k.getSize(); if (!gr.x || !gr.y) return;
-        var px = Math.round(gr.x * A26_RAND), py = Math.round(gr.y * A26_RAND), dpr = Math.min(2, window.devicePixelRatio || 1);
+        var rand = gr.x * gr.y > 6e5 ? A26_RAND_GROSS : A26_RAND, px = Math.round(gr.x * rand), py = Math.round(gr.y * rand);
+        var dpr = Math.min(2, window.devicePixelRatio || 1, Math.sqrt(A26_MAX_PX / ((gr.x + 2 * px) * (gr.y + 2 * py))));
         cv.width = Math.round((gr.x + 2 * px) * dpr); cv.height = Math.round((gr.y + 2 * py) * dpr);
         cv.style.width = (gr.x + 2 * px) + 'px'; cv.style.height = (gr.y + 2 * py) + 'px';
         L.DomUtil.setPosition(cv, k.containerPointToLayerPoint([-px, -py]));
-        this._o = k.containerPointToLayerPoint([0, 0]); this._p = L.point(px, py);
+        this._o = k.containerPointToLayerPoint([0, 0]); this._p = L.point(px, py); this._ecke = k.containerPointToLatLng([-px, -py]); this._z = k.getZoom();
         var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, px * dpr, py * dpr);   // gezeichnet wird in Kartenpixeln, (0,0) = linke obere Ecke der Karte
         this.info = a26Zeichnen(ctx, this._g, gr.x, gr.y, px, py);
       }
