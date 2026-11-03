@@ -66,12 +66,12 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
       const s = await H.neueSeite(b, {}, {});
       await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 });
       await s.p.click('#tb-radsat'); await s.p.waitForSelector('#ebenenWahl [data-ebene="wind"]', { timeout: 15000 });
-      await s.p.click('#ebenenWahl [data-ebene="wind"]'); await s.p.waitForSelector('#radarKarte img.a26-flaeche', { timeout: 8000 }); await s.p.waitForTimeout(500);
+      await s.p.click('#ebenenWahl [data-ebene="wind"]'); await s.p.waitForSelector('#radarKarte .a26-flaeche', { timeout: 8000 }); await s.p.waitForTimeout(500);
       const z = await s.p.evaluate(async () => {
-        const i = document.querySelector('#radarKarte img.a26-flaeche'); if (!i.complete) await new Promise(r => { i.onload = r; });
-        const W = i.getBoundingClientRect().width, k = i.naturalWidth / W, c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight;
-        const x = c.getContext('2d'); x.drawImage(i, 0, 0);
-        const d = x.getImageData(Math.round((W - 80) * k), 0, Math.round(80 * k), Math.round(130 * k)).data; let n = 0; for (let q = 3; q < d.length; q += 4) if (d[q] > 40) n++;
+        // seit W2 (03.11.2026) Zeichenfläche mit Rand rundum: Bereich unter den Knöpfen aus der Lage der Karte umrechnen
+        const c = document.querySelector('#radarKarte canvas.a26-flaeche'), a = c.getBoundingClientRect(), m = document.getElementById('radarKarte').getBoundingClientRect();
+        const W = m.width, k = c.width / a.width, x0 = m.left - a.left, y0 = m.top - a.top;
+        const d = c.getContext('2d').getImageData(Math.round((x0 + W - 80) * k), Math.round(y0 * k), Math.round(80 * k), Math.round(130 * k)).data; let n = 0; for (let q = 3; q < d.length; q += 4) if (d[q] > 40) n++;
         return { n, W };
       });
       pruefe('Wind: unter den Zoom-Knöpfen (rechts oben, 80 × 130 px) ist kein Pfeil gezeichnet', z.n === 0, z);

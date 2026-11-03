@@ -76,14 +76,12 @@ async function start(b, opt, modus) {
       pruefe('Pillen: Radar, Satellit, Infrarot, Karte, Wind, Wolken, Isobaren', pillen.map(x => x.t).join(',') === 'Radar,Satellit,Infrarot,Karte,Wind,Wolken,Isobaren', pillen);
       pruefe('Alle Pillen mind. 44 px hoch', pillen.every(x => x.h >= 43.5), pillen.map(x => x.h));
       const flaeche = () => s.p.evaluate(async () => {
-        const i = document.querySelector('#radarKarte img.a26-flaeche'); if (!i) return null;
-        if (!i.complete) await new Promise(r => { i.onload = r; });
-        const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0);
-        const d = x.getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < d.length; k += 4) if (d[k] > 40) n++;
+        const c = document.querySelector('#radarKarte canvas.a26-flaeche'); if (!c) return null;   // seit W2 (03.11.2026) Zeichenfläche statt Bild
+        const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let k = 3; k < d.length; k += 4) if (d[k] > 40) n++;
         return { n, gesamt: d.length / 4, breite: c.width };
       });
       for (const [id, name, saetze] of [['wind', 'Wind', /Pfeil/], ['wolken', 'Wolken', /Bewölkung|bedeckt/], ['druck', 'Isobaren', /Luftdruck|hPa/]]) {
-        await s.p.click('#ebenenWahl [data-ebene="' + id + '"]'); await s.p.waitForFunction(() => document.querySelector('#radarKarte img.a26-flaeche'), null, { timeout: 8000 }).catch(() => { });
+        await s.p.click('#ebenenWahl [data-ebene="' + id + '"]'); await s.p.waitForFunction(() => document.querySelector('#radarKarte canvas.a26-flaeche'), null, { timeout: 8000 }).catch(() => { });
         await s.p.waitForTimeout(500);
         const f = await flaeche(), ui = await s.p.evaluate(() => ({ play: document.getElementById('radarPlay').hidden, steuer: document.getElementById('w3Steuer').hidden, text: document.getElementById('ebeneQuelle').textContent, zeit: document.getElementById('radarZeit').textContent, checked: document.querySelector('#ebenenWahl [aria-checked="true"]').dataset.ebene }));
         pruefe(name + ': Fläche liegt über der Karte (Bild mit sichtbaren Pixeln)', !!f && f.n > 200, f);
@@ -92,7 +90,7 @@ async function start(b, opt, modus) {
       }
       pruefe('Ein Abruf an Open-Meteo für das Gitter (mind. 40 Punkte, Wind, Wolken, Druck), gleicher Ausschnitt wird nicht neu geholt', gitter.length === 1 && decodeURIComponent(gitter[0]).split('latitude=')[1].split('&')[0].split(',').length >= 40 && /wind_speed_10m/.test(gitter[0]) && /cloud_cover/.test(gitter[0]), gitter.length + ' ' + (gitter[0] || '').slice(0, 200));
       await s.p.click('#ebenenWahl [data-ebene="radar"]'); await s.p.waitForTimeout(500);
-      pruefe('Zurück auf Radar: Fläche entfernt, Abspielen wieder da', !(await s.p.$('#radarKarte img.a26-flaeche')) && await s.p.evaluate(() => !document.getElementById('radarPlay').hidden));
+      pruefe('Zurück auf Radar: Fläche entfernt, Abspielen wieder da', !(await s.p.$('#radarKarte .a26-flaeche')) && await s.p.evaluate(() => !document.getElementById('radarPlay').hidden));
       await s.p.focus('#ebenenWahl [data-ebene="radar"]');
       for (let i = 0; i < 6; i++) await s.p.keyboard.press('ArrowRight');
       pruefe('Pfeiltaste wechselt bis „Isobaren“', await s.p.evaluate(() => document.querySelector('#ebenenWahl [aria-checked="true"]').dataset.ebene) === 'druck');
@@ -104,7 +102,7 @@ async function start(b, opt, modus) {
       const f = await start(b, {}, { gitterFehler: true });
       await f.p.click('#tb-radsat'); await f.p.waitForSelector('#radarKarte .leaflet-tile-pane', { state: 'attached' }); await f.p.waitForTimeout(400);
       await f.p.click('#ebenenWahl [data-ebene="wind"]'); await f.p.waitForTimeout(1200);
-      pruefe('Gitter nicht erreichbar: ruhiger Satz, keine Fläche, keine Seitenfehler', /nicht erreichbar/.test(await f.p.textContent('#radarZeit')) && !(await f.p.$('#radarKarte img.a26-flaeche')) && !f.konsole.some(k => /Seitenfehler/.test(k)), [await f.p.textContent('#radarZeit'), f.konsole]);
+      pruefe('Gitter nicht erreichbar: ruhiger Satz, keine Fläche, keine Seitenfehler', /nicht erreichbar/.test(await f.p.textContent('#radarZeit')) && !(await f.p.$('#radarKarte .a26-flaeche')) && !f.konsole.some(k => /Seitenfehler/.test(k)), [await f.p.textContent('#radarZeit'), f.konsole]);
       await f.ctx.close();
     }
 
@@ -177,8 +175,8 @@ async function start(b, opt, modus) {
       // F2: Wolken sichtbar auf heller Karte: Bild über hellem Grund, linker Rand (wenig Wolken) gegen rechten Rand (viel Wolken)
       await s.p.click('#ebenenWahl [data-ebene="wolken"]'); await s.p.waitForTimeout(800);
       const kon = await s.p.evaluate(async () => {
-        const i = document.querySelector('#radarKarte img.a26-flaeche'); if (!i.complete) await new Promise(r => { i.onload = r; });
-        const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.fillStyle = 'rgb(221,221,221)'; x.fillRect(0, 0, c.width, c.height); x.drawImage(i, 0, 0);
+        const i = document.querySelector('#radarKarte canvas.a26-flaeche');
+        const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; const x = c.getContext('2d'); x.fillStyle = 'rgb(221,221,221)'; x.fillRect(0, 0, c.width, c.height); x.drawImage(i, 0, 0);
         const lum = px => { const d = x.getImageData(px, Math.round(c.height / 2), 1, 1).data; return .2126 * d[0] + .7152 * d[1] + .0722 * d[2]; };
         return { links: lum(2), rechts: lum(c.width - 3) };
       });

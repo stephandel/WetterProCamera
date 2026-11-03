@@ -317,7 +317,7 @@
     sat: ['Satellitenbild in Farbe (Meteosat). „Abspielen“ zeigt die letzten 2 Stunden. Nachts dunkel.', 'EUMETSAT', 'https://view.eumetsat.int'],
     ir: ['Infrarot-Satellitenbild (Meteosat): weiß sind hohe, kalte Wolken, auch nachts. „Abspielen“ zeigt die letzten 2 Stunden.', 'EUMETSAT', 'https://view.eumetsat.int'],
     karte: ['Aktuelle Temperaturen an deinen Orten.', 'Open-Meteo', 'https://open-meteo.com'],
-    wind: ['Aktueller Wind in 10 m Höhe. Der Pfeil zeigt, wohin der Wind weht, die Zahl ist die Geschwindigkeit in der gewählten Einheit (aktuell: ' + EINHEITEN[windEinheit] + '). Regen zeigt das Radar.', 'Open-Meteo', 'https://open-meteo.com'],
+    wind: ['Aktueller Wind in 10 m Höhe. Der Pfeil zeigt, wohin der Wind weht, die Zahl ist die Geschwindigkeit in der gewählten Einheit (aktuell: ' + EINHEITEN[windEinheit] + '). Die Farbe zeigt die Stärke: hellblau schwach, grün, gelb, orange, rot und violett stürmisch. Regen zeigt das Radar.', 'Open-Meteo', 'https://open-meteo.com'],
     wolken: ['Aktuelle Bewölkung: je weißer die Fläche, desto dichter die Wolken. Das Satellitenbild zeigt die echten Wolken.', 'Open-Meteo', 'https://open-meteo.com'],
     druck: ['Linien gleichen Luftdrucks auf Meereshöhe, meist alle 4 hPa, bei geringen Unterschieden alle 2 hPa. Enge Linien bedeuten starken Wind.', 'Open-Meteo', 'https://open-meteo.com']
   };
@@ -432,15 +432,15 @@
      Nicht gebaut: Regen als eigene Ebene (das Radar zeigt Regen), Zeitleiste für Vorhersage-Bilder, Wind als Strömungs-Animation (brauchen Dienste mit Schlüssel oder viel mehr Daten). */
   var A26_NX = 8, A26_NY = 7, a26 = { g: null, laeuft: null, bild: null, nr: 0, uhr: null };
   function a26Weg() { if (a26.bild && radarKarte) radarKarte.removeLayer(a26.bild); a26.bild = null; a26.nr++; }
-  function a26Bewegt() { clearTimeout(a26.uhr); if (A26_NAMEN[ebene]) a26.uhr = setTimeout(a26Zeigen, 400); }
+  function a26Bewegt() { clearTimeout(a26.uhr); if (A26_NAMEN[ebene]) a26.uhr = setTimeout(a26Zeigen, 250); }   // nur noch für neue Gitter-Abrufe, gezeichnet wird in der Ebene selbst (W2)
   function a26Holen() {
     // Open-Meteo zählt jeden Gitterpunkt als eigenen Abruf: Gitter weiterverwenden, solange die Kartenmitte darin liegt, der Zoom höchstens 1 Stufe anders ist und die Werte jünger als 30 Minuten sind (Prüfung 22.10.2026).
     // Am Rand des Kartenbilds gelten die Randwerte weiter (a26Wert), sonst würde schon eine kleine Verschiebung neu laden.
-    var b = radarKarte.getBounds(), zoom = radarKarte.getZoom(), g = a26.g, mitte = b.getCenter();
-    if (g && Math.abs(g.zoom - zoom) <= 1 && Date.now() - g.zeit < 30 * 60000 && mitte.lat >= g.lats[0] && mitte.lat <= g.lats[A26_NY - 1] && mitte.lng >= g.lons[0] && mitte.lng <= g.lons[A26_NX - 1]) return Promise.resolve(g);
+    var b = radarKarte.getBounds(), zoom = radarKarte.getZoom(), g = a26.g, mitte = b.getCenter(), mw = mitte.wrap();
+    if (g && Math.abs(g.zoom - zoom) <= 1 && Date.now() - g.zeit < 30 * 60000 && mitte.lat >= g.lats[0] && mitte.lat <= g.lats[A26_NY - 1] && mw.lng >= g.lons[0] && mw.lng <= g.lons[A26_NX - 1]) return Promise.resolve(g);
     if (a26.laeuft) return a26.laeuft.then(a26Holen);   // läuft schon ein Abruf: abwarten, danach neu entscheiden (sonst doppelte Abrufe beim Öffnen)
-    var dLat = (b.getNorth() - b.getSouth()) * .3, dLon = (b.getEast() - b.getWest()) * .3;
-    var sued = Math.max(-85, b.getSouth() - dLat), nord = Math.min(85, b.getNorth() + dLat), west = Math.max(-180, b.getWest() - dLon), ost = Math.min(180, b.getEast() + dLon);
+    var dLat = (b.getNorth() - b.getSouth()) * .3, dLon = (b.getEast() - b.getWest()) * .3, schieb = mitte.wrap().lng - mitte.lng;   // weit über die Datumsgrenze geschoben: Längen zurück in −180 … 180 (sonst 400 von Open-Meteo, 03.11.2026)
+    var sued = Math.max(-85, b.getSouth() - dLat), nord = Math.min(85, b.getNorth() + dLat), west = Math.max(-180, b.getWest() + schieb - dLon), ost = Math.min(180, b.getEast() + schieb + dLon);
     var lats = [], lons = [], la = [], lo = [], i, j;
     for (j = 0; j < A26_NY; j++) lats.push(+(sued + (nord - sued) * j / (A26_NY - 1)).toFixed(3));
     for (i = 0; i < A26_NX; i++) lons.push(+(west + (ost - west) * i / (A26_NX - 1)).toFixed(3));
@@ -500,50 +500,107 @@
     }
     return aus;
   }
-  function a26Zeichnen(g) {
-    var gr = radarKarte.getSize(), W = gr.x, H = gr.y, dpr = Math.min(2, window.devicePixelRatio || 1), cv = document.createElement('canvas');
-    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
-    var ctx = cv.getContext('2d'), css = getComputedStyle(document.documentElement), hell = css.getPropertyValue('--label').trim(), dunkel = css.getPropertyValue('--bg').trim();
-    var latBei = function (y) { return radarKarte.containerPointToLatLng([0, y]).lat; }, lonBei = function (x) { return radarKarte.containerPointToLatLng([x, 0]).lng; };
-    ctx.scale(dpr, dpr); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 12px -apple-system, "SF Pro Text", system-ui, sans-serif';
+  /* W2 (03.11.2026): Die Fläche ist eine eigene Leaflet-Ebene mit einer Zeichenfläche statt eines PNG-Bilds (L.imageOverlay).
+     Vorher deckte das Bild nur den alten Ausschnitt: beim Verschieben blieben leere Streifen, bis die Karte ganz stand (nach dem
+     Nachgleiten auf dem iPhone mehrere Sekunden) plus 400 ms Wartezeit; jedes Neuzeichnen kodierte dazu ein PNG (Messung 03.11.2026).
+     Jetzt wird ein Rand von 35 % rundum mitgezeichnet, beim Verschieben neu gezeichnet, sobald der Rand knapp wird, und die Windpfeile
+     hängen an festen Kartenpunkten (Raster in Weltpixeln), damit sie beim Neuzeichnen nicht springen. Während des Zoomens blendet
+     Leaflet die Ebene aus (Klasse leaflet-zoom-hide), danach ist sie sofort wieder da. */
+  var A26_RAND = .35, A26_RASTER = 84, a26Klasse = null;
+  var WIND_STUFEN = [6, 12, 20, 29, 39, 50, 62];   // km/h, Farben --wind-0 … --wind-7 in app.css
+  function a26Ebene() {
+    if (!a26Klasse) a26Klasse = L.Layer.extend({
+      onAdd: function (k) {
+        this._cv = L.DomUtil.create('canvas', 'a26-flaeche leaflet-zoom-hide', k.getPane('overlayPane'));
+        k.on('moveend resize', this.neu, this); k.on('move zoom', this._mit, this); this.neu();
+      },
+      onRemove: function (k) {
+        k.off('moveend resize', this.neu, this); k.off('move zoom', this._mit, this);
+        if (this._raf) cancelAnimationFrame(this._raf); this._raf = 0; L.DomUtil.remove(this._cv); this._cv = null; this._o = null;
+      },
+      gitter: function (g) { this._g = g; this.neu(); return this; },
+      // beim Verschieben: erst neu zeichnen, wenn mehr als 60 % des Rands aufgebraucht sind (höchstens einmal je Bild)
+      _mit: function (e) {
+        if (!this._o || this._raf) return;
+        var o = this._map.containerPointToLayerPoint([0, 0]), self = this;
+        if (e.type === 'zoom' || Math.abs(o.x - this._o.x) > this._p.x * .6 || Math.abs(o.y - this._o.y) > this._p.y * .6) this._raf = requestAnimationFrame(function () { self._raf = 0; self.neu(); });
+      },
+      neu: function () {
+        var k = this._map, cv = this._cv; if (!k || !cv || !this._g) return;
+        var gr = k.getSize(); if (!gr.x || !gr.y) return;
+        var px = Math.round(gr.x * A26_RAND), py = Math.round(gr.y * A26_RAND), dpr = Math.min(2, window.devicePixelRatio || 1);
+        cv.width = Math.round((gr.x + 2 * px) * dpr); cv.height = Math.round((gr.y + 2 * py) * dpr);
+        cv.style.width = (gr.x + 2 * px) + 'px'; cv.style.height = (gr.y + 2 * py) + 'px';
+        L.DomUtil.setPosition(cv, k.containerPointToLayerPoint([-px, -py]));
+        this._o = k.containerPointToLayerPoint([0, 0]); this._p = L.point(px, py);
+        var ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, px * dpr, py * dpr);   // gezeichnet wird in Kartenpixeln, (0,0) = linke obere Ecke der Karte
+        this.info = a26Zeichnen(ctx, this._g, gr.x, gr.y, px, py);
+      }
+    });
+    return new a26Klasse();
+  }
+  function a26WindFarbe(css, kmh) { var i = 0; while (i < WIND_STUFEN.length && kmh >= WIND_STUFEN[i]) i++; return css.getPropertyValue('--wind-' + i).trim(); }
+  // Pfeil als gefüllte Form (Schaft + Spitze) mit dunklem Rand; zeigt, wohin der Wind weht
+  function a26Pfeil(ctx, x, y, grad, len, farbe, rand) {
+    var h = len / 2, k = Math.min(10, len * .45);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(grad * Math.PI / 180);
+    ctx.beginPath(); ctx.moveTo(-1.7, h); ctx.lineTo(1.7, h); ctx.lineTo(1.7, -h + k); ctx.lineTo(6, -h + k); ctx.lineTo(0, -h); ctx.lineTo(-6, -h + k); ctx.lineTo(-1.7, -h + k); ctx.closePath();
+    ctx.lineWidth = 3; ctx.strokeStyle = rand; ctx.stroke(); ctx.fillStyle = farbe; ctx.fill();
+    ctx.restore();
+  }
+  function a26Schild(ctx, txt, x, y, hell, dunkel) {
+    var b = Math.ceil(ctx.measureText(txt).width) + 10, h = 17, l = x - b / 2, o = y - h / 2, r = h / 2;
+    ctx.beginPath(); ctx.moveTo(l + r, o); ctx.lineTo(l + b - r, o); ctx.arc(l + b - r, o + r, r, -Math.PI / 2, Math.PI / 2); ctx.lineTo(l + r, o + h); ctx.arc(l + r, o + r, r, Math.PI / 2, Math.PI * 1.5); ctx.closePath();
+    ctx.globalAlpha = .8; ctx.fillStyle = dunkel; ctx.fill(); ctx.globalAlpha = 1; ctx.fillStyle = hell; ctx.fillText(txt, x, y + .5);
+  }
+  // zeichnet die gewählte Ebene in Kartenpixeln; px/py = mitgezeichneter Rand links/rechts bzw. oben/unten
+  function a26Zeichnen(ctx, g, W, H, px, py) {
+    var css = getComputedStyle(document.documentElement), hell = css.getPropertyValue('--label').trim(), dunkel = css.getPropertyValue('--bg').trim();
+    var latBei = function (y) { return radarKarte.containerPointToLatLng([0, y]).lat; }, lonBei = function (x) { return radarKarte.containerPointToLatLng([x, 0]).wrap().lng; };
+    var GW = W + 2 * px, GH = H + 2 * py;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 12px -apple-system, "SF Pro Text", system-ui, sans-serif';
     var x, y, stufe = 0, anzahl = 0;
     if (ebene === 'wolken') {
-      var w = Math.ceil(W / 8), h = Math.ceil(H / 8), kl = document.createElement('canvas'); kl.width = w; kl.height = h;
-      ctx.globalAlpha = .5; ctx.fillStyle = dunkel; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;   // dunkler Schleier, damit die weißen Wolken auch auf der hellen Karte zu sehen sind
+      var w = Math.ceil(GW / 8), h = Math.ceil(GH / 8), kl = document.createElement('canvas'); kl.width = w; kl.height = h;
+      ctx.globalAlpha = .5; ctx.fillStyle = dunkel; ctx.fillRect(-px, -py, GW, GH); ctx.globalAlpha = 1;   // dunkler Schleier, damit die weißen Wolken auch auf der hellen Karte zu sehen sind
       var kc = kl.getContext('2d'); kc.fillStyle = hell;
-      for (y = 0; y < h; y++) for (x = 0; x < w; x++) { var c = a26Wert(g, 'wolken', latBei(y * 8 + 4), lonBei(x * 8 + 4)); if (c != null) { kc.globalAlpha = Math.max(0, Math.min(1, c / 100)) * .9; kc.fillRect(x, y, 1, 1); } }
-      ctx.imageSmoothingEnabled = true; ctx.drawImage(kl, 0, 0, w * 8, h * 8);
+      for (y = 0; y < h; y++) for (x = 0; x < w; x++) { var c = a26Wert(g, 'wolken', latBei(y * 8 + 4 - py), lonBei(x * 8 + 4 - px)); if (c != null) { kc.globalAlpha = Math.max(0, Math.min(1, c / 100)) * .9; kc.fillRect(x, y, 1, 1); } }
+      ctx.imageSmoothingEnabled = true; ctx.drawImage(kl, -px, -py, w * 8, h * 8);
     } else if (ebene === 'wind') {
-      for (y = 44; y < H; y += 84) for (x = 44; x < W; x += 84) {
-        if (x + 30 > W - 80 && y < 150) continue;   // nicht unter den Zoom-Knöpfen (rechts oben), wie bei den Isobaren
-        var wi = a26Wind(g, latBei(y), lonBei(x)); if (!wi) continue;
-        var len = Math.min(36, 14 + wi.v * .6), r = (wi.dir + 180) * Math.PI / 180, dx = Math.sin(r), dy = -Math.cos(r);
-        var x1 = x - dx * len / 2, y1 = y - dy * len / 2, x2 = x + dx * len / 2, y2 = y + dy * len / 2, kopf = function () { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.moveTo(x2 - dx * 8 - dy * 5, y2 - dy * 8 + dx * 5); ctx.lineTo(x2, y2); ctx.lineTo(x2 - dx * 8 + dy * 5, y2 - dy * 8 - dx * 5); ctx.stroke(); };
-        ctx.strokeStyle = dunkel; ctx.lineWidth = 5.5; kopf(); ctx.strokeStyle = hell; ctx.lineWidth = 2.5; kopf();
-        var zahl = windTxt(wi.v), ty = y + Math.max(len / 2, 12) + 10; ctx.lineWidth = 4; ctx.strokeStyle = dunkel; ctx.strokeText(zahl, x, ty); ctx.fillStyle = hell; ctx.fillText(zahl, x, ty);
+      // Raster in Weltpixeln (versetzte Reihen): derselbe Kartenpunkt behält beim Verschieben seinen Pfeil
+      var pb = radarKarte.getPixelBounds(), S = A26_RASTER;
+      for (var ry = Math.floor((pb.min.y - py) / S); ry * S <= pb.max.y + py; ry++) {
+        var versatz = ((ry % 2) + 2) % 2 ? S / 2 : 0;
+        for (var rx = Math.floor((pb.min.x - px - versatz) / S); rx * S + versatz <= pb.max.x + px; rx++) {
+          x = rx * S + versatz - pb.min.x; y = ry * S - pb.min.y;
+          if (x > W - 110 && x < W + 30 && y > -40 && y < 150) continue;   // nicht unter den Zoom-Knöpfen (rechts oben), wie bei den Isobaren
+          var wi = a26Wind(g, latBei(y), lonBei(x)); if (!wi) continue;
+          var farbe = a26WindFarbe(css, wi.v);
+          if (wi.v < 2) { ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = dunkel; ctx.stroke(); ctx.fillStyle = farbe; ctx.fill(); }   // windstill: Punkt statt Pfeil
+          else a26Pfeil(ctx, x, y, wi.dir + 180, Math.min(36, 18 + wi.v * .45), farbe, dunkel);
+          a26Schild(ctx, windWert(wi.v), x, y + 22, hell, dunkel);
+          anzahl++;
+        }
       }
     } else {
-      var rw = Math.max(24, Math.round(W / 6)), rh = Math.max(18, Math.round(H / 6)), feld = [];
-      for (y = 0; y < rh; y++) for (x = 0; x < rw; x++) feld.push(a26Wert(g, 'druck', latBei(y / (rh - 1) * H), lonBei(x / (rw - 1) * W)));
+      var rw = Math.max(24, Math.round(GW / 6)), rh = Math.max(18, Math.round(GH / 6)), feld = [];
+      for (y = 0; y < rh; y++) for (x = 0; x < rw; x++) feld.push(a26Wert(g, 'druck', latBei(y / (rh - 1) * GH - py), lonBei(x / (rw - 1) * GW - px)));
       stufe = 4; var linien = a26Linien(feld, rw, rh, stufe);
       if (linien.length < 2) { stufe = 2; linien = a26Linien(feld, rw, rh, stufe); }   // ruhiges Wetter: feinere Stufe
-      var sx = W / (rw - 1), sy = H / (rh - 1), anzahl = linien.length;
-      var strecken = function (l) { ctx.beginPath(); l.seg.forEach(function (sg) { ctx.moveTo(sg[0][0] * sx, sg[0][1] * sy); ctx.lineTo(sg[1][0] * sx, sg[1][1] * sy); }); ctx.stroke(); };
+      var sx = GW / (rw - 1), sy = GH / (rh - 1); anzahl = linien.length;
+      var strecken = function (l) { ctx.beginPath(); l.seg.forEach(function (sg) { ctx.moveTo(sg[0][0] * sx - px, sg[0][1] * sy - py); ctx.lineTo(sg[1][0] * sx - px, sg[1][1] * sy - py); }); ctx.stroke(); };
       linien.forEach(function (l) { ctx.strokeStyle = dunkel; ctx.lineWidth = 5; strecken(l); ctx.strokeStyle = hell; ctx.lineWidth = 2; strecken(l); });
-      // Beschriftung nur im Inneren: nicht am Rand und nicht unter den Zoom-Knöpfen (rechts oben)
-      var frei = function (mx, my) { return mx > 30 && my > 20 && mx < W - 30 && my < H - 30 && !(mx > W - 80 && my < 130); };
+      // Beschriftung nicht am Rand der Zeichenfläche und nicht unter den Zoom-Knöpfen (rechts oben)
+      var frei = function (mx, my) { return mx > 30 - px && my > 20 - py && mx < W + px - 30 && my < H + py - 30 && !(mx > W - 80 && mx < W + 30 && my > -30 && my < 130); };
       linien.forEach(function (l) {
-        var n = l.seg.length, k = Math.max(1, Math.floor(n / 2));
+        var n = l.seg.length, k = Math.max(1, Math.floor(n / 3));
         for (var q = Math.floor(k / 2); q < n; q += k) {
-          var sg = l.seg[q], mx = (sg[0][0] + sg[1][0]) / 2 * sx, my = (sg[0][1] + sg[1][1]) / 2 * sy, txt = String(Math.round(l.wert));
+          var sg = l.seg[q], mx = (sg[0][0] + sg[1][0]) / 2 * sx - px, my = (sg[0][1] + sg[1][1]) / 2 * sy - py, txt = String(Math.round(l.wert));
           if (!frei(mx, my)) continue;
           ctx.fillStyle = dunkel; ctx.fillRect(mx - 20, my - 10, 40, 20); ctx.fillStyle = hell; ctx.fillText(txt, mx, my);
         }
       });
     }
-    var mb = radarKarte.getBounds(), bounds = [[mb.getSouth(), mb.getWest()], [mb.getNorth(), mb.getEast()]], url = cv.toDataURL('image/png');
-    if (a26.bild) radarKarte.removeLayer(a26.bild);
-    a26.bild = L.imageOverlay(url, bounds, { interactive: false, className: 'a26-flaeche', zIndex: 5 }).addTo(radarKarte);
     return { stufe: stufe, anzahl: anzahl };
   }
   function a26Zeigen() {
@@ -553,8 +610,9 @@
     z.textContent = name + ' · wird geladen …';
     a26Holen().then(function (g) {
       if (nr !== a26.nr || !A26_NAMEN[ebene]) return;
-      var info = a26Zeichnen(g);
-      z.textContent = name + ' · ' + (ebene !== 'druck' ? 'aktuell' : info.anzahl ? 'alle ' + info.stufe + ' hPa' : 'kaum Druckunterschiede im Ausschnitt, deshalb keine Linien');
+      if (!a26.bild) a26.bild = a26Ebene().addTo(radarKarte);
+      var info = a26.bild.gitter(g).info || { anzahl: 0, stufe: 0 };
+      z.textContent = name + ' · ' + (ebene === 'wind' ? 'aktuell · ' + EINHEITEN[windEinheit] : ebene !== 'druck' ? 'aktuell' : info.anzahl ? 'alle ' + info.stufe + ' hPa' : 'kaum Druckunterschiede im Ausschnitt, deshalb keine Linien');
     }).catch(function () { if (nr !== a26.nr) return; if (a26.bild) { radarKarte.removeLayer(a26.bild); a26.bild = null; } z.textContent = name + ': Wetterdaten für die Karte gerade nicht erreichbar.'; });
   }
   function temperaturMarken() {
