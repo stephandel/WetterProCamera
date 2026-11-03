@@ -128,7 +128,7 @@ async function start(b, opt, modus) {
       let k = await kreist('w3Tag', 14);
       pruefe('Fund 12: Tab und Umschalt+Tab bleiben im Tagesblatt (nie auf Rahmen oder Seitenkörper)', k.every(x => !/DRAUSSEN/.test(x)), k);
       await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);
-      await s.p.click('#a9Warnung button'); await s.p.waitForSelector('#a9WarnBlatt[open]');
+      await s.p.click('#a9Symbol'); await s.p.waitForSelector('#a9WarnBlatt[open]');
       k = await kreist('a9WarnBlatt', 8);
       pruefe('Fund 12: Tab bleibt im Warnblatt', k.every(x => !/DRAUSSEN/.test(x)), k);
       await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(150);

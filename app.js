@@ -770,7 +770,7 @@
       else ortSetzen({ name: 'Mein Standort', land: '', lat: lat, lon: lon, standort: true });
     }, function () { var b = $('#btnStandort .leise'); if (b) b.textContent = 'nicht erlaubt'; });
   }
-  function ortSetzen(o) { ort = o; speicher.schreiben('wpgt-ort', o); daten = null; $('#ortName').textContent = o.name; zeigeTab('wetter'); laden(); }
+  function ortSetzen(o) { ort = o; speicher.schreiben('wpgt-ort', o); daten = null; $('#ortName').textContent = o.name; try { a9SymbolNeu(); } catch (e) { } zeigeTab('wetter'); laden(); }
 
   /* ---------- Tabs: Wetter, Graphs, Kamera (Mitte, öffnet Teilen), Rad/Sat, Mehr ---------- */
   var TABS = [['wetter', 'Wetter', 'cloudsun'], ['graphs', 'Graphs', 'chart'], ['kamera', 'Kamera', 'camera'], ['radsat', 'Rad/Sat', 'radar'], ['mehr', 'Mehr', 'more']];
@@ -2966,6 +2966,8 @@
      Nur für Orte in Deutschland. Keine Warnung, Fehler oder offline: Kachel fehlt still, nichts blockiert. */
   var A9_WARN = { minor: ['Wetterwarnung', 1], moderate: ['Markante Wetterwarnung', 2], severe: ['Unwetterwarnung', 3], extreme: ['Extreme Unwetterwarnung', 4] };
   var a9WarnD = {};
+  // W1 (Ansatz F, Stephans Wahl 03.11.2026): Warnung zuerst als Dreieck neben dem Ortsnamen, der große Block nur noch bei „extrem“
+  var A9_ANZEIGE = 'symbol-extrem';   // 'block' (Stand bis 03.11.) | 'symbol' | 'symbol-extrem'; als Auswahl später im Design-Konfigurator
   var a9InDeutschland = function (o) { return o.lat > 47.2 && o.lat < 55.1 && o.lon > 5.8 && o.lon < 15.1; };
   function a9WarnHolen(o) {
     var k = a5PosKey(o), m = a9WarnD[k];
@@ -2987,8 +2989,20 @@
     if (!bis) return anfang + (anfang === 'jetzt' ? '' : ' Uhr');
     return anfang + ' bis ' + (von && von > jetzt && von.slice(0, 10) === bis.slice(0, 10) ? '' : tag(bis) + ' ') + hm(bis) + ' Uhr';
   }
+  function a9BlockZeigen(l) { return !!l.length && (A9_ANZEIGE === 'block' || (A9_ANZEIGE === 'symbol-extrem' && l[0].severity === 'extreme')); }
+  // Dreieck in der Kopfzeile: Farbe der höchsten Stufe, Zahl ab zwei Warnungen; steht auf jedem Reiter
+  function a9SymbolNeu() {
+    var k = $('#a9Symbol'); if (!k || !a9WarnD) return;
+    var l = A9_ANZEIGE === 'block' ? [] : a9WarnListe(), top = l[0];
+    if (!top) { k.hidden = true; k.innerHTML = ''; return; }
+    k.className = 'a9-symbol tippbar a9-s-' + top.severity;
+    k.setAttribute('aria-label', (l.length === 1 ? '1 Wetterwarnung' : l.length + ' Wetterwarnungen') + ', höchste Stufe: ' + A9_WARN[top.severity][0] + '. Details');
+    k.innerHTML = '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="a9-f" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path class="a9-z" stroke-width="2.2" d="M12 9v4M12 17h.01"/></svg>' +
+      (l.length > 1 ? '<span class="a9-symbol-zahl" aria-hidden="true">' + l.length + '</span>' : '');
+    k.hidden = false;
+  }
   function a9WarnHtml() {
-    var l = a9WarnListe(); if (!l.length) return '';
+    var l = a9WarnListe(); if (!a9BlockZeigen(l)) return '';
     return '<section class="a9-warnung" id="a9Warnung" aria-labelledby="a9WarnungT"><h2 class="nur-vorlesen" id="a9WarnungT">Wetterwarnungen</h2>' +
       l.map(function (a, i) {
         return '<button type="button" class="a9-warn a9-warn-' + a.severity + ' tippbar" data-a9-warn="' + i + '" aria-haspopup="dialog">' + Ikon('warn') +
@@ -2996,6 +3010,7 @@
       }).join('') + '</section>';
   }
   function a9WarnNeu() {
+    a9SymbolNeu();
     if (aktiv !== 'wetter' || !daten) return;
     var s = $('#tab-wetter'); if (!s) return;
     var alt = $('#a9Warnung', s); if (alt) alt.remove();
@@ -3003,18 +3018,22 @@
     var z = $('.update-zeile', s);
     if (z) z.insertAdjacentHTML('afterend', html); else s.insertAdjacentHTML('afterbegin', html);
   }
+  // i = Nummer einer Warnung (Block), i < 0 = alle Warnungen untereinander (Dreieck in der Kopfzeile)
   function a9WarnBlatt(i, knopf) {
-    var a = a9WarnListe()[i]; if (!a) return;
-    var d = w3Blatt('a9WarnBlatt', 'Wetterwarnung');
+    var l = a9WarnListe(), w = i < 0 ? l : l.slice(i, i + 1); if (!w.length) return;
+    var d = w3Blatt('a9WarnBlatt', w.length > 1 ? 'Wetterwarnungen' : 'Wetterwarnung');
+    $('#a9WarnBlattT').textContent = w.length > 1 ? 'Wetterwarnungen' : 'Wetterwarnung';
     if (!d.open) w3Fokus = knopf || document.activeElement;   // Safari fokussiert angetippte Knöpfe nicht: der Knopf aus dem Klick
     var absatz = function (t) { return t ? '<p>' + esc(t) + '</p>' : ''; };
-    $('#a9WarnBlattInhalt').innerHTML = '<section class="kachel a9-blatt a9-warn-' + a.severity + '"><p class="a9-warn-art">' + A9_WARN[a.severity][0] + (a.event_de ? ': ' + esc(a.event_de) : '') + '</p><h3 class="w3-h3">' + esc(a.headline_de) + '</h3><p class="zahl">' + esc(a9Zeitraum(a)) + '</p></section>' +
-      '<section class="kachel">' + absatz(a.description_de) + (a.instruction_de ? '<h3 class="w3-h3">Verhaltenshinweise</h3>' + absatz(a.instruction_de) : '') +
-      '<p class="info">Quelle: Deutscher Wetterdienst (DWD), über Bright Sky (brightsky.dev), CC BY 4.0.</p></section>';
+    $('#a9WarnBlattInhalt').innerHTML = w.map(function (a, n) {
+      return '<section class="kachel a9-blatt a9-warn-' + a.severity + '"><p class="a9-warn-art">' + A9_WARN[a.severity][0] + (a.event_de ? ': ' + esc(a.event_de) : '') + '</p><h3 class="w3-h3">' + esc(a.headline_de) + '</h3><p class="zahl">' + esc(a9Zeitraum(a)) + '</p></section>' +
+        '<section class="kachel">' + absatz(a.description_de) + (a.instruction_de ? '<h3 class="w3-h3">Verhaltenshinweise</h3>' + absatz(a.instruction_de) : '') +
+        (n === w.length - 1 ? '<p class="info">Quelle: Deutscher Wetterdienst (DWD), über Bright Sky (brightsky.dev), CC BY 4.0.</p>' : '') + '</section>';
+    }).join('');
     if (!d.open) d.showModal();
     $('[data-zu]', d).focus();
   }
-  document.addEventListener('click', function (e) { var b = e.target.closest('#a9Warnung [data-a9-warn]'); if (b) a9WarnBlatt(+b.dataset.a9Warn, b); });
+  document.addEventListener('click', function (e) { var b = e.target.closest('#a9Warnung [data-a9-warn]'); if (b) a9WarnBlatt(+b.dataset.a9Warn, b); else if (e.target.closest('#a9Symbol')) a9WarnBlatt(-1, $('#a9Symbol')); });
   renderWetter = (function (alt) { return function () { alt(); try { a9WarnHolen(ort); a9WarnNeu(); } catch (e) { console.error('Warnung', e); } }; })(renderWetter);
   quellenHtml = (function (alt) {
     return function () {

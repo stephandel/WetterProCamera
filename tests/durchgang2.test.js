@@ -29,11 +29,11 @@ const FOTO = path.join(WURZEL, 'foto-mannheim.jpg');
     // Fund N2 (zweite Meinung): Warnblatt per Antippen/Klick (Safari fokussiert den Knopf nicht), dann Esc: Fokus zurück auf die Warnkachel
     {
       const s = await H.neueSeite(b, {}, { warnung: 'ja' });
-      await s.p.goto(H.BASIS); await s.p.waitForSelector('#a9Warnung button', { timeout: 15000 });
-      await s.p.click('#a9Warnung button'); await s.p.waitForSelector('#a9WarnBlatt[open]', { timeout: 4000 });
+      await s.p.goto(H.BASIS); await s.p.waitForSelector('#a9Symbol:not([hidden])', { timeout: 15000 });
+      await s.p.click('#a9Symbol'); await s.p.waitForSelector('#a9WarnBlatt[open]', { timeout: 4000 });
       await s.p.keyboard.press('Escape'); await s.p.waitForTimeout(400);
-      const f = await s.p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, kachel: !!a.closest('#a9Warnung') }; });
-      pruefe('Warnblatt: nach Klick und Esc liegt der Fokus wieder auf der Warnkachel', f.kachel, f);
+      const f = await s.p.evaluate(() => { const a = document.activeElement; return { tag: a.tagName, kachel: a.id === 'a9Symbol' }; });
+      pruefe('Warnblatt: nach Klick und Esc liegt der Fokus wieder auf dem Warndreieck (W1)', f.kachel, f);
       await s.ctx.close();
     }
     // Fund N2/N3 (zweite Meinung): jeder Text im Meteogramm mit der GEZEICHNETEN Größe (font-size × SVG-Skalierung) mindestens 11 px, Ziel 12 px (Muster wedda-durchgang)

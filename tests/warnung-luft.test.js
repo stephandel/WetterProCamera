@@ -23,28 +23,33 @@ async function start(b, modus, opt) {
   const srv = await H.server();
   const b = await webkit.launch();
   try {
-    console.log('Warnung (DWD)');
+    console.log('Warnung (DWD), seit W1 (Ansatz F, 04.11.2026): Dreieck neben dem Ortsnamen, Block nur bei „extrem“');
     let s = await start(b, { warnung: 'ja' });
-    const w = await s.p.evaluate(() => {
-      const k = document.getElementById('a9Warnung'), e = [...document.getElementById('tab-wetter').children].filter(x => !x.classList.contains('update-zeile'));
-      if (!k) return null;
-      const knoepfe = [...k.querySelectorAll('button')], cs = getComputedStyle(k), r = knoepfe[0] && knoepfe[0].getBoundingClientRect();
-      return { erste: e[0] === k, text: k.textContent, n: knoepfe.length, farbe: cs.color, hoehe: r && r.height, bgs: knoepfe.map(x => getComputedStyle(x).backgroundColor), farben: knoepfe.map(x => getComputedStyle(x).color) };
-    });
-    pruefe('Mit Warnung: Kachel „Warnung“ steht ganz oben auf der Startseite', !!w && w.erste, w);
-    pruefe('Kachel nennt die Überschrift des DWD und den Zeitraum', !!w && /Amtliche WARNUNG vor FROST/.test(w.text) && /heute 18:00 bis morgen 08:00 Uhr/.test(w.text), w && w.text);
-    pruefe('Zwei Warnungen, die schwerere (moderate) zuerst', !!w && w.n === 2 && w.text.indexOf('FROST') < w.text.indexOf('WINDBÖEN'), w);
-    pruefe('Kachel in Warnfarbe nach Schwere (moderate = Orange, minor = Gelb)', !!w && w.bgs[0] === 'rgb(255, 159, 10)' && w.bgs[1] === 'rgb(255, 214, 51)', w && w.bgs);
-    pruefe('Text auf der Warnfarbe mind. 4,5:1', !!w && w.bgs.every((g, i) => kontrast(w.farben[i], g) >= 4.5), w && [w.farben, w.bgs]);
-    pruefe('Tippfläche mind. 44 px hoch', !!w && w.hoehe >= 43.5, w && w.hoehe);
+    const SYM = () => {
+      const k = document.getElementById('a9Symbol'); if (!k || k.hidden) return null;
+      const r = k.getBoundingClientRect(), n = document.getElementById('ortName').getBoundingClientRect(), f = k.querySelector('.a9-f'), z = k.querySelector('.a9-symbol-zahl');
+      const kopf = document.getElementById('titelzeile').getBoundingClientRect();
+      return { label: k.getAttribute('aria-label'), w: r.width, h: r.height, rechtsVomNamen: r.left >= n.right - 1, mitteY: Math.abs((r.top + r.height / 2) - (n.top + n.height / 2)), fuell: getComputedStyle(f).fill, zahl: z ? z.textContent : '', zahlFarbe: z && getComputedStyle(z).color, zahlBg: z && getComputedStyle(z).backgroundColor, kopfH: kopf.height, block: !!document.getElementById('a9Warnung') };
+    };
+    let w = await s.p.evaluate(SYM);
+    pruefe('Zwei gewöhnliche Warnungen (markant + gering): kein großer Block mehr oben im Reiter Wetter', !!w && !w.block, w);
+    pruefe('Dreieck steht rechts neben dem Ortsnamen, auf gleicher Höhe', !!w && w.rechtsVomNamen && w.mitteY <= 3, w);
+    pruefe('Dreieck gefüllt in der Farbe der höchsten Stufe (markant = Orange)', !!w && w.fuell === 'rgb(255, 159, 10)', w && w.fuell);
+    pruefe('Tippfläche mind. 44 × 44 px', !!w && w.w >= 43.5 && w.h >= 43.5, w);
+    pruefe('Zahl „2“ am Dreieck, Kontrast mind. 4,5:1', !!w && w.zahl === '2' && kontrast(w.zahlFarbe, w.zahlBg) >= 4.5, w);
+    pruefe('VoiceOver: „2 Wetterwarnungen, höchste Stufe: Markante Wetterwarnung. Details“', !!w && w.label === '2 Wetterwarnungen, höchste Stufe: Markante Wetterwarnung. Details', w && w.label);
+    pruefe('Kopfzeile wird durch das Dreieck nicht höher (wie ohne Warnung)', !!w && w.kopfH <= await s.p.evaluate(() => { const k = document.getElementById('a9Symbol'); k.hidden = true; const h = document.getElementById('titelzeile').getBoundingClientRect().height; k.hidden = false; return h; }) + 0.5, w && w.kopfH);
     pruefe('Bright-Sky-Aufruf mit Ort', s.anfragen.some(u => /brightsky\.dev\/alerts\?/.test(u) && /lat=49\.4/.test(u) && /lon=8\.4/.test(u)), s.anfragen);
-    await H.foto(s.p, 'a9-warnung-390');
-    if (w) { await s.p.click('#a9Warnung button'); await s.p.waitForTimeout(300); }
-    const d = await s.p.evaluate(() => { const d = document.querySelector('dialog[open]'); return d ? { text: d.textContent } : null; });
-    pruefe('Antippen öffnet das Blatt mit vollem Text (Beschreibung, Hinweis, Zeitraum, Quelle DWD)', !!d && /Tiefstwerte zwischen -2 und -4 Grad/.test(d.text) && /Empfindliche Pflanzen abdecken/.test(d.text) && /heute 18:00 bis morgen 08:00 Uhr/.test(d.text) && /Deutscher Wetterdienst/.test(d.text), d && d.text);
-    await H.foto(s.p, 'a9-warnung-blatt-390');
+    await H.foto(s.p, 'w1-symbol-390');
+    if (w) { await s.p.click('#a9Symbol'); await s.p.waitForTimeout(300); }
+    const d = await s.p.evaluate(() => { const d = document.querySelector('dialog[open]'); return d ? { text: d.textContent, titel: d.querySelector('h2').textContent, n: d.querySelectorAll('.a9-blatt').length, quellen: (d.textContent.match(/Deutscher Wetterdienst/g) || []).length } : null; });
+    pruefe('Antippen öffnet das Blatt mit beiden Warnungen, die schwerere zuerst', !!d && d.n === 2 && d.titel === 'Wetterwarnungen' && d.text.indexOf('FROST') < d.text.indexOf('WINDBÖEN'), d && [d.n, d.titel]);
+    pruefe('Blatt mit vollem Text (Beschreibung, Hinweis, Zeitraum, Quelle DWD einmal)', !!d && /Tiefstwerte zwischen -2 und -4 Grad/.test(d.text) && /Empfindliche Pflanzen abdecken/.test(d.text) && /heute 18:00 bis morgen 08:00 Uhr/.test(d.text) && d.quellen === 1, d && d.text);
+    await H.foto(s.p, 'w1-symbol-blatt-390');
     if (d) { await s.p.click('dialog[open] [data-zu]'); await s.p.waitForTimeout(200); }
-    pruefe('Blatt schließt mit „Fertig“', !(await s.p.$('dialog[open]')));
+    pruefe('Blatt schließt mit „Fertig“, Fokus wieder auf dem Dreieck', !(await s.p.$('dialog[open]')) && await s.p.evaluate(() => document.activeElement && document.activeElement.id === 'a9Symbol'));
+    await s.p.click('#tb-graphs'); await s.p.waitForTimeout(300);
+    pruefe('Dreieck bleibt auf anderen Reitern sichtbar (Graphs)', !!(await s.p.evaluate(SYM)));
     await s.p.click('#tb-mehr'); await s.p.waitForTimeout(300);
     const m = await s.p.textContent('#tab-mehr');
     pruefe('Quellen nennen die DWD-Warnungen über Bright Sky (CC BY 4.0)', /Warnungen: DWD über Bright Sky[\s\S]*CC BY 4\.0/.test(await s.p.textContent('#quellen')));
@@ -52,37 +57,52 @@ async function start(b, modus, opt) {
     pruefe('Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
     await s.ctx.close();
 
-    s = await start(b, { warnung: 'keine' });
-    pruefe('Ohne Warnung: keine Kachel, keine leere Fläche', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.akt')) && s.anfragen.some(u => /alerts/.test(u)), s.anfragen);
-    await s.ctx.close();
-    s = await start(b, { warnung: 'fehler' });
-    pruefe('Warnung-Abruf scheitert (offline/Fehler): still ausgeblendet, Startseite lädt normal', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && !(await s.p.$('.leer-zustand')));
-    await s.ctx.close();
     s = await start(b, { warnung: 'vier' });
+    const v = await s.p.evaluate(() => {
+      const k = document.getElementById('a9Warnung'), e = [...document.getElementById('tab-wetter').children].filter(x => !x.classList.contains('update-zeile'));
+      if (!k) return null;
+      const knoepfe = [...k.querySelectorAll('button')], r = knoepfe[0] && knoepfe[0].getBoundingClientRect(), sy = document.getElementById('a9Symbol');
+      return { erste: e[0] === k, text: k.textContent, n: knoepfe.length, hoehe: r && r.height, bgs: knoepfe.map(x => getComputedStyle(x).backgroundColor), farben: knoepfe.map(x => getComputedStyle(x).color), sym: !sy.hidden && sy.className, symRand: getComputedStyle(sy.querySelector('.a9-f')).stroke };
+    });
+    pruefe('Mit „extrem“: zusätzlich der große Block ganz oben auf der Startseite', !!v && v.erste, v);
+    pruefe('Block nennt Überschrift und Zeitraum, alle vier Warnungen, die schwerste (ORKAN) zuerst', !!v && v.n === 4 && /ORKAN/.test(v.text) && v.text.indexOf('ORKAN') < v.text.indexOf('FROST'), v && v.text);
+    pruefe('Block in Warnfarbe nach Schwere (extrem dunkelrot … gering gelb)', !!v && v.bgs[0] === 'rgb(168, 20, 46)' && v.bgs[3] === 'rgb(255, 214, 51)', v && v.bgs);
+    pruefe('Text auf der Warnfarbe mind. 4,5:1', !!v && v.bgs.every((g, i) => kontrast(v.farben[i], g) >= 4.5), v && [v.farben, v.bgs]);
+    pruefe('Tippfläche im Block mind. 44 px hoch', !!v && v.hoehe >= 43.5, v && v.hoehe);
+    pruefe('Dreieck daneben dunkelrot mit weißem Rand', !!v && /a9-s-extreme/.test(v.sym) && v.symRand === 'rgb(255, 255, 255)', v && [v.sym, v.symRand]);
+    await H.foto(s.p, 'w1-extrem-390');
     const blaetter = [];
     for (let i = 0; i < 4; i++) {
       await s.p.click('#a9Warnung [data-a9-warn="' + i + '"]'); await s.p.waitForTimeout(250);
-      blaetter.push(await s.p.evaluate(() => { const k = document.querySelector('dialog[open] .a9-blatt'); if (!k) return null; const c = getComputedStyle(k); return { klasse: k.className, bg: c.backgroundColor, farbe: c.color, texte: [...k.querySelectorAll('p, h3')].map(e => getComputedStyle(e).color) }; }));
+      blaetter.push(await s.p.evaluate(() => { const k = document.querySelector('dialog[open] .a9-blatt'); if (!k) return null; const c = getComputedStyle(k); return { klasse: k.className, n: document.querySelectorAll('dialog[open] .a9-blatt').length, bg: c.backgroundColor, farbe: c.color, texte: [...k.querySelectorAll('p, h3')].map(e => getComputedStyle(e).color) }; }));
       await s.p.click('dialog[open] [data-zu]'); await s.p.waitForTimeout(150);
     }
+    pruefe('Block: jede Kachel öffnet das Blatt mit genau ihrer Warnung', blaetter.every(x => x && x.n === 1), blaetter.map(x => x && x.n));
     pruefe('Warnblatt: Schrift auf der Warnfarbe mind. 4,5:1 bei allen vier Schweregraden', blaetter.length === 4 && blaetter.every(x => x && x.texte.every(c => kontrast(c, x.bg) >= 4.5)), blaetter);
+    await s.ctx.close();
+    s = await start(b, { warnung: 'keine' });
+    pruefe('Ohne Warnung: keine Kachel, kein Dreieck, keine leere Fläche', !(await s.p.$('#a9Warnung')) && await s.p.evaluate(() => document.getElementById('a9Symbol').hidden) && !!(await s.p.$('.akt')) && s.anfragen.some(u => /alerts/.test(u)), s.anfragen);
+    await s.ctx.close();
+    s = await start(b, { warnung: 'fehler' });
+    pruefe('Warnung-Abruf scheitert (offline/Fehler): still ausgeblendet, Startseite lädt normal', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && !(await s.p.$('.leer-zustand')));
     await s.ctx.close();
     s = await start(b, { warnung: 'format' });
     pruefe('Warnung-Antwort im falschen Format (alerts ist kein Array): keine Kachel, keine Konsolenfehler', !(await s.p.$('#a9Warnung')) && !!(await s.p.$('.tage')) && s.konsole.length === 0, s.konsole);
     await s.ctx.close();
     s = await start(b, { warnung: 'test' });
-    const ft = await s.p.evaluate(() => { const k = document.getElementById('a9Warnung'); return k ? k.textContent : ''; });
+    await s.p.click('#a9Symbol'); await s.p.waitForTimeout(250);
+    const ft = await s.p.evaluate(() => { const k = document.querySelector('dialog[open]'); return k ? k.textContent : ''; });
     pruefe('Testwarnungen (status „test“) und Entwarnungen (response_type „allclear“) werden nicht gezeigt, echte Warnung schon', /NEBEL/.test(ft) && !/TESTWARNUNG/.test(ft) && !/ENTWARNUNG/.test(ft), ft);
     await s.ctx.close();
     s = await H.neueSeite(b, {}, { warnung: 'ja' });
     s.anfragen = []; s.p.on('request', r => { if (/brightsky\.dev\/alerts/.test(r.url())) s.anfragen.push(r.url()); });
     await s.p.addInitScript(() => { if (!localStorage.getItem('wpgt-ort')) localStorage.setItem('wpgt-ort', JSON.stringify({ name: 'Corralejo', land: 'Spanien', lat: 28.73, lon: -13.867 })); });
     await s.p.goto(H.BASIS); await s.p.waitForSelector('.tag', { timeout: 15000 }); await s.p.waitForTimeout(900);
-    pruefe('Ort außerhalb Deutschlands (Corralejo): kein Warnungs-Abruf, keine Kachel', s.anfragen.length === 0 && !(await s.p.$('#a9Warnung')) && /Corralejo/.test(await s.p.textContent('#titelzeile')), s.anfragen);
+    pruefe('Ort außerhalb Deutschlands (Corralejo): kein Warnungs-Abruf, keine Kachel, kein Dreieck', s.anfragen.length === 0 && !(await s.p.$('#a9Warnung')) && await s.p.evaluate(() => document.getElementById('a9Symbol').hidden) && /Corralejo/.test(await s.p.textContent('#titelzeile')), s.anfragen);
     await s.ctx.close();
-    s = await start(b, { warnung: 'ja' }, { viewport: { width: 1280, height: 800 } });
+    s = await start(b, { warnung: 'vier' }, { viewport: { width: 1280, height: 800 } });
     const mac = await s.p.evaluate(() => { const k = document.getElementById('a9Warnung'), l = document.querySelector('.mac-links'); return k ? { oben: k.parentNode.id === 'tab-wetter' && k.getBoundingClientRect().bottom <= l.getBoundingClientRect().top, b: k.getBoundingClientRect().width, h: document.documentElement.scrollWidth - innerWidth } : null; });
-    pruefe('Mac 1280: Warnung über beiden Spalten, volle Breite, kein seitliches Scrollen', !!mac && mac.oben && mac.b > 600 && mac.h <= 0, mac);
+    pruefe('Mac 1280 (extrem): Warnung über beiden Spalten, volle Breite, kein seitliches Scrollen', !!mac && mac.oben && mac.b > 600 && mac.h <= 0, mac);
     await H.foto(s.p, 'a9-warnung-mac-1280');
     await s.ctx.close();
 

@@ -114,8 +114,8 @@ const knopf = '#tabbar #tb-kamera';
       await p.click('[data-seg="wfzo"] [data-v="kopf"]');
       pruefe('Kopfzeile: Knopf rechts außen, hinter der Suche', await p.evaluate(() => { const k = document.querySelector('#titelzeile .zugang-kopf'); return !!k && k.previousElementSibling && k.previousElementSibling.id === 'btnSuche'; }));
       pruefe('Kopfzeile: Tab-Leiste ohne Wetterfoto (4 Knöpfe)', (await p.$$('#tabbar button')).length === 4);
-      const kopf = await p.evaluate(() => ({ breite: document.documentElement.scrollWidth - innerWidth, k: document.querySelector('.zugang-kopf').getBoundingClientRect().width, ort: document.getElementById('ortName').getBoundingClientRect().width }));
-      pruefe('Kopfzeile: kein seitliches Scrollen, Knopf ≥ 44 px, Ortsname hat Platz', kopf.breite <= 0 && kopf.k >= 44 && kopf.ort > 120, kopf);
+      const kopf = await p.evaluate(() => ({ breite: document.documentElement.scrollWidth - innerWidth, k: document.querySelector('.zugang-kopf').getBoundingClientRect().width, ort: document.querySelector('.ort-block').getBoundingClientRect().width, ganz: document.getElementById('ortName').scrollWidth <= document.getElementById('ortName').clientWidth }));   // seit W1 sitzt der Name schmal neben dem Warndreieck: Platz = Breite des Ort-Blocks
+      pruefe('Kopfzeile: kein seitliches Scrollen, Knopf ≥ 44 px, Ortsname hat Platz', kopf.breite <= 0 && kopf.k >= 44 && kopf.ort > 120 && kopf.ganz, kopf);
       await p.click('[data-seg="wfzp"] [data-v="links-aussen"]');
       pruefe('Kopfzeile links außen', await p.evaluate(() => { const k = document.querySelector('#titelzeile .zugang-kopf'); return !!k && k.nextElementSibling && k.nextElementSibling.id === 'btnMenue'; }));
       await p.click('[data-seg="wfzo"] [data-v="schwebend"]');
