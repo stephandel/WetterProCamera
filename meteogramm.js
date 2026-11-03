@@ -944,11 +944,15 @@
       if (neu) {
         ro.style.minHeight = ''; box.style.minHeight = '';
         var zAlt = el.zeit.innerHTML, lAlt = el.lage.innerHTML, hoch = 0, gesehen = {};
-        el.zeit.innerHTML = '<b>28.10. · 22:58</b> <span class="mg-rel">vor 35 Std.</span>';
-        Object.keys(WMO_TEXT).forEach(function(c){
-          if (gesehen[WMO_TEXT[c]]) return; gesehen[WMO_TEXT[c]] = 1;
-          el.lage.innerHTML = '<span class="mg-lage-i">' + wmoIcon(+c, 1) + '</span>' + esc(WMO_TEXT[c]);
-          hoch = Math.max(hoch, box.offsetHeight);
+        // längste Abstandsangaben: „vor 35 Std.“ und bei weiter Vorschau „in 88 Tagen“ (zweite Meinung 03.11.2026)
+        ['vor 35 Std.', 'in 88 Tagen'].forEach(function(rel){
+          el.zeit.innerHTML = '<b>28.10. · 22:58</b> <span class="mg-rel">' + rel + '</span>';
+          gesehen = {};
+          Object.keys(WMO_TEXT).forEach(function(c){
+            if (gesehen[WMO_TEXT[c]]) return; gesehen[WMO_TEXT[c]] = 1;
+            el.lage.innerHTML = '<span class="mg-lage-i">' + wmoIcon(+c, 1) + '</span>' + esc(WMO_TEXT[c]);
+            hoch = Math.max(hoch, box.offsetHeight);
+          });
         });
         el.zeit.innerHTML = zAlt; el.lage.innerHTML = lAlt;
         if (hoch) box.style.minHeight = hoch + 'px';
