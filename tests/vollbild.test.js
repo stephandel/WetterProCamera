@@ -212,22 +212,22 @@ async function radsat(s, mac) {
         pruefe('Tipp auf Graphs öffnet das Meteogramm direkt als Blatt, Fokus auf „Fertig“', await blatt('#pcMg') && await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('mg-vb-fertig')));
         await H.foto(p, 'vollbild-immer-390-graphs');
         await p.click('#pcMg .mg-vb-fertig'); await p.waitForTimeout(400);
-        pruefe('„Fertig“ führt zum vorherigen Reiter (Wetter), Seite frei', await reiter() === 'wetter' && !(await blatt('#pcMg')) && await p.evaluate(() => !document.querySelector('#tabbar').closest('[inert]')), await reiter());
+        pruefe('„Fertig“ bleibt im Reiter Graphs (kleine Ansicht), Seite frei', await reiter() === 'graphs' && !(await blatt('#pcMg')) && await p.evaluate(() => !document.querySelector('#tabbar').closest('[inert]')), await reiter());
         await p.click('#tb-mehr'); await p.waitForTimeout(200);
         await p.click('#tb-radsat'); await p.waitForTimeout(700);
         pruefe('Tipp auf Rad/Sat öffnet die Karte direkt als Blatt', await blatt('#tab-radsat'));
         await H.foto(p, 'vollbild-immer-390-radsat');
         await p.evaluate(() => history.back()); await p.waitForTimeout(500);
-        pruefe('Zurück aus Rad/Sat führt zum vorherigen Reiter (Mehr)', await reiter() === 'mehr' && !(await blatt('#tab-radsat')), await reiter());
+        pruefe('Zurück aus Rad/Sat bleibt im Reiter Rad/Sat (kleine Ansicht)', await reiter() === 'radsat' && !(await blatt('#tab-radsat')), await reiter());
         await p.keyboard.press('Escape');
         await p.click('#tb-graphs'); await p.waitForTimeout(500); await p.keyboard.press('Escape'); await p.waitForTimeout(400);
-        pruefe('Esc aus Graphs führt ebenfalls zurück (Mehr)', await reiter() === 'mehr', await reiter());
-        // Nach einem Neustart: Wahl noch gesetzt, Start mit gemerktem Reiter Graphs öffnet das Blatt, Fertig führt zu Wetter
+        pruefe('Esc aus Graphs bleibt ebenfalls im Reiter Graphs', await reiter() === 'graphs', await reiter());
+        // Nach einem Neustart: Wahl noch gesetzt, Start mit gemerktem Reiter Graphs öffnet das Blatt, Fertig bleibt in Graphs (seit 11.11.2026)
         await p.click('#tb-graphs'); await p.waitForTimeout(300);
         await p.reload(); await p.waitForSelector('#pcMg .mg-svg text', { timeout: 15000 }); await p.waitForTimeout(600);
         pruefe('Neustart im Reiter Graphs: Blatt offen, Wahl noch gesetzt', await blatt('#pcMg') && await p.evaluate(() => localStorage.getItem('wpc-vollbild-immer')) === 'true');
         await p.click('#pcMg .mg-vb-fertig'); await p.waitForTimeout(400);
-        pruefe('Fertig nach dem Neustart: Reiter Wetter', await reiter() === 'wetter', await reiter());
+        pruefe('Fertig nach dem Neustart: Reiter Graphs', await reiter() === 'graphs', await reiter());
         await p.click('#tb-mehr'); await p.waitForTimeout(200);
         pruefe('Schalter steht nach dem Neustart auf an', await p.isChecked('#a32Liste input[data-a32]'));
         // Darstellung „Kurve“ hat kein Blatt

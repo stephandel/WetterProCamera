@@ -380,7 +380,7 @@
     neu(); setTimeout(neu, 280);
     if (!an) radsatVollbildZu();
   }
-  var radsatVollbildZu = function () { };   // Paket A32 P3 hängt hier den Rückweg zum vorherigen Reiter an
+  var radsatVollbildZu = function () { };   // Paket A32 P3 merkt sich hier, dass das Blatt in diesem Besuch geschlossen wurde
   document.addEventListener('keydown', function (e) { if (rsVoll.an && e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); radsatVollbild(false); } });
   window.addEventListener('popstate', function () {
     // das eigene Zurück von „Fertig“ kommt an; inzwischen neu geöffnet: Eintrag für das Blatt neu anlegen (wie im Meteogramm-Baustein)
@@ -1534,7 +1534,7 @@
       karte: false, zeilen: zeilen, zeilenStandard: zeilen, werteKlug: false,
       merkschluessel: 'wpc-mg', zeitzone: (daten && daten.timezone) || 'auto',
       vollbild: function (an) { document.documentElement.classList.toggle('pc-mg-voll', !!an); },
-      vollbildStart: a32Immer() && aktiv === 'graphs', beiVollbildZu: a32Zurueck   // A32 P3: „immer im Vollbild“
+      vollbildStart: a32Immer() && !a32Klein && aktiv === 'graphs', beiVollbildZu: a32Zu   // A32 P3: „immer im Vollbild“
     });
     mg.schluessel = schl;
   }
@@ -3126,33 +3126,30 @@
   renderWetter = (function (alt) { return function () { alt(); startseiteOrdnen(); }; })(renderWetter);
 
   /* === A32 P3 (21.10.2026): „Meteogramm und Karten immer im Vollbild“ ===
-     Ist der Schalter unter „Mehr“ an, öffnen Graphs (Darstellung Meteogramm) und Rad/Sat gleich als Vollbild-Blatt; „Fertig“ oder Zurück
-     führen zum vorherigen Reiter (unbekannt, etwa beim Start mit gemerktem Reiter: Wetter). Das Meteogramm der Startseite bleibt klein,
-     „Ganz ansehen“ öffnet dann direkt das Blatt. Die Darstellung „Kurve“ hat kein Blatt und bleibt, wie sie ist. */
+     Ist der Schalter unter „Mehr“ an, öffnen Graphs (Darstellung Meteogramm) und Rad/Sat gleich als Vollbild-Blatt; „Fertig“, Esc oder
+     Zurück schließen nur das Blatt: Die App bleibt im Reiter und zeigt die kleine Ansicht (seit 11.11.2026, vorher Sprung zum vorherigen
+     Reiter). Erst der nächste Besuch des Reiters öffnet wieder das Blatt. Das Meteogramm der Startseite bleibt klein, „Ganz ansehen“
+     öffnet dann direkt das Blatt. Die Darstellung „Kurve“ hat kein Blatt und bleibt, wie sie ist. */
   var A32_IMMER_STANDARD = false;   // Vorgabe aus design.json (einstellungen.vollbildImmer); danach gilt die Wahl unter „Mehr“
   function a32Immer() { return speicher.lesen('wpc-vollbild-immer', A32_IMMER_STANDARD) === true; }
-  var a32Vorher = 'wetter';
-  function a32Zurueck() {
-    if (!a32Immer() || (aktiv !== 'graphs' && aktiv !== 'radsat')) return;
-    zeigeTab(a32Vorher);
-    var t = $('#tb-' + a32Vorher); if (t && t.offsetParent) t.focus({ preventScroll: true });
-  }
+  var a32Klein = false;   // Blatt in diesem Besuch geschlossen: kleine Ansicht bleibt, auch wenn Meteogramm oder Karte neu aufgebaut werden
+  function a32Zu() { a32Klein = true; }
   zeigeTab = (function (alt) {
     return function (id) {
-      if (id !== aktiv && aktiv !== 'graphs' && aktiv !== 'radsat') a32Vorher = aktiv;
+      if (id !== aktiv) a32Klein = false;
       alt(id);
-      if (!a32Immer()) return;
+      if (!a32Immer() || a32Klein) return;
       if (id === 'radsat') radsatVollbild(true);
       else if (id === 'graphs' && graphsModus() === 'meteo' && mg.instanz) mg.instanz.vollbild(true);
     };
   })(zeigeTab);
-  radsatVollbildZu = a32Zurueck;
+  radsatVollbildZu = a32Zu;
   renderMehr = (function (alt) {
     return function () {
       alt();
       var l = $('#tab-mehr #a5Start'); if (!l || $('#a32Liste')) return;
       // eigene Liste direkt unter den Startseiten-Schaltern (Gruppe „Startseite und Ansicht“), danach Auf-/Zuklappen neu anwenden
-      l.insertAdjacentHTML('afterend', '<div class="liste a5-liste" id="a32Liste"><label class="tippbar"><span class="modell-text"><span>Meteogramm und Karten immer im Vollbild</span><small class="leise">Graphs (Meteogramm) und Rad/Sat öffnen über den ganzen Bildschirm; „Fertig“ führt zurück</small></span><input type="checkbox" role="switch" data-a32="immer"' + (a32Immer() ? ' checked' : '') + '></label></div>');
+      l.insertAdjacentHTML('afterend', '<div class="liste a5-liste" id="a32Liste"><label class="tippbar"><span class="modell-text"><span>Meteogramm und Karten immer im Vollbild</span><small class="leise">Graphs (Meteogramm) und Rad/Sat öffnen über den ganzen Bildschirm; „Fertig“ zeigt die kleine Ansicht</small></span><input type="checkbox" role="switch" data-a32="immer"' + (a32Immer() ? ' checked' : '') + '></label></div>');
       a9MehrAnwenden();
     };
   })(renderMehr);
