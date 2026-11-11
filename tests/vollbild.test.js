@@ -119,7 +119,7 @@ async function rsVollbild(s, name, w, h) {
   await p.click('#radsatVoll'); await p.waitForTimeout(500);
   const z = await p.evaluate(ZUSTAND, zs);
   pruefe(name + ': „Vollbild“ legt Rad/Sat über den ganzen Bildschirm (' + w + ' × ' + h + ')', voll(z) && z.deckt, [z.r, z.deckt]);
-  pruefe(name + ': role="dialog", aria-modal, Name „Rad/Sat im Vollbild“', z.rolle === 'dialog' && z.modal === 'true' && z.label === 'Rad/Sat im Vollbild', [z.rolle, z.modal, z.label]);
+  pruefe(name + ': role="dialog", aria-modal, Name „Radar im Vollbild“', z.rolle === 'dialog' && z.modal === 'true' && z.label === 'Radar im Vollbild', [z.rolle, z.modal, z.label]);
   pruefe(name + ': „Fertig“ oben rechts, mind. 44 px (Mac 28 px), Fokus darauf', !!z.fertig && z.fertig.t === 'Fertig' && z.fertig.h >= (w >= 1024 ? 28 : 44) && z.fertig.right < 40 && z.fokus === 'fertig', [z.fertig, z.fokus]);
   if (!z.fertig) return;
   pruefe(name + ': Rest der Seite gesperrt, Verlaufseintrag', z.gesperrt.length === 0 && z.tabbarInert && z.overflow === 'hidden' && z.zustand && z.zustand.wpVollbild === 'radsat' && z.laenge === vorher.laenge + 1, z);

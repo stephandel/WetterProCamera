@@ -330,7 +330,7 @@
   function renderRadsat() {
     var s = $('#tab-radsat');
     if (!s.dataset.gebaut) {
-      s.innerHTML = '<div class="pc-blatt-kopf rs-vb-kopf" hidden><h2>Rad/Sat</h2><button type="button" class="pc-kopf-knopf tippbar" id="radsatFertig">Fertig</button></div>' +
+      s.innerHTML = '<div class="pc-blatt-kopf rs-vb-kopf" hidden><h2>Radar</h2><button type="button" class="pc-kopf-knopf tippbar" id="radsatFertig">Fertig</button></div>' +
         '<div class="chips ebenen" id="ebenenWahl" role="radiogroup" aria-label="Ebene der Karte">' +
         EBENEN.map(function (e) { return '<button class="chip tippbar" role="radio" data-ebene="' + e[0] + '">' + e[1] + '</button>'; }).join('') + '</div>' +
         '<div class="karte" id="radarKarte" role="region" aria-label="Karte"></div>' +
@@ -361,7 +361,7 @@
     s.classList.toggle('rs-vollbild', an); $('.rs-vb-kopf', s).hidden = !an;
     k.setAttribute('aria-pressed', String(an)); k.textContent = an ? 'Vollbild beenden' : 'Vollbild';
     if (an) {
-      s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-label', 'Rad/Sat im Vollbild');
+      s.setAttribute('role', 'dialog'); s.setAttribute('aria-modal', 'true'); s.setAttribute('aria-label', 'Radar im Vollbild');
       rsVoll.gesperrt = [];
       for (var e = s; e && e !== document.body && e.parentNode; e = e.parentNode) {
         Array.prototype.forEach.call(e.parentNode.children, function (g) { if (g === e || g.hasAttribute('inert') || /^(SCRIPT|STYLE|LINK|TEMPLATE)$/.test(g.tagName)) return; g.setAttribute('inert', ''); rsVoll.gesperrt.push(g); });
@@ -773,7 +773,7 @@
   function ortSetzen(o) { ort = o; speicher.schreiben('wpgt-ort', o); daten = null; $('#ortName').textContent = o.name; try { a9SymbolNeu(); } catch (e) { } zeigeTab('wetter'); laden(); }
 
   /* ---------- Tabs: Wetter, Graphs, Kamera (Mitte, öffnet Teilen), Rad/Sat, Mehr ---------- */
-  var TABS = [['wetter', 'Wetter', 'cloudsun'], ['graphs', 'Graphs', 'chart'], ['kamera', 'Kamera', 'camera'], ['radsat', 'Rad/Sat', 'radar'], ['mehr', 'Mehr', 'more']];
+  var TABS = [['wetter', 'Wetter', 'cloudsun'], ['graphs', 'Kurven', 'chart'], ['kamera', 'Kamera', 'camera'], ['radsat', 'Radar', 'radar'], ['mehr', 'Mehr', 'more']];
   var SEITEN = TABS.filter(function (t) { return t[0] !== 'kamera'; });
   var aktiv = 'wetter';
   // Die Tab-Leiste hat die vier Seiten; der Wetterfoto-Knopf sitzt dort nur, wenn die Einstellung „Tab-Leiste“ gilt (Platz 1 bis 5, Standard 3)
@@ -1072,8 +1072,8 @@
     return (praefix || 'Stand') + ' ' + (heute ? '' : d.getDate() + '.' + (d.getMonth() + 1) + '. ') + uhr + ' Uhr';
   }
 
-  /* --- A3: „Letztes Update" oben im Tab Wetter, Knopf „Aktualisieren", Ziehen zum Aktualisieren --- */
-  function updateText() { return laeuft ? 'Aktualisiere …' : standText('Letztes Update'); }
+  /* --- A3: „Stand 12:48 Uhr" oben im Tab Wetter (bis 11.11.2026 „Letztes Update"), Knopf „Aktualisieren", Ziehen zum Aktualisieren --- */
+  function updateText() { return laeuft ? 'Aktualisiere …' : standText(); }
   function updateZeile() {
     return '<div class="update-zeile"><span class="update-text" id="updateText" aria-live="polite">' + updateText() + '</span>' +
       '<button type="button" class="button leise tippbar update-knopf" data-aktualisieren="1" aria-label="Wetter aktualisieren">Aktualisieren</button></div>';
@@ -1951,10 +1951,10 @@
     var html = '<h2 class="abschnitt-titel" id="a5StartTitel">Startseite</h2><div class="liste a5-liste" id="a5Start">' +
       schalter('tipps', 'Was heute geht', 'Bis zu ' + A5_MAX_TIPPS + ' Tipps für heute, nach festen Regeln', st.tipps) +
       schalter('radar', 'Regenradar-Kachel', 'Regen der nächsten 2 Stunden auf der Startseite, im Link vom 20.10.2026 aus', st.radar) +
-      schalter('meteo', 'Meteogramm auf der Startseite', 'Zeilen wie im Tab „Graphs“, ganz unten auf der Startseite', st.meteo) + '</div>' +
+      schalter('meteo', 'Meteogramm auf der Startseite', 'Zeilen wie unter „Kurven“, ganz unten auf der Startseite', st.meteo) + '</div>' +
       '<div class="kachel a5-groesse" id="a5Groesse"' + (st.meteo ? '' : ' hidden') + '><p class="a5-groesse-titel" id="a5GroesseTitel">Größe des Meteogramms</p>' +
       seg('a5groesse', st.groesse, [['klein', 'Klein'], ['mittel', 'Mittel'], ['gross', 'Groß']], 'Größe des Meteogramms') +
-      '<p class="info">Klein zeigt 1 Zeile, Mittel 2 Zeilen, Groß alle Zeilen, die du im Tab „Graphs“ unter „Zeilen“ gewählt hast.</p></div>' +
+      '<p class="info">Klein zeigt 1 Zeile, Mittel 2 Zeilen, Groß alle Zeilen, die du unter „Kurven“ bei „Zeilen“ gewählt hast.</p></div>' +
       '<h2 class="abschnitt-titel" id="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>Welche Tipps dürfen erscheinen?</h2>' +
       '<div class="liste a5-liste" id="a5Arten" role="group" aria-labelledby="a5ArtenTitel"' + (st.tipps ? '' : ' hidden') + '>' +
       A5_ARTEN.map(function (a) { return '<label class="tippbar"><span class="modell-text"><span>' + a[1] + '</span><small class="leise">' + a[2] + '</small></span><input type="checkbox" value="' + a[0] + '"' + (st.arten.indexOf(a[0]) >= 0 ? ' checked' : '') + '></label>'; }).join('') + '</div>' +
@@ -3149,7 +3149,7 @@
       alt();
       var l = $('#tab-mehr #a5Start'); if (!l || $('#a32Liste')) return;
       // eigene Liste direkt unter den Startseiten-Schaltern (Gruppe „Startseite und Ansicht“), danach Auf-/Zuklappen neu anwenden
-      l.insertAdjacentHTML('afterend', '<div class="liste a5-liste" id="a32Liste"><label class="tippbar"><span class="modell-text"><span>Meteogramm und Karten immer im Vollbild</span><small class="leise">Graphs (Meteogramm) und Rad/Sat öffnen über den ganzen Bildschirm; „Fertig“ zeigt die kleine Ansicht</small></span><input type="checkbox" role="switch" data-a32="immer"' + (a32Immer() ? ' checked' : '') + '></label></div>');
+      l.insertAdjacentHTML('afterend', '<div class="liste a5-liste" id="a32Liste"><label class="tippbar"><span class="modell-text"><span>Meteogramm und Karten immer im Vollbild</span><small class="leise">Kurven (Meteogramm) und Radar öffnen über den ganzen Bildschirm; „Fertig“ zeigt die kleine Ansicht</small></span><input type="checkbox" role="switch" data-a32="immer"' + (a32Immer() ? ' checked' : '') + '></label></div>');
       a9MehrAnwenden();
     };
   })(renderMehr);

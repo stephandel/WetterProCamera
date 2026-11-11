@@ -339,10 +339,11 @@ dialog.rm-blatt::backdrop { background: rgba(0,0,0,.45); }
 .windzeile { flex-wrap: wrap; }
 .hinweis-text { flex: 1 1 14em; overflow-wrap: break-word; }   /* wird es eng, rutscht der Knopf unter den Text */
 .tabbar.pille button > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Tagesliste: Wird die Schrift im Verhältnis zur Breite zu groß (ab etwa 140 % auf dem iPhone), rücken
-   Sonne, Regenrisiko und Regenmenge in eine zweite Zeile unter die Werte. em in der Abfrage = Schriftgröße der Liste. */
+/* Tagesliste: Wird die Schrift im Verhältnis zur Breite zu groß, rücken Sonne, Regenrisiko und Regenmenge in eine zweite
+   Zeile unter die Werte. em in der Abfrage = Schriftgröße der Liste. 20em (340 px bei 17 px): bis 360 pt Breite stießen die
+   fünf Spalten sonst aneinander („17°C☀6,4 h“ bei 320, gemessen 11.11.2026); 375 und 402 bleiben einzeilig. */
 .tage { container-type: inline-size; }
-@container (max-width: 15em) {
+@container (max-width: 20em) {
   .tag { grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "name sym temp wind" "zusatz zusatz zusatz zusatz"; column-gap: var(--s3); row-gap: var(--s1); }
   .tag > .tag-name { grid-area: name; } .tag > .tag-sym { grid-area: sym; } .tag > .tag-temp { grid-area: temp; justify-self: end; } .tag > .tag-wind { grid-area: wind; justify-self: end; }
   .tag > .tag-zusatz { grid-area: zusatz; justify-self: start; display: flex; flex-wrap: wrap; column-gap: var(--s4); }
