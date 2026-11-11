@@ -1895,7 +1895,7 @@
     a5MgAbbauen();
     var el = document.createElement('section');
     el.className = 'kachel a5-mg-kachel'; el.setAttribute('aria-labelledby', 'a5MgTitel');
-    el.innerHTML = '<div class="a5-mg-kopf"><h2 class="kachel-titel" id="a5MgTitel">' + Ikon('chart') + 'Meteogramm</h2><button type="button" class="button leise tippbar" data-a5-mg-ganz="1" aria-label="Meteogramm im Tab Graphs ganz ansehen">Ganz ansehen</button></div><div class="pc-mg a5-mg" id="a5Mg"></div>';
+    el.innerHTML = '<div class="a5-mg-kopf"><h2 class="kachel-titel" id="a5MgTitel">' + Ikon('chart') + 'Meteogramm</h2><button type="button" class="button leise tippbar" data-a5-mg-ganz="1" aria-label="Meteogramm unter Kurven ganz ansehen">Ganz ansehen</button></div><div class="pc-mg a5-mg" id="a5Mg"></div>';
     anker.insertAdjacentElement('afterend', el);
     a5Mg.el = el; a5Mg.breite = el.clientWidth;
     var ziel = $('#a5Mg', el);
