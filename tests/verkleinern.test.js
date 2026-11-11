@@ -1,8 +1,10 @@
-/* tests/verkleinern.test.js – „Fertig“ bleibt im Reiter (F1, P-cff6); 11.11.2026
+/* tests/verkleinern.test.js – „Fertig“ bleibt im Reiter (F1, P-cff6) und ‹ Jetzt › liegt über der Tab-Leiste (B3, P-ecd6); 11.11.2026
    Start:  PORT=8899 node tests/verkleinern.test.js   (Exit-Code 0 = grün)
    Prüft in WebKit bei 402 × 874 (System dunkel und hell), 375 × 667 und 320 × 568, dazu einmal am Mac 1280 × 800:
-   Schalter „Meteogramm und Karten immer im Vollbild“ an: „Fertig“, Esc und Zurück schließen das Blatt, die App bleibt im Reiter
-   Graphs bzw. Rad/Sat und zeigt die kleine Ansicht; erst der nächste Besuch des Reiters öffnet wieder das Blatt.
+   1) Schalter „Meteogramm und Karten immer im Vollbild“ an: „Fertig“, Esc und Zurück schließen das Blatt, die App bleibt im Reiter
+      Graphs bzw. Rad/Sat und zeigt die kleine Ansicht; erst der nächste Besuch des Reiters öffnet wieder das Blatt.
+   2) „Tag zurück / Jetzt / Tag vor“ unter dem Meteogramm liegen beim Öffnen von Graphs ganz über der Tab-Leiste und lassen sich antippen
+      (Nachmessung: war in dieser App schon vor dem 11.11.2026 in Ordnung, der Test hält es fest).
    Fremde Dienste sind auf Antworten aus tests/fixtures umgeleitet (tests/hilfe.js). Der Name der Bilder beginnt mit BILDNAME (z. B. „vorher-“). */
 'use strict';
 const fs = require('fs');
@@ -54,6 +56,22 @@ async function blattAuf(p, name, a) {
   if (!(await blatt(p, a.sel))) { await p.click(a.voll); await p.waitForTimeout(600); }
   return blatt(p, a.sel);
 }
+// Knöpfe ‹ Jetzt › unter dem Meteogramm gegen die Tab-Leiste: ganz darüber, ganz im Bild, mind. 44 × 44, in der Mitte liegt der Knopf selbst
+const KNOEPFE = () => {
+  const leiste = document.querySelector('#tabbar').getBoundingClientRect(), vh = document.documentElement.clientHeight, mg = document.querySelector('#pcMg');
+  const verstoesse = [], werte = [];
+  ['[aria-label="Einen Tag zurück"]', '.mg-btn-jetzt', '[aria-label="Einen Tag vor"]'].forEach(s => {
+    const k = mg.querySelector(s); if (!k) { verstoesse.push(s + ' fehlt'); return; }
+    const r = k.getBoundingClientRect(), n = k.getAttribute('aria-label') || k.textContent.trim();
+    werte.push(n + ' ' + Math.round(r.top) + '–' + Math.round(r.bottom));
+    if (r.bottom > leiste.top + 0.5) verstoesse.push(n + ': unten ' + Math.round(r.bottom) + ' > Leiste oben ' + Math.round(leiste.top));
+    if (r.top < 0 || r.bottom > vh + 0.5) verstoesse.push(n + ': nicht ganz im Bild');
+    if (r.width < 43.5 || r.height < 43.5) verstoesse.push(n + ': nur ' + Math.round(r.width) + ' × ' + Math.round(r.height));
+    const oben = document.elementFromPoint(r.left + r.width / 2, Math.min(r.top + r.height / 2, vh - 1)), wer = oben && (oben.closest('button, nav') || oben);
+    if (!oben || !(k === oben || k.contains(oben))) verstoesse.push(n + ': verdeckt von ' + (wer ? (wer.id || wer.className || wer.tagName) : 'nichts'));
+  });
+  return { leiste: Math.round(leiste.top) + '–' + Math.round(leiste.bottom), hoehe: vh, knoepfe: werte, verstoesse };
+};
 
 // 1) F1: ganz = alle Wege (Fertig, Esc, Zurück, Ebenen, nächster Besuch, Neustart); sonst nur „Fertig“ in beiden Reitern
 async function f1(b, g, ganz) {
@@ -153,6 +171,30 @@ async function f1Mac(b) {
   await s.ctx.close();
 }
 
+// 2) B3: Knöpfe unter dem Meteogramm beim Öffnen, nach einem Tipp und ganz unten auf der Seite
+async function b3(b, g, o) {
+  o = o || {};
+  const kz = kuerzel(g) + (o.schrift ? '-schrift130' : '') + (o.immer ? '-nach-fertig' : '');
+  const s = await start(b, { breite: g[0], hoehe: g[1], farbe: g[2], schrift: o.schrift, speicher: o.immer ? IMMER : null }), p = s.p;
+  await zuGraphs(p);
+  if (o.immer) { await p.click('#pcMg .mg-vb-fertig'); await p.waitForTimeout(600); }
+  const m = await p.evaluate(KNOEPFE);
+  pruefe(kz + ': „Tag zurück / Jetzt / Tag vor“ liegen beim Öffnen von Graphs frei über der Tab-Leiste', await reiter(p) === 'graphs' && m.verstoesse.length === 0, m);
+  await foto(p, 'b3-graphs-' + kz);
+  if (!o.schrift && !o.immer) {
+    const vor = await p.evaluate(() => { const r = document.querySelector('#pcMg [aria-label="Einen Tag vor"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, zeit: document.querySelector('#pcMg .mg-zeit').textContent.trim() }; });
+    await p.mouse.click(vor.x, vor.y); await p.waitForTimeout(900);
+    const nach = { reiter: await reiter(p), zeit: await p.evaluate(() => document.querySelector('#pcMg .mg-zeit').textContent.trim()) };
+    pruefe(kz + ': Tipp auf „Tag vor“ blättert einen Tag weiter, die App bleibt in Graphs', nach.reiter === 'graphs' && nach.zeit !== vor.zeit, [vor.zeit, nach]);
+    if (nach.reiter !== 'graphs') { await p.click('#tb-graphs'); await p.waitForTimeout(500); }
+    await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(400);
+    const u = await p.evaluate(KNOEPFE);
+    pruefe(kz + ': auch ganz unten auf der Seite liegen die Knöpfe frei', u.verstoesse.length === 0, u);
+  }
+  pruefe(kz + ': Konsole ohne Fehler', s.konsole.length === 0, s.konsole);
+  await s.ctx.close();
+}
+
 (async () => {
   const srv = await H.server();
   const b = await webkit.launch();
@@ -161,6 +203,10 @@ async function f1Mac(b) {
     for (const g of GROESSEN) await f1(b, g, g === GROESSEN[0]);
     await f1Startseite(b);
     await f1Mac(b);
+    console.log('2) ‹ Jetzt › unter dem Meteogramm über der Tab-Leiste (B3, Nachmessung)');
+    for (const g of GROESSEN) await b3(b, g);
+    await b3(b, GROESSEN[0], { schrift: true });
+    await b3(b, GROESSEN[2], { immer: true });
   } finally { await b.close(); srv.close(); }
   const e = H.ergebnis();
   console.log('\n' + e.ok + ' Prüfungen bestanden, ' + e.fehler + ' fehlgeschlagen.');
